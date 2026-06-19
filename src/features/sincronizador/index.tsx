@@ -83,23 +83,20 @@ export default function SincronizadorPage() {
 
         {statusData && (
           <div className="flex flex-wrap items-center gap-6">
-            <SyncStatusBadge
-              isOnline={statusData.isOnline}
-              lastStatus={statusData.status}
-            />
+            <SyncStatusBadge statusSistema={statusData.statusSistema} />
 
             {statusData.ultimaExecucao ? (
               <>
                 <span className="text-sm text-foreground/70">
                   Última execução:{' '}
                   <span className="text-foreground font-medium">
-                    {formatDate(statusData.ultimaExecucao.iniciadoem)}
+                    {formatDate(statusData.ultimaExecucao.iniciadoEm)}
                   </span>
                 </span>
                 <span className="text-sm text-foreground/70">
                   Duração:{' '}
                   <DurationLabel
-                    duracaoms={statusData.ultimaExecucao.duracaoms}
+                    duracaoMs={statusData.ultimaExecucao.duracaoMs}
                     className="text-sm text-foreground font-medium"
                   />
                 </span>
@@ -120,6 +117,7 @@ export default function SincronizadorPage() {
             <Button
               variant="primary"
               isLoading={runMutation.isPending}
+              disabled={statusData.emExecucao}
               onClick={() => runMutation.mutate()}
               aria-label="Executar sincronização agora"
             >

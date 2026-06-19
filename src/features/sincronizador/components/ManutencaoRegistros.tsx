@@ -49,21 +49,6 @@ function TipoBadge({ tipo }: { tipo: RegistroTipo }) {
   )
 }
 
-/** Badge de situação ativo/desativado */
-function SituacaoBadge({ desativadoem }: { desativadoem: string | null }) {
-  const isAtivo = desativadoem === null
-  return (
-    <span
-      className={clsx(
-        'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium',
-        isAtivo ? 'bg-success-bg text-success-fg' : 'bg-badge-neutro-bg text-badge-neutro-fg',
-      )}
-    >
-      {isAtivo ? 'Ativo' : 'Desativado'}
-    </span>
-  )
-}
-
 /** Linha da tabela de resultados */
 function RegistroRow({
   registro,
@@ -72,8 +57,6 @@ function RegistroRow({
   registro: RegistroDto
   onDesativar: (r: RegistroSelecionado) => void
 }) {
-  const isAtivo = registro.desativadoem === null
-
   return (
     <tr className="border-[0.7px] border-border border-t-0 h-[38px]">
       <td className="px-5 py-[9px] text-[12px]">
@@ -83,49 +66,38 @@ function RegistroRow({
         {registro.hubspotId}
       </td>
       <td className="px-5 py-[9px] text-[12px]">
-        <span
-          title={registro.assunto}
-          className="block truncate max-w-[300px]"
-        >
+        <span title={registro.assunto} className="block truncate max-w-[300px]">
           {registro.assunto}
         </span>
       </td>
       <td className="px-5 py-[9px] text-[12px] text-foreground/70">
-        {registro.status}
-      </td>
-      <td className="px-5 py-[9px] text-[12px] text-foreground/70">
-        {registro.clienteNome ?? '—'}
+        {registro.pipeline ?? '—'}
       </td>
       <td className="px-5 py-[9px] text-[12px] text-center text-foreground/70">
-        {formatDate(registro.criadoem)}
+        {formatDate(registro.criadoEm)}
       </td>
       <td className="px-5 py-[9px] text-[12px] text-center">
-        <SituacaoBadge desativadoem={registro.desativadoem} />
-      </td>
-      <td className="px-5 py-[9px] text-[12px] text-center">
-        {isAtivo && (
-          <button
-            type="button"
-            onClick={() =>
-              onDesativar({
-                hubspotId: registro.hubspotId,
-                tipo: registro.tipo,
-                assunto: registro.assunto,
-              })
-            }
-            aria-label={`Desativar ${registro.tipo} #${registro.hubspotId} — ${registro.assunto}`}
-            className={clsx(
-              'inline-flex items-center justify-center gap-1.5 h-7 px-2',
-              'rounded-[5px] text-[12px] font-semibold text-error-fg',
-              'border border-transparent bg-transparent',
-              'transition-shadow duration-150 cursor-pointer',
-              'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
-              'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-            )}
-          >
-            Desativar
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() =>
+            onDesativar({
+              hubspotId: registro.hubspotId,
+              tipo: registro.tipo,
+              assunto: registro.assunto,
+            })
+          }
+          aria-label={`Desativar ${registro.tipo} #${registro.hubspotId} — ${registro.assunto}`}
+          className={clsx(
+            'inline-flex items-center justify-center gap-1.5 h-7 px-2',
+            'rounded-[5px] text-[12px] font-semibold text-error-fg',
+            'border border-transparent bg-transparent',
+            'transition-shadow duration-150 cursor-pointer',
+            'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+            'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
+          )}
+        >
+          Desativar
+        </button>
       </td>
     </tr>
   )
@@ -134,6 +106,8 @@ function RegistroRow({
 /**
  * Seção de manutenção de registros (tickets e projetos HubSpot).
  * Busca manual via RHF + Zod. Soft-delete com ConfirmDialog.
+ * Backend retorna apenas registros ativos — após o delete (204) a query é
+ * invalidada e a linha some da lista (o toast confirma a ação).
  */
 export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
   const { query, handleBusca } = useRegistrosBusca()
@@ -201,7 +175,7 @@ export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
         {query.isError && !query.isFetching && (
           <ErrorState
             message="Não foi possível carregar os registros."
-            onRetry={() => handleBusca(query.data ? '' : '')}
+            onRetry={() => query.refetch()}
           />
         )}
         {!query.isFetching && !query.isError && query.data !== undefined && registros.length === 0 && (
@@ -213,21 +187,19 @@ export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
             <table className="w-full border-collapse text-[12px]">
               <thead>
                 <tr>
-                  {['Tipo', 'ID HubSpot', 'Assunto', 'Status', 'Cliente', 'Criado em', 'Situação', 'Ação'].map(
-                    (col) => (
-                      <th
-                        key={col}
-                        className={clsx(
-                          'h-9 px-5 font-medium text-foreground/80 bg-background text-center',
-                          'border-[0.7px] border-border',
-                          'first:rounded-tl-[5px] last:rounded-tr-[5px]',
-                          'border-b border-border',
-                        )}
-                      >
-                        {col}
-                      </th>
-                    ),
-                  )}
+                  {['Tipo', 'ID HubSpot', 'Assunto', 'Pipeline', 'Criado em', 'Ação'].map((col) => (
+                    <th
+                      key={col}
+                      className={clsx(
+                        'h-9 px-5 font-medium text-foreground/80 bg-background text-center',
+                        'border-[0.7px] border-border',
+                        'first:rounded-tl-[5px] last:rounded-tr-[5px]',
+                        'border-b border-border',
+                      )}
+                    >
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>

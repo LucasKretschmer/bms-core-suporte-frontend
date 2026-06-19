@@ -4,10 +4,10 @@ import { ptBR } from 'date-fns/locale'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import type { ColumnDef, SortState } from '../../../components/ui/DataTable/types'
 import { DurationLabel } from './DurationLabel'
-import type { SincronizacaoLogDto, SyncStatus } from '../types/sincronizador'
+import type { LogDto, SyncStatus } from '../types/sincronizador'
 
 type LogsTableProps = {
-  data: SincronizacaoLogDto[]
+  data: LogDto[]
   sortBy: string
   sortDirection: 'asc' | 'desc'
   onSort: (key: string) => void
@@ -53,7 +53,7 @@ function formatDate(iso: string): string {
   }
 }
 
-const COLUMNS: ColumnDef<SincronizacaoLogDto>[] = [
+const COLUMNS: ColumnDef<LogDto>[] = [
   {
     key: 'status',
     header: 'Status',
@@ -72,22 +72,22 @@ const COLUMNS: ColumnDef<SincronizacaoLogDto>[] = [
     accessor: (row) => formatDisparo(row.disparo),
   },
   {
-    key: 'iniciadoem',
+    key: 'iniciadoEm',
     header: 'Iniciado em',
     sortable: true,
-    sortKey: 'iniciadoem',
+    sortKey: 'iniciadoEm',
     align: 'center',
     width: '160px',
-    accessor: (row) => formatDate(row.iniciadoem),
+    accessor: (row) => formatDate(row.iniciadoEm),
   },
   {
-    key: 'duracaoms',
+    key: 'duracaoMs',
     header: 'Duração',
     sortable: true,
-    sortKey: 'duracaoms',
+    sortKey: 'duracaoMs',
     align: 'center',
     width: '90px',
-    accessor: (row) => <DurationLabel duracaoms={row.duracaoms} />,
+    accessor: (row) => <DurationLabel duracaoMs={row.duracaoMs} />,
   },
   {
     key: 'contadores',
@@ -96,8 +96,8 @@ const COLUMNS: ColumnDef<SincronizacaoLogDto>[] = [
     align: 'center',
     accessor: (row) => (
       <span className="text-foreground/80">
-        {row.ticketsupserted}↑ {row.ticketsignorados}↷ / {row.projetosupserted}↑{' '}
-        {row.projetosignorados}↷
+        {row.ticketsUpserted}↑ {row.ticketsIgnorados}↷ / {row.projetosUpserted}↑{' '}
+        {row.projetosIgnorados}↷
       </span>
     ),
   },
@@ -107,20 +107,20 @@ const COLUMNS: ColumnDef<SincronizacaoLogDto>[] = [
     sortable: false,
     align: 'center',
     width: '100px',
-    accessor: (row) => `${row.empresasresolvidas} / ${row.contatosresolvidos}`,
+    accessor: (row) => `${row.empresasResolvidas} / ${row.contatosResolvidos}`,
   },
   {
-    key: 'mensagemerro',
+    key: 'mensagemErro',
     header: 'Erro',
     sortable: false,
     align: 'left',
     accessor: (row) =>
-      row.mensagemerro ? (
+      row.mensagemErro ? (
         <span
-          title={row.mensagemerro}
+          title={row.mensagemErro}
           className="block truncate max-w-[200px] text-error-fg text-xs"
         >
-          {row.mensagemerro}
+          {row.mensagemErro}
         </span>
       ) : (
         <span className="text-foreground/30">—</span>

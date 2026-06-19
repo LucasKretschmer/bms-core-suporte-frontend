@@ -1,9 +1,9 @@
 import { clsx } from 'clsx'
-import type { SyncStatus } from '../types/sincronizador'
+import type { StatusSistema } from '../types/sincronizador'
 
 type SyncStatusBadgeProps = {
-  isOnline: boolean
-  lastStatus: SyncStatus | null
+  /** Status agregado calculado pelo backend (não derivar no front). */
+  statusSistema: StatusSistema
   className?: string
 }
 
@@ -13,24 +13,19 @@ type BadgeConfig = {
   animate: boolean
 }
 
-function getConfig(isOnline: boolean, lastStatus: SyncStatus | null): BadgeConfig {
-  if (!isOnline) {
-    return { dotClass: 'bg-muted', label: 'Offline', animate: false }
-  }
-  if (lastStatus === 'erro') {
-    return { dotClass: 'bg-warning-fg', label: 'Degradado', animate: false }
-  }
-  return { dotClass: 'bg-success-fg', label: 'Online', animate: true }
+const STATUS_CONFIG: Record<StatusSistema, BadgeConfig> = {
+  online: { dotClass: 'bg-success-fg', label: 'Online', animate: true },
+  degradado: { dotClass: 'bg-warning-fg', label: 'Degradado', animate: false },
+  offline: { dotClass: 'bg-muted', label: 'Offline', animate: false },
 }
 
 /**
  * Badge de status do sincronizador.
- * Wrapper sobre o padrão visual do LiveIndicator (ponto + texto).
- * NÃO modifica o LiveIndicator original (lição FE-007).
+ * Consome `statusSistema` (online | degradado | offline) vindo do backend.
  * aria-live="polite" para leitores de tela.
  */
-export function SyncStatusBadge({ isOnline, lastStatus, className }: SyncStatusBadgeProps) {
-  const config = getConfig(isOnline, lastStatus)
+export function SyncStatusBadge({ statusSistema, className }: SyncStatusBadgeProps) {
+  const config = STATUS_CONFIG[statusSistema] ?? STATUS_CONFIG.offline
 
   return (
     <span

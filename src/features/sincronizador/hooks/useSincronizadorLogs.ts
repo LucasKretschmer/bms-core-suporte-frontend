@@ -3,9 +3,9 @@ import { useState } from 'react'
 import { listSincronizacaoLogs } from '../services/sincronizadorService'
 import type { SyncStatus } from '../types/sincronizador'
 
-type AllowedSortKey = 'iniciadoem' | 'status' | 'duracaoms'
+type AllowedSortKey = 'iniciadoEm' | 'status' | 'duracaoMs'
 
-const ALLOWED_SORT_KEYS: AllowedSortKey[] = ['iniciadoem', 'status', 'duracaoms']
+const ALLOWED_SORT_KEYS: AllowedSortKey[] = ['iniciadoEm', 'status', 'duracaoMs']
 
 /**
  * Hook de logs do sincronizador.
@@ -16,7 +16,7 @@ export function useSincronizadorLogs() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
   const [statusFilter, setStatusFilter] = useState<SyncStatus | undefined>(undefined)
-  const [sortBy, setSortBy] = useState<AllowedSortKey>('iniciadoem')
+  const [sortBy, setSortBy] = useState<AllowedSortKey>('iniciadoEm')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   const query = useQuery({

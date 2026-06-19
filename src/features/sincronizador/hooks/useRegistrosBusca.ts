@@ -1,32 +1,36 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { listRegistros } from '../services/sincronizadorService'
+import { buildBuscaParams, listRegistros } from '../services/sincronizadorService'
 
 /**
  * Hook de busca de registros para manutenção.
- * A query só é ativada após submit explícito do usuário.
- * Mínimo de 2 caracteres para evitar buscas excessivas.
+ * A query só é ativada após submit explícito e termo com >= 2 caracteres
+ * (backend responde 422 SEARCH_REQUIRED se a busca chegar vazia).
+ * Termo numérico vira `hubspotId`; senão `search` (ver buildBuscaParams).
  */
 export function useRegistrosBusca() {
-  const [busca, setBusca] = useState('')
+  const [termo, setTermo] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
+  const trimmed = termo.trim()
+  const enabled = submitted && trimmed.length >= 2
+
   const query = useQuery({
-    queryKey: ['sincronizador-registros', busca],
-    queryFn: () => listRegistros({ busca }),
-    enabled: submitted && busca.length >= 2,
+    queryKey: ['sincronizador-registros', trimmed],
+    queryFn: () => listRegistros(buildBuscaParams(trimmed)),
+    enabled,
     staleTime: 30_000,
   })
 
   function handleBusca(valor: string) {
-    setBusca(valor)
+    setTermo(valor)
     setSubmitted(true)
   }
 
   function reset() {
-    setBusca('')
+    setTermo('')
     setSubmitted(false)
   }
 
-  return { query, busca, handleBusca, reset }
+  return { query, termo, handleBusca, reset }
 }

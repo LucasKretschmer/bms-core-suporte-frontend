@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { formatDuration } from '../../../utils/formatDuration'
 
 type DurationLabelProps = {
-  duracaoms: number | null
+  duracaoMs: number | null
   className?: string
 }
 
@@ -10,10 +10,10 @@ type DurationLabelProps = {
  * Exibe duração em ms formatada de forma legível.
  * Lógica de formatação em utils/formatDuration (testável de forma isolada).
  */
-export function DurationLabel({ duracaoms, className }: DurationLabelProps) {
+export function DurationLabel({ duracaoMs, className }: DurationLabelProps) {
   return (
     <span className={clsx('text-xs text-foreground/60', className)}>
-      {formatDuration(duracaoms)}
+      {formatDuration(duracaoMs)}
     </span>
   )
 }

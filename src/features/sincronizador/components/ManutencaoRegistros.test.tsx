@@ -8,6 +8,7 @@ import type { RegistroDto } from '../types/sincronizador'
 
 const mockHandleBusca = vi.fn()
 const mockReset = vi.fn()
+const mockRefetch = vi.fn()
 const mockMutate = vi.fn()
 
 // Estado simulado da query de busca
@@ -15,16 +16,18 @@ let mockQueryState: {
   data: RegistroDto[] | undefined
   isFetching: boolean
   isError: boolean
+  refetch: typeof mockRefetch
 } = {
   data: undefined,
   isFetching: false,
   isError: false,
+  refetch: mockRefetch,
 }
 
 vi.mock('../hooks/useRegistrosBusca', () => ({
   useRegistrosBusca: () => ({
     query: mockQueryState,
-    busca: '',
+    termo: '',
     handleBusca: mockHandleBusca,
     reset: mockReset,
   }),
@@ -49,13 +52,11 @@ import { ManutencaoRegistros } from './ManutencaoRegistros'
 
 function makeRegistro(overrides?: Partial<RegistroDto>): RegistroDto {
   return {
-    hubspotId: '123456',
     tipo: 'ticket',
+    hubspotId: '123456',
     assunto: 'Problema com login',
-    status: 'aberto',
-    clienteNome: 'Empresa XPTO',
-    criadoem: '2026-01-15T10:00:00Z',
-    desativadoem: null,
+    pipeline: 'Suporte',
+    criadoEm: '2026-01-15T10:00:00Z',
     ...overrides,
   }
 }
@@ -71,7 +72,12 @@ function createWrapper() {
 describe('ManutencaoRegistros', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockQueryState = { data: undefined, isFetching: false, isError: false }
+    mockQueryState = {
+      data: undefined,
+      isFetching: false,
+      isError: false,
+      refetch: mockRefetch,
+    }
   })
 
   it('exibe erro de validação inline quando campo de busca tem 1 char e submit é tentado', async () => {
@@ -87,38 +93,37 @@ describe('ManutencaoRegistros', () => {
   })
 
   it('mostra EmptyState quando resultado é lista vazia', () => {
-    mockQueryState = { data: [], isFetching: false, isError: false }
+    mockQueryState = { ...mockQueryState, data: [] }
     render(<ManutencaoRegistros />, { wrapper: createWrapper() })
     expect(screen.getByText('Nenhum registro encontrado para esta busca.')).toBeInTheDocument()
   })
 
   it('mostra ErrorState quando query retorna erro', () => {
-    mockQueryState = { data: undefined, isFetching: false, isError: true }
+    mockQueryState = { ...mockQueryState, data: undefined, isError: true }
     render(<ManutencaoRegistros />, { wrapper: createWrapper() })
     expect(screen.getByText('Não foi possível carregar os registros.')).toBeInTheDocument()
   })
 
-  it('botão Desativar visível para registro ativo (desativadoem=null)', () => {
-    const registro = makeRegistro({ desativadoem: null })
-    mockQueryState = { data: [registro], isFetching: false, isError: false }
+  it('ErrorState → onRetry chama query.refetch (não nova busca vazia)', () => {
+    mockQueryState = { ...mockQueryState, data: undefined, isError: true }
+    render(<ManutencaoRegistros />, { wrapper: createWrapper() })
+
+    fireEvent.click(screen.getByText('Tentar novamente'))
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1)
+    expect(mockHandleBusca).not.toHaveBeenCalled()
+  })
+
+  it('botão Desativar visível para registro retornado', () => {
+    mockQueryState = { ...mockQueryState, data: [makeRegistro()] }
 
     render(<ManutencaoRegistros />, { wrapper: createWrapper() })
 
     expect(screen.getByRole('button', { name: /Desativar ticket #123456/i })).toBeInTheDocument()
   })
 
-  it('botão Desativar oculto para registro já desativado', () => {
-    const registro = makeRegistro({ desativadoem: '2026-01-20T10:00:00Z' })
-    mockQueryState = { data: [registro], isFetching: false, isError: false }
-
-    render(<ManutencaoRegistros />, { wrapper: createWrapper() })
-
-    expect(screen.queryByRole('button', { name: /Desativar ticket #123456/i })).not.toBeInTheDocument()
-  })
-
   it('abre ConfirmDialog ao clicar em Desativar', async () => {
-    const registro = makeRegistro({ desativadoem: null })
-    mockQueryState = { data: [registro], isFetching: false, isError: false }
+    mockQueryState = { ...mockQueryState, data: [makeRegistro()] }
 
     render(<ManutencaoRegistros />, { wrapper: createWrapper() })
 
@@ -130,17 +135,14 @@ describe('ManutencaoRegistros', () => {
   })
 
   it('ConfirmDialog exibe informações do registro selecionado', async () => {
-    const registro = makeRegistro({ desativadoem: null })
-    mockQueryState = { data: [registro], isFetching: false, isError: false }
+    mockQueryState = { ...mockQueryState, data: [makeRegistro()] }
 
     render(<ManutencaoRegistros />, { wrapper: createWrapper() })
 
     fireEvent.click(screen.getByRole('button', { name: /Desativar ticket #123456/i }))
 
     await waitFor(() => {
-      // Verificar que o dialog abriu com o título correto
       expect(screen.getByText('Desativar registro')).toBeInTheDocument()
-      // Verificar que a descrição contém o assunto do registro
       const desc = screen.getByRole('alertdialog')
       expect(desc).toHaveTextContent('Problema com login')
       expect(desc).toHaveTextContent('123456')
