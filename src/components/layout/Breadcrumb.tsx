@@ -4,6 +4,10 @@ import { clsx } from 'clsx'
 export type BreadcrumbItem = {
   label: string
   href?: string
+  /** Params da rota tipada (ex.: { clientId }) — repassados ao <Link params> */
+  params?: Record<string, string>
+  /** Search params a preservar (ex.: filtros/origem) — repassados ao <Link search> */
+  search?: Record<string, unknown>
 }
 
 type BreadcrumbProps = {
@@ -33,6 +37,8 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
             ) : (
               <Link
                 to={item.href}
+                params={item.params}
+                search={item.search}
                 className="hover:text-primary transition-colors"
               >
                 {item.label}

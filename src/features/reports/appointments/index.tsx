@@ -5,13 +5,14 @@
  * Inclui tickets com totalSeconds = 0 (sem apontamentos no período).
  * Acessível a todos os usuários autenticados (AtendentePlus).
  *
- * Linha clicável: abre o ticket no HubSpot em nova aba (rel="noopener noreferrer").
- * TODO: quando existir rota de logs do ticket (/relatorios/tickets/:id), navegar para ela.
+ * Linha clicável: navega para o detalhe interno do ticket (/relatorios/tickets/$ticketId).
+ * O link do HubSpot continua disponível dentro da célula "Ticket" (stopPropagation).
  *
  * Export: CSV e Excel com as colunas mapeadas (nunca categoria do HubSpot).
  */
 
 import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../components/ui/Pagination'
@@ -25,9 +26,13 @@ import { formatSeconds } from '../shared/utils/formatters'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
 import { usePermissions } from '../../../hooks/usePermissions'
+import { saveReportFilters } from '../../../utils/reportFilters'
 import { useAppointments } from './hooks/useAppointments'
 import { buildAppointmentsColumns } from './columns'
 import type { TicketReportItemDto } from '../shared/types/reports'
+
+/** Chave de persistência de filtros desta tela (R2) */
+const FILTERS_KEY = 'appointments'
 
 // ── Opções de scope ──────────────────────────────────────────────────────────
 
@@ -68,6 +73,7 @@ function mapToExportRow(item: TicketReportItemDto): ExportRow {
 export default function AppointmentsPage() {
   const { isCoordenadorOuAcima } = usePermissions()
   const toast = useToast()
+  const navigate = useNavigate()
   const [isExporting, setIsExporting] = useState(false)
 
   const {
@@ -99,13 +105,19 @@ export default function AppointmentsPage() {
   // Colunas com memoize — reconstrução apenas se necessário
   const columns = useMemo(() => buildAppointmentsColumns(), [])
 
-  // Navegação por linha: abre HubSpot em nova aba
-  // TODO: quando existir rota /relatorios/tickets/:id, navegar para ela primeiro
-  const handleRowClick = useCallback((row: TicketReportItemDto) => {
-    if (row.hubspotUrl) {
-      window.open(row.hubspotUrl, '_blank', 'noopener,noreferrer')
-    }
-  }, [])
+  // Navegação por linha: detalhe interno do ticket (por UUID).
+  // O link externo do HubSpot continua na célula "Ticket" (stopPropagation).
+  const handleRowClick = useCallback(
+    (row: TicketReportItemDto) => {
+      saveReportFilters(FILTERS_KEY, { ...filters, sortBy, sortDirection })
+      void navigate({
+        to: '/relatorios/tickets/$ticketId',
+        params: { ticketId: row.ticketId },
+        search: { from: 'apontamentos' },
+      })
+    },
+    [navigate, filters, sortBy, sortDirection],
+  )
 
   const sortState = useDeferredValue({ sortBy, sortDirection })
 

@@ -13,12 +13,17 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as AuthSincronizadorRouteImport } from './routes/_auth/sincronizador'
+import { Route as AuthEquipesRouteImport } from './routes/_auth/equipes'
+import { Route as AuthConfiguracoesRouteImport } from './routes/_auth/configuracoes'
+import { Route as AuthCategoriasRouteImport } from './routes/_auth/categorias'
 import { Route as AuthRelatoriosProdutividadeRouteImport } from './routes/_auth/relatorios/produtividade'
 import { Route as AuthRelatoriosConsumoPlanosRouteImport } from './routes/_auth/relatorios/consumo-planos'
 import { Route as AuthRelatoriosClienteRouteImport } from './routes/_auth/relatorios/cliente'
 import { Route as AuthRelatoriosApontamentosRouteImport } from './routes/_auth/relatorios/apontamentos'
 import { Route as AuthDashboardsSuporteRouteImport } from './routes/_auth/dashboards/suporte'
 import { Route as AuthDashboardsOnboardingRouteImport } from './routes/_auth/dashboards/onboarding'
+import { Route as AuthRelatoriosTicketsTicketIdRouteImport } from './routes/_auth/relatorios/tickets.$ticketId'
+import { Route as AuthRelatoriosClientesClientIdRouteImport } from './routes/_auth/relatorios/clientes.$clientId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -37,6 +42,21 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
 const AuthSincronizadorRoute = AuthSincronizadorRouteImport.update({
   id: '/sincronizador',
   path: '/sincronizador',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthEquipesRoute = AuthEquipesRouteImport.update({
+  id: '/equipes',
+  path: '/equipes',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthConfiguracoesRoute = AuthConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCategoriasRoute = AuthCategoriasRouteImport.update({
+  id: '/categorias',
+  path: '/categorias',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthRelatoriosProdutividadeRoute =
@@ -73,10 +93,25 @@ const AuthDashboardsOnboardingRoute =
     path: '/dashboards/onboarding',
     getParentRoute: () => AuthRoute,
   } as any)
+const AuthRelatoriosTicketsTicketIdRoute =
+  AuthRelatoriosTicketsTicketIdRouteImport.update({
+    id: '/relatorios/tickets/$ticketId',
+    path: '/relatorios/tickets/$ticketId',
+    getParentRoute: () => AuthRoute,
+  } as any)
+const AuthRelatoriosClientesClientIdRoute =
+  AuthRelatoriosClientesClientIdRouteImport.update({
+    id: '/relatorios/clientes/$clientId',
+    path: '/relatorios/clientes/$clientId',
+    getParentRoute: () => AuthRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
   '/login': typeof LoginRoute
+  '/categorias': typeof AuthCategoriasRoute
+  '/configuracoes': typeof AuthConfiguracoesRoute
+  '/equipes': typeof AuthEquipesRoute
   '/sincronizador': typeof AuthSincronizadorRoute
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
   '/dashboards/suporte': typeof AuthDashboardsSuporteRoute
@@ -84,9 +119,14 @@ export interface FileRoutesByFullPath {
   '/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
   '/relatorios/produtividade': typeof AuthRelatoriosProdutividadeRoute
+  '/relatorios/clientes/$clientId': typeof AuthRelatoriosClientesClientIdRoute
+  '/relatorios/tickets/$ticketId': typeof AuthRelatoriosTicketsTicketIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/categorias': typeof AuthCategoriasRoute
+  '/configuracoes': typeof AuthConfiguracoesRoute
+  '/equipes': typeof AuthEquipesRoute
   '/sincronizador': typeof AuthSincronizadorRoute
   '/': typeof AuthIndexRoute
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
@@ -95,11 +135,16 @@ export interface FileRoutesByTo {
   '/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
   '/relatorios/produtividade': typeof AuthRelatoriosProdutividadeRoute
+  '/relatorios/clientes/$clientId': typeof AuthRelatoriosClientesClientIdRoute
+  '/relatorios/tickets/$ticketId': typeof AuthRelatoriosTicketsTicketIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRoute
+  '/_auth/categorias': typeof AuthCategoriasRoute
+  '/_auth/configuracoes': typeof AuthConfiguracoesRoute
+  '/_auth/equipes': typeof AuthEquipesRoute
   '/_auth/sincronizador': typeof AuthSincronizadorRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
@@ -108,12 +153,17 @@ export interface FileRoutesById {
   '/_auth/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/_auth/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
   '/_auth/relatorios/produtividade': typeof AuthRelatoriosProdutividadeRoute
+  '/_auth/relatorios/clientes/$clientId': typeof AuthRelatoriosClientesClientIdRoute
+  '/_auth/relatorios/tickets/$ticketId': typeof AuthRelatoriosTicketsTicketIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/categorias'
+    | '/configuracoes'
+    | '/equipes'
     | '/sincronizador'
     | '/dashboards/onboarding'
     | '/dashboards/suporte'
@@ -121,9 +171,14 @@ export interface FileRouteTypes {
     | '/relatorios/cliente'
     | '/relatorios/consumo-planos'
     | '/relatorios/produtividade'
+    | '/relatorios/clientes/$clientId'
+    | '/relatorios/tickets/$ticketId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/categorias'
+    | '/configuracoes'
+    | '/equipes'
     | '/sincronizador'
     | '/'
     | '/dashboards/onboarding'
@@ -132,10 +187,15 @@ export interface FileRouteTypes {
     | '/relatorios/cliente'
     | '/relatorios/consumo-planos'
     | '/relatorios/produtividade'
+    | '/relatorios/clientes/$clientId'
+    | '/relatorios/tickets/$ticketId'
   id:
     | '__root__'
     | '/_auth'
     | '/login'
+    | '/_auth/categorias'
+    | '/_auth/configuracoes'
+    | '/_auth/equipes'
     | '/_auth/sincronizador'
     | '/_auth/'
     | '/_auth/dashboards/onboarding'
@@ -144,6 +204,8 @@ export interface FileRouteTypes {
     | '/_auth/relatorios/cliente'
     | '/_auth/relatorios/consumo-planos'
     | '/_auth/relatorios/produtividade'
+    | '/_auth/relatorios/clientes/$clientId'
+    | '/_auth/relatorios/tickets/$ticketId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,6 +241,27 @@ declare module '@tanstack/react-router' {
       path: '/sincronizador'
       fullPath: '/sincronizador'
       preLoaderRoute: typeof AuthSincronizadorRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/equipes': {
+      id: '/_auth/equipes'
+      path: '/equipes'
+      fullPath: '/equipes'
+      preLoaderRoute: typeof AuthEquipesRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/configuracoes': {
+      id: '/_auth/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthConfiguracoesRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/categorias': {
+      id: '/_auth/categorias'
+      path: '/categorias'
+      fullPath: '/categorias'
+      preLoaderRoute: typeof AuthCategoriasRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/relatorios/produtividade': {
@@ -223,10 +306,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardsOnboardingRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/relatorios/tickets/$ticketId': {
+      id: '/_auth/relatorios/tickets/$ticketId'
+      path: '/relatorios/tickets/$ticketId'
+      fullPath: '/relatorios/tickets/$ticketId'
+      preLoaderRoute: typeof AuthRelatoriosTicketsTicketIdRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/relatorios/clientes/$clientId': {
+      id: '/_auth/relatorios/clientes/$clientId'
+      path: '/relatorios/clientes/$clientId'
+      fullPath: '/relatorios/clientes/$clientId'
+      preLoaderRoute: typeof AuthRelatoriosClientesClientIdRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
 interface AuthRouteChildren {
+  AuthCategoriasRoute: typeof AuthCategoriasRoute
+  AuthConfiguracoesRoute: typeof AuthConfiguracoesRoute
+  AuthEquipesRoute: typeof AuthEquipesRoute
   AuthSincronizadorRoute: typeof AuthSincronizadorRoute
   AuthIndexRoute: typeof AuthIndexRoute
   AuthDashboardsOnboardingRoute: typeof AuthDashboardsOnboardingRoute
@@ -235,9 +335,14 @@ interface AuthRouteChildren {
   AuthRelatoriosClienteRoute: typeof AuthRelatoriosClienteRoute
   AuthRelatoriosConsumoPlanosRoute: typeof AuthRelatoriosConsumoPlanosRoute
   AuthRelatoriosProdutividadeRoute: typeof AuthRelatoriosProdutividadeRoute
+  AuthRelatoriosClientesClientIdRoute: typeof AuthRelatoriosClientesClientIdRoute
+  AuthRelatoriosTicketsTicketIdRoute: typeof AuthRelatoriosTicketsTicketIdRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthCategoriasRoute: AuthCategoriasRoute,
+  AuthConfiguracoesRoute: AuthConfiguracoesRoute,
+  AuthEquipesRoute: AuthEquipesRoute,
   AuthSincronizadorRoute: AuthSincronizadorRoute,
   AuthIndexRoute: AuthIndexRoute,
   AuthDashboardsOnboardingRoute: AuthDashboardsOnboardingRoute,
@@ -246,6 +351,8 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthRelatoriosClienteRoute: AuthRelatoriosClienteRoute,
   AuthRelatoriosConsumoPlanosRoute: AuthRelatoriosConsumoPlanosRoute,
   AuthRelatoriosProdutividadeRoute: AuthRelatoriosProdutividadeRoute,
+  AuthRelatoriosClientesClientIdRoute: AuthRelatoriosClientesClientIdRoute,
+  AuthRelatoriosTicketsTicketIdRoute: AuthRelatoriosTicketsTicketIdRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

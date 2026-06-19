@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Input } from '../../../components/ui/Input'
 import { Pagination } from '../../../components/ui/Pagination'
@@ -12,15 +13,21 @@ import { listPlanConsumption } from '../shared/services/reportsService'
 import { planConsumptionColumns } from './columns'
 import { usePlanConsumption } from './hooks/usePlanConsumption'
 import { formatHours, formatPercent } from '../shared/utils/formatters'
+import { saveReportFilters } from '../../../utils/reportFilters'
+import type { PlanConsumptionItemDto } from '../shared/types/reports'
 
 /** Chave única para persistência da ordem das colunas */
 const TABLE_ID = 'plan-consumption'
+
+/** Chave de persistência de filtros desta tela (R2) */
+const FILTERS_KEY = 'plan-consumption'
 
 /**
  * Página U3 — Consumo de Planos.
  * Restrita a CoordenadorPlus (guarda de rota configurada em routes/_auth/relatorios/consumo-planos.tsx).
  */
 export default function PlanConsumptionPage() {
+  const navigate = useNavigate()
   const {
     data,
     isLoading,
@@ -34,6 +41,19 @@ export default function PlanConsumptionPage() {
     setSort,
     setFilters,
   } = usePlanConsumption()
+
+  // Drill-down: linha → tickets do cliente (preserva filtros em sessionStorage, R2)
+  const handleRowClick = useCallback(
+    (row: PlanConsumptionItemDto) => {
+      saveReportFilters(FILTERS_KEY, { ...filters, sortBy, sortDirection })
+      void navigate({
+        to: '/relatorios/clientes/$clientId',
+        params: { clientId: row.clientId },
+        search: { from: 'consumo-planos' },
+      })
+    },
+    [navigate, filters, sortBy, sortDirection],
+  )
 
   // Debounce para o campo de busca
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -173,6 +193,8 @@ export default function PlanConsumptionPage() {
         data={data?.items ?? []}
         sortState={{ sortBy, sortDirection }}
         onSort={setSort}
+        onRowClick={handleRowClick}
+        isClickable
       />
       {data && data.totalPages > 0 && (
         <div className="px-5 border-t border-border">

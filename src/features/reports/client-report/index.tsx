@@ -11,15 +11,16 @@
  * Filtros obrigatórios: Cliente (combobox assíncrono) + Competência (mês).
  * Enquanto não preenchidos, exibe EmptyState com instrução ao usuário.
  *
- * Linhas clicáveis: ao clicar numa linha, abre o ticket no HubSpot (nova aba).
- * TODO (Manager): quando existir a rota de logs do ticket na aplicação,
- * substituir a abertura do HubSpot por navegação interna para os logs do ticket.
+ * Linhas clicáveis: ao clicar numa linha, navega para o detalhe interno do ticket
+ * (/relatorios/tickets/$ticketId). O detalhe é uso interno — a privacidade do cliente
+ * (categoria HubSpot) permanece preservada nesta tela/PDF/export (R5).
  *
  * Serviço / Serviço - Secundário: campos do HubSpot não disponíveis no DTO atual.
  * TODO (Manager): adicionar os campos ao ClientReportItemDto e às colunas quando disponíveis.
  */
 
 import { useCallback, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../components/ui/Pagination'
 import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
@@ -100,6 +101,7 @@ function itemToExportRow(item: ClientReportItemDto): Record<string, string | num
  * Restrita a CoordenadorPlus (guarda de rota em routes/_auth/relatorios/cliente.tsx).
  */
 export default function ClientReportPage() {
+  const navigate = useNavigate()
   const {
     reportData,
     paginatedData,
@@ -188,16 +190,17 @@ export default function ClientReportPage() {
     }
   }
 
-  /** Ao clicar numa linha, abre o ticket no HubSpot em nova aba */
-  function handleRowClick(row: ClientReportItemDto) {
-    // TODO (Manager): quando existir rota de logs do ticket na aplicação,
-    // navegar internamente para os logs do ticket em vez de abrir o HubSpot.
-    // Por ora: abre hubspotUrl se disponível (campo não está no DTO atual — ver análise).
-    // O clique sem URL não faz nada visível (não há hubspotUrl no DTO atual de ClientReportItemDto).
-    // Quando o backend incluir hubspotUrl no ClientReportItemDto, usar:
-    //   if (row.hubspotUrl) window.open(row.hubspotUrl, '_blank', 'noopener,noreferrer')
-    void row // satisfaz TypeScript sem usar `any`
-  }
+  /** Ao clicar numa linha, navega para o detalhe interno do ticket (por UUID). */
+  const handleRowClick = useCallback(
+    (row: ClientReportItemDto) => {
+      void navigate({
+        to: '/relatorios/tickets/$ticketId',
+        params: { ticketId: row.ticketId },
+        search: { from: 'cliente', clientId: filters.clientId ?? undefined },
+      })
+    },
+    [navigate, filters.clientId],
+  )
 
   // Colunas da tabela — com linha clicável (cursor-pointer, hover por sombra)
   const columns = buildClientReportColumns({

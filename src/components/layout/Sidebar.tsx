@@ -123,6 +123,41 @@ const reportItems: NavItem[] = [
  * Visibilidade de itens CoordenadorPlus controlada por usePermissions().
  * O backend é a fonte de verdade — a guarda é apenas UX.
  */
+/** Itens do grupo Administração — gestão de configurações (CoordenadorPlus) */
+const administracaoItems: NavItem[] = [
+  {
+    label: 'Categorias',
+    href: '/categorias',
+    requiresCoordenadorPlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 8V3a2 2 0 012-2h2z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Equipes e Atendentes',
+    href: '/equipes',
+    requiresCoordenadorPlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Configurações',
+    href: '/configuracoes',
+    requiresCoordenadorPlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+]
+
 /** Itens de administração (visíveis apenas para GerentePlus) */
 const adminItems: NavItem[] = [
   {
@@ -151,6 +186,7 @@ const adminItems: NavItem[] = [
 export function Sidebar({ isCollapsed }: SidebarProps) {
   const [dashboardsOpen, setDashboardsOpen] = useState(true)
   const [reportsOpen, setReportsOpen] = useState(true)
+  const [administracaoOpen, setAdministracaoOpen] = useState(true)
   const { isCoordenadorOuAcima, isGerentePlus } = usePermissions()
 
   const visibleDashboardItems = dashboardItems.filter(
@@ -158,6 +194,10 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
   )
 
   const visibleReportItems = reportItems.filter(
+    (item) => !item.requiresCoordenadorPlus || isCoordenadorOuAcima,
+  )
+
+  const visibleAdministracaoItems = administracaoItems.filter(
     (item) => !item.requiresCoordenadorPlus || isCoordenadorOuAcima,
   )
 
@@ -285,6 +325,52 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
             </div>
           )}
         </div>
+
+        {/* Grupo: Administração — gestão de configurações (CoordenadorPlus) */}
+        {visibleAdministracaoItems.length > 0 && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => setAdministracaoOpen((prev) => !prev)}
+              aria-expanded={administracaoOpen}
+              className={clsx(
+                'flex items-center w-full h-10 gap-2 rounded-[4px] mx-2 px-2',
+                isCollapsed ? 'justify-center' : 'justify-between',
+                'text-sidebar-fg/70 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
+                'text-xs font-medium uppercase tracking-wide',
+              )}
+            >
+              {!isCollapsed && <span>Administração</span>}
+              {isCollapsed && (
+                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                </svg>
+              )}
+              {!isCollapsed && (
+                <svg
+                  aria-hidden="true"
+                  className={clsx('h-3 w-3 transition-transform', !administracaoOpen && '-rotate-90')}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </button>
+
+            {administracaoOpen && (
+              <div className="mt-1">
+                {visibleAdministracaoItems.map((item) => (
+                  <SubNavLink key={item.href} href={item.href} icon={item.icon} isCollapsed={isCollapsed}>
+                    {item.label}
+                  </SubNavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Itens de administração (GerentePlus) */}
         {visibleAdminItems.length > 0 && (

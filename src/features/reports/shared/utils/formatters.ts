@@ -56,6 +56,19 @@ export function formatDateTime(isoString: string): string {
   }
 }
 
+/** ISO Z → hora brasileira "HH:mm" (fuso America/Sao_Paulo) */
+export function formatTime(isoString: string): string {
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+    }).format(new Date(isoString))
+  } catch {
+    return '—'
+  }
+}
+
 /** YYYY-MM → "Março 2024" (capitalizado) */
 export function formatMonth(yearMonth: string): string {
   try {
