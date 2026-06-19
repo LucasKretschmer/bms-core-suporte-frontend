@@ -1,0 +1,272 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { clsx } from 'clsx'
+import { format, parseISO } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { Button } from '../../../components/ui/Button'
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
+import { EmptyState } from '../../../components/ui/EmptyState'
+import { ErrorState } from '../../../components/ui/ErrorState'
+import { Input } from '../../../components/ui/Input'
+import { Skeleton } from '../../../components/ui/Skeleton'
+import { useDeleteRegistro } from '../hooks/useDeleteRegistro'
+import { useRegistrosBusca } from '../hooks/useRegistrosBusca'
+import type { BuscaRegistroFormData, RegistroDto, RegistroTipo } from '../types/sincronizador'
+import { buscaRegistroSchema } from '../types/sincronizador'
+
+type ManutencaoRegistrosProps = {
+  className?: string
+}
+
+type RegistroSelecionado = {
+  hubspotId: string
+  tipo: RegistroTipo
+  assunto: string
+}
+
+function formatDate(iso: string): string {
+  try {
+    return format(parseISO(iso), 'dd/MM/yyyy', { locale: ptBR })
+  } catch {
+    return iso
+  }
+}
+
+/** Badge de tipo ticket/projeto */
+function TipoBadge({ tipo }: { tipo: RegistroTipo }) {
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium',
+        tipo === 'ticket'
+          ? 'bg-info-bg text-info-fg'
+          : 'bg-badge-plano-bg text-badge-plano-fg',
+      )}
+    >
+      {tipo === 'ticket' ? 'Ticket' : 'Projeto'}
+    </span>
+  )
+}
+
+/** Badge de situação ativo/desativado */
+function SituacaoBadge({ desativadoem }: { desativadoem: string | null }) {
+  const isAtivo = desativadoem === null
+  return (
+    <span
+      className={clsx(
+        'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium',
+        isAtivo ? 'bg-success-bg text-success-fg' : 'bg-badge-neutro-bg text-badge-neutro-fg',
+      )}
+    >
+      {isAtivo ? 'Ativo' : 'Desativado'}
+    </span>
+  )
+}
+
+/** Linha da tabela de resultados */
+function RegistroRow({
+  registro,
+  onDesativar,
+}: {
+  registro: RegistroDto
+  onDesativar: (r: RegistroSelecionado) => void
+}) {
+  const isAtivo = registro.desativadoem === null
+
+  return (
+    <tr className="border-[0.7px] border-border border-t-0 h-[38px]">
+      <td className="px-5 py-[9px] text-[12px]">
+        <TipoBadge tipo={registro.tipo} />
+      </td>
+      <td className="px-5 py-[9px] text-[12px] font-mono text-foreground/80">
+        {registro.hubspotId}
+      </td>
+      <td className="px-5 py-[9px] text-[12px]">
+        <span
+          title={registro.assunto}
+          className="block truncate max-w-[300px]"
+        >
+          {registro.assunto}
+        </span>
+      </td>
+      <td className="px-5 py-[9px] text-[12px] text-foreground/70">
+        {registro.status}
+      </td>
+      <td className="px-5 py-[9px] text-[12px] text-foreground/70">
+        {registro.clienteNome ?? '—'}
+      </td>
+      <td className="px-5 py-[9px] text-[12px] text-center text-foreground/70">
+        {formatDate(registro.criadoem)}
+      </td>
+      <td className="px-5 py-[9px] text-[12px] text-center">
+        <SituacaoBadge desativadoem={registro.desativadoem} />
+      </td>
+      <td className="px-5 py-[9px] text-[12px] text-center">
+        {isAtivo && (
+          <button
+            type="button"
+            onClick={() =>
+              onDesativar({
+                hubspotId: registro.hubspotId,
+                tipo: registro.tipo,
+                assunto: registro.assunto,
+              })
+            }
+            aria-label={`Desativar ${registro.tipo} #${registro.hubspotId} — ${registro.assunto}`}
+            className={clsx(
+              'inline-flex items-center justify-center gap-1.5 h-7 px-2',
+              'rounded-[5px] text-[12px] font-semibold text-error-fg',
+              'border border-transparent bg-transparent',
+              'transition-shadow duration-150 cursor-pointer',
+              'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+              'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
+            )}
+          >
+            Desativar
+          </button>
+        )}
+      </td>
+    </tr>
+  )
+}
+
+/**
+ * Seção de manutenção de registros (tickets e projetos HubSpot).
+ * Busca manual via RHF + Zod. Soft-delete com ConfirmDialog.
+ */
+export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
+  const { query, handleBusca } = useRegistrosBusca()
+  const deleteMutation = useDeleteRegistro()
+  const [registroSelecionado, setRegistroSelecionado] = useState<RegistroSelecionado | null>(null)
+  const desativarButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<BuscaRegistroFormData>({
+    resolver: zodResolver(buscaRegistroSchema),
+  })
+
+  function onSubmit(values: BuscaRegistroFormData) {
+    handleBusca(values.busca)
+  }
+
+  function handleDesativar(r: RegistroSelecionado) {
+    setRegistroSelecionado(r)
+  }
+
+  function handleConfirmDelete() {
+    if (!registroSelecionado) return
+    deleteMutation.mutate(
+      { tipo: registroSelecionado.tipo, hubspotId: registroSelecionado.hubspotId },
+      {
+        onSettled: () => {
+          setRegistroSelecionado(null)
+          // Devolver foco ao botão que abriu o dialog
+          desativarButtonRef.current?.focus()
+        },
+      },
+    )
+  }
+
+  const registros: RegistroDto[] = query.data ?? []
+
+  return (
+    <div className={className}>
+      {/* Formulário de busca */}
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex items-end gap-3 flex-wrap">
+        <div className="flex-1 min-w-[200px] max-w-sm">
+          <Input
+            label="Buscar registros"
+            placeholder="ID HubSpot ou trecho do assunto"
+            error={errors.busca?.message}
+            {...register('busca')}
+          />
+        </div>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={isSubmitting}
+          isLoading={query.isFetching && !query.data}
+        >
+          Buscar
+        </Button>
+      </form>
+
+      {/* Resultados */}
+      <div className="mt-4">
+        {query.isFetching && !query.data && <Skeleton lines={4} />}
+        {query.isError && !query.isFetching && (
+          <ErrorState
+            message="Não foi possível carregar os registros."
+            onRetry={() => handleBusca(query.data ? '' : '')}
+          />
+        )}
+        {!query.isFetching && !query.isError && query.data !== undefined && registros.length === 0 && (
+          <EmptyState message="Nenhum registro encontrado para esta busca." />
+        )}
+
+        {registros.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[12px]">
+              <thead>
+                <tr>
+                  {['Tipo', 'ID HubSpot', 'Assunto', 'Status', 'Cliente', 'Criado em', 'Situação', 'Ação'].map(
+                    (col) => (
+                      <th
+                        key={col}
+                        className={clsx(
+                          'h-9 px-5 font-medium text-foreground/80 bg-background text-center',
+                          'border-[0.7px] border-border',
+                          'first:rounded-tl-[5px] last:rounded-tr-[5px]',
+                          'border-b border-border',
+                        )}
+                      >
+                        {col}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {registros.map((r) => (
+                  <RegistroRow
+                    key={`${r.tipo}-${r.hubspotId}`}
+                    registro={r}
+                    onDesativar={(sel) => {
+                      // Guardar ref do botão ativo para devolver o foco
+                      desativarButtonRef.current = document.activeElement as HTMLButtonElement
+                      handleDesativar(sel)
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Dialog de confirmação */}
+      <ConfirmDialog
+        isOpen={registroSelecionado !== null}
+        onClose={() => {
+          setRegistroSelecionado(null)
+          desativarButtonRef.current?.focus()
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Desativar registro"
+        description={
+          registroSelecionado
+            ? `Deseja desativar o ${registroSelecionado.tipo} #${registroSelecionado.hubspotId} — ${registroSelecionado.assunto}? Esta ação pode ser revertida pelo suporte técnico.`
+            : ''
+        }
+        confirmLabel="Desativar"
+        cancelLabel="Cancelar"
+        isLoading={deleteMutation.isPending}
+        variant="danger"
+      />
+    </div>
+  )
+}
