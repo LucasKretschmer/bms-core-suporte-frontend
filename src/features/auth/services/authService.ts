@@ -13,6 +13,18 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return data.data
 }
 
+/**
+ * POST /api/v1/auth/refresh → ApiResponse<LoginResponseDto> (mesmo shape do login).
+ *
+ * Sem body: o cookie httpOnly de refresh (Path=/api/v1/auth) é enviado
+ * automaticamente pelo browser (depende de withCredentials no Axios).
+ * NÃO é best-effort: propaga o erro 401 para quem chama (ensureSession) decidir o fallback.
+ */
+export async function refresh(): Promise<LoginResponse> {
+  const { data } = await api.post<ApiResponse<LoginResponse>>('/api/v1/auth/refresh')
+  return data.data
+}
+
 /** GET /api/v1/auth/me → ApiResponse<UserResponseDto> */
 export async function getMe(): Promise<AuthUser> {
   const { data } = await api.get<ApiResponse<AuthUser>>('/api/v1/auth/me')

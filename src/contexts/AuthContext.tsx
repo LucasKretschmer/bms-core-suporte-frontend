@@ -1,12 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import * as authService from '../features/auth/services/authService'
 import { tokenStore } from '../utils/tokenStore'
+import { ensureSession, resetSession } from '../utils/ensureSession'
+import { router } from '../router'
+import { queryClient } from '../queryClient'
 import type { AuthUser } from '../features/auth/types/authSchema'
 
 type AuthContextValue = {
   user: AuthUser | null
   isAuthenticated: boolean
+  isBootstrapping: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -16,77 +19,74 @@ export const AuthContext = createContext<AuthContextValue | null>(null)
 /**
  * Provider de autenticação.
  *
- * SEGURANÇA: token JWT vive APENAS em memória (tokenStore + estado React).
- * Nunca em localStorage/sessionStorage.
+ * SEGURANÇA: o access token vive APENAS em memória (tokenStore + estado React).
+ * Nunca em localStorage/sessionStorage. O refresh vive só em cookie httpOnly.
  *
- * Bootstrap: app inicia deslogado — sem rehydrate de sessão.
- * F5 perde o token → usuário vai para /login?redirect=<rota>.
+ * Bootstrap: ao montar, tenta reidratar a sessão via `ensureSession()`
+ * (POST /auth/refresh com cookie) — sobrevive ao F5 sem novo login.
  *
- * O interceptor do Axios emite 'auth:logout' em 401 → este provider escuta.
+ * Expiração do access: tratada reativamente pelo interceptor 401 do Axios
+ * (refresh-once → retry). Não há auto-logout por timer.
+ *
+ * Navegação: usa a instância singleton `router` (não useNavigate) porque o
+ * provider é montado FORA do RouterProvider — useNavigate aqui seria no-op.
+ *
+ * O interceptor do Axios emite 'auth:logout' quando o refresh esgota → este
+ * provider escuta e limpa a sessão.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const navigate = useNavigate()
+  const [isBootstrapping, setIsBootstrapping] = useState(true)
+
+  // Rehydrate no mount — reusa o lock único do ensureSession
+  useEffect(() => {
+    let active = true
+    ensureSession()
+      .then((reidratado) => {
+        if (active && reidratado) setUser(reidratado)
+      })
+      .finally(() => {
+        if (active) setIsBootstrapping(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const login = useCallback(async (email: string, password: string) => {
+    const response = await authService.login(email, password)
+    tokenStore.set(response.token, response.expiresAt)
+    setUser(response.user)
+  }, [])
 
   const logout = useCallback(async () => {
-    // Cancela timer de expiração
-    if (logoutTimerRef.current) {
-      clearTimeout(logoutTimerRef.current)
-      logoutTimerRef.current = null
-    }
-    // Notifica o backend (best-effort)
-    await authService.logout()
-    // Limpa token e estado
+    await authService.logout() // best-effort: backend revoga sessão + limpa cookie
     tokenStore.clear()
+    resetSession()
     setUser(null)
-    // Redireciona para login
-    navigate({ to: '/login' })
-  }, [navigate])
+    queryClient.clear() // limpa cache do usuário anterior
+    router.navigate({ to: '/login' })
+  }, [])
 
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const response = await authService.login(email, password)
-      // Guarda token em memória
-      tokenStore.set(response.token, response.expiresAt)
-      // Atualiza estado React
-      setUser(response.user)
-      // Agenda logout automático ao expirar o token
-      const expiresAt = new Date(response.expiresAt).getTime()
-      const msUntilExpiry = expiresAt - Date.now()
-      if (msUntilExpiry > 0) {
-        if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current)
-        logoutTimerRef.current = setTimeout(() => {
-          logout()
-        }, msUntilExpiry)
-      }
-    },
-    [logout],
-  )
-
-  // Listener do interceptor Axios (401 → logout automático)
+  // Listener do interceptor Axios (401 → refresh esgotado → logout)
   useEffect(() => {
     function handleAuthLogout() {
-      // Limpa estado sem chamar authService (token já é inválido)
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current)
+      // Fallback: token já é inválido, não chama authService.logout
       tokenStore.clear()
+      resetSession()
       setUser(null)
-      navigate({ to: '/login' })
+      queryClient.clear()
+      router.navigate({ to: '/login' })
     }
 
     window.addEventListener('auth:logout', handleAuthLogout)
     return () => window.removeEventListener('auth:logout', handleAuthLogout)
-  }, [navigate])
-
-  // Limpa timer ao desmontar
-  useEffect(() => {
-    return () => {
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current)
-    }
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: user !== null, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated: user !== null, isBootstrapping, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   )

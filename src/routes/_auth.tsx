@@ -1,25 +1,32 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { AppLayout } from '../components/layout/AppLayout'
 import { tokenStore } from '../utils/tokenStore'
+import { ensureSession } from '../utils/ensureSession'
 
 /**
  * Layout pathless protegido.
- * beforeLoad: verifica token em memória → redireciona para /login se inválido.
- * O redirect inclui ?redirect=<rota-atual> para retornar após autenticação.
+ *
+ * beforeLoad (assíncrono): se não há sessão em memória, tenta reidratar via
+ * `ensureSession()` (POST /auth/refresh com cookie httpOnly) ANTES de
+ * redirecionar para /login. Isso sobrevive ao F5 e evita o flash de login
+ * (o router aguarda a Promise e exibe o defaultPendingComponent).
  *
  * NOTA: o backend é a fonte de verdade. Esta guarda é apenas UX.
- * Tokens expirados são tratados pelo interceptor Axios (401 → logout automático).
+ * Expiração do access token é tratada pelo interceptor Axios (401 → refresh).
  */
 export const Route = createFileRoute('/_auth')({
-  beforeLoad: ({ location }) => {
-    if (!tokenStore.isValid()) {
-      throw redirect({
-        to: '/login',
-        search: {
-          redirect: location.pathname,
-        },
-      })
-    }
+  beforeLoad: async ({ location }) => {
+    if (tokenStore.isValid()) return // sessão em memória — segue
+
+    await ensureSession() // tenta refresh UMA vez (memoizado, lock único)
+    if (tokenStore.isValid()) return // refresh ok — segue
+
+    throw redirect({
+      to: '/login',
+      search: {
+        redirect: location.pathname,
+      },
+    })
   },
   component: AppLayout,
 })

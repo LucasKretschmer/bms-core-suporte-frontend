@@ -9,7 +9,7 @@ vi.mock('../../../services/api', () => ({
 }))
 
 import { api } from '../../../services/api'
-import { login, getMe, logout } from './authService'
+import { login, getMe, logout, refresh } from './authService'
 import type { AuthUser, LoginResponse } from '../types/authSchema'
 
 const mockUser: AuthUser = {
@@ -86,6 +86,36 @@ describe('authService', () => {
       await getMe()
 
       expect(api.get).toHaveBeenCalledWith('/api/v1/auth/me')
+    })
+  })
+
+  describe('refresh', () => {
+    it('desempacota data.data do envelope ApiResponse (mesmo shape do login)', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: { data: mockLoginResponse, message: 'Sessão renovada.' },
+      })
+
+      const result = await refresh()
+
+      expect(result).toEqual(mockLoginResponse)
+      expect(result.token).toBe(mockLoginResponse.token)
+      expect(result.user.nome).toBe('Ana Silva')
+    })
+
+    it('chama POST /api/v1/auth/refresh SEM body (cookie httpOnly automático)', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: { data: mockLoginResponse },
+      })
+
+      await refresh()
+
+      expect(api.post).toHaveBeenCalledWith('/api/v1/auth/refresh')
+    })
+
+    it('propaga erro 401 (não engole, diferente do logout)', async () => {
+      vi.mocked(api.post).mockRejectedValueOnce(new Error('Request failed with status code 401'))
+
+      await expect(refresh()).rejects.toThrow('401')
     })
   })
 

@@ -1,20 +1,21 @@
 /**
- * tokenStore — armazenamento seguro do JWT em memória.
+ * tokenStore — armazenamento seguro do access token (JWT) em memória.
  *
- * DECISÃO DE ARQUITETURA (ver arquitetura.md §4.3):
- * O token JWT vive APENAS em memória (variável de módulo singleton).
+ * DECISÃO DE ARQUITETURA:
+ * O access token vive APENAS em memória (variável de módulo singleton).
  * NUNCA em localStorage, sessionStorage ou cookie acessível por JS.
  *
- * Consequência aceita: ao dar F5/refresh da aba, o token se perde e o usuário
- * é redirecionado para /login?redirect=<rota-atual>.
+ * Persistência de sessão (F5/refresh da aba): o access token NÃO é persistido.
+ * Ao recarregar, ele é reidratado via `POST /api/v1/auth/refresh` (ver
+ * `utils/ensureSession.ts`), que usa o cookie httpOnly `suporte_refresh`
+ * (Path=/api/v1/auth) enviado automaticamente pelo browser. O refresh token
+ * vive SÓ nesse cookie httpOnly — inacessível ao JS, imune a XSS.
  *
- * Trade-off documentado para o Manager:
- * - Opção atual (Fase 0): re-login no refresh. Mais simples e seguro.
- * - Opção futura: cookie httpOnly + endpoint /auth/refresh no backend.
- *   Isso exige mudança no backend e está fora do escopo desta rodada.
+ * Expiração do access em uso: tratada reativamente pelo interceptor 401 do
+ * Axios (refresh-once → retry), nunca por auto-logout local.
  *
- * A reordenação de colunas da DataTable e o estado colapsado do Sidebar
- * SÃO persisitidos em localStorage — são preferências de layout, não dados
+ * A reordenação de colunas da DataTable e o estado colapsado do Sidebar SÃO
+ * persistidos em localStorage — são preferências de layout, não dados
  * sensíveis, e não há risco de XSS relacionado ao token.
  */
 
