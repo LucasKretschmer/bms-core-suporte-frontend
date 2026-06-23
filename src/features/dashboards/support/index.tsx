@@ -62,7 +62,7 @@ export default function DashboardSuportePage() {
 
   // Lista para o PanelMode: Global (sentinel id='') + equipes de suporte
   const panelTeams: TeamDto[] = [
-    { id: '', nome: 'Global', gerencia: 'suporte' },
+    { id: 0, nome: 'Global', gerencia: 'suporte' },
     ...supportTeams,
   ]
 

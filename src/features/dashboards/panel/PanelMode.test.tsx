@@ -48,8 +48,8 @@ vi.mock('./components/PanelHeader', () => ({
 }))
 
 const baseTeams: TeamDto[] = [
-  { id: '', nome: 'Global', gerencia: 'suporte' },
-  { id: 'team-1', nome: 'Suporte Tier 1', gerencia: 'suporte' },
+  { id: 0, nome: 'Global', gerencia: 'suporte' },
+  { id: 1, nome: 'Suporte Tier 1', gerencia: 'suporte' },
 ]
 
 const defaultProps = {

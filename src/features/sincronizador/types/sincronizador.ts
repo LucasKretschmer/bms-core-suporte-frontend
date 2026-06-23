@@ -14,7 +14,7 @@ export type StatusSistema = 'online' | 'offline' | 'degradado'
  * Contadores são flat (não aninhados em `contadores`).
  */
 export type LogDto = {
-  logId: string
+  logId: number
   status: SyncStatus
   disparo: SyncDisparo
   iniciadoEm: string
@@ -43,7 +43,7 @@ export type SincronizadorStatusDto = {
 
 /** Resultado do run manual (202) — backend só devolve logId. */
 export type RunResultDto = {
-  logId: string
+  logId: number
 }
 
 /** Resultado da sincronização de equipes. */
@@ -54,7 +54,7 @@ export type SyncTeamsResultDto = {
 
 /** Item de ticket vindo de /registros/tickets (camelCase). */
 export type TicketManutencaoDto = {
-  ticketId: string
+  ticketId: number
   hubspotId: string
   assunto: string | null
   pipeline: string | null
@@ -66,7 +66,7 @@ export type TicketManutencaoDto = {
 
 /** Item de projeto vindo de /registros/projetos (camelCase). */
 export type ProjetoManutencaoDto = {
-  projetoId: string
+  projetoId: number
   hubspotId: string
   nome: string | null
   tipo: string | null

@@ -15,8 +15,8 @@ export type RuleValue = boolean | string | number
 
 /** DTO de regra retornado pelo backend (valor já desserializado para JS). */
 export type BusinessRuleDto = {
-  id: string
-  teamId: string | null
+  id: number
+  teamId: number | null
   chave: string
   valor: RuleValue
   criadoEm: string
@@ -94,7 +94,7 @@ export const AUTO_STOP_OPTIONS: { value: AutoStopOnReply; label: string }[] = [
 /** Estado resolvido de uma regra: valor efetivo + id do registro (null = ainda não persistido). */
 export type ResolvedRule = {
   value: RuleValue
-  ruleId: string | null
+  ruleId: number | null
 }
 
 /**

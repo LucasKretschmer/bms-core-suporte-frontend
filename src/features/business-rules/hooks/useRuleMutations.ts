@@ -6,8 +6,8 @@ import { businessRulesKeys } from './useBusinessRules'
 import type { RuleValue } from '../types/businessRule'
 
 type SaveRuleArgs = {
-  ruleId: string | null
-  teamId: string | null
+  ruleId: number | null
+  teamId: number | null
   chave: string
   valor: RuleValue
 }

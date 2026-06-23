@@ -3,7 +3,7 @@ import { productivityColumns } from './columns'
 import type { AgentMetricDto } from '../shared/types/reports'
 
 const sampleRow: AgentMetricDto = {
-  userId: 'u1',
+  userId: 1,
   nome: 'João Silva',
   equipe: 'Equipe A',
   nAtendimentos: 42,

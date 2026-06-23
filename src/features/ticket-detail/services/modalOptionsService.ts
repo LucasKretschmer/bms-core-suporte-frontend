@@ -9,7 +9,7 @@ import type { ApiResponse } from '../../../types/api'
 
 /** Atendente (B5 — AgentDto). */
 export type AgentOptionDto = {
-  userId: string
+  userId: number
   nome: string
   equipeNome: string | null
   papel: string
@@ -17,7 +17,7 @@ export type AgentOptionDto = {
 
 /** Categoria de atendimento (B4 — ServiceCategoryDto). */
 export type ServiceCategoryOptionDto = {
-  id: string
+  id: number
   nome: string
   isActive: boolean
 }

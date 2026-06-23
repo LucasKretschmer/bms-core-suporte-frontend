@@ -5,7 +5,7 @@ import type { BusinessRuleDto } from '../types/businessRule'
 
 export const businessRulesKeys = {
   global: ['business-rules', 'global'] as const,
-  team: (teamId: string) => ['business-rules', 'team', teamId] as const,
+  team: (teamId: number) => ['business-rules', 'team', teamId] as const,
   teamsList: ['teams'] as const,
 }
 
@@ -29,7 +29,7 @@ export function useTeamsList() {
  * Regras de cada equipe — uma query por equipe (N+1 aceitável; B6 agregado é opcional).
  * Retorna um mapa teamId → { rules, isLoading, isError }.
  */
-export function useTeamRules(teamIds: string[]) {
+export function useTeamRules(teamIds: number[]) {
   const queries = useQueries({
     queries: teamIds.map((teamId) => ({
       queryKey: businessRulesKeys.team(teamId),
@@ -38,7 +38,7 @@ export function useTeamRules(teamIds: string[]) {
   })
 
   const byTeam: Record<
-    string,
+    number,
     { rules: BusinessRuleDto[]; isLoading: boolean; isError: boolean }
   > = {}
 

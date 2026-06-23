@@ -50,7 +50,7 @@ describe('useCategoryMutations', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('create: sucesso → toast e invalida lista', async () => {
-    mockCreate.mockResolvedValueOnce({ id: 'c-1', nome: 'X', isActive: true })
+    mockCreate.mockResolvedValueOnce({ id: 1, nome: 'X', isActive: true })
     const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
     act(() => result.current.create.mutate('X'))
@@ -61,13 +61,13 @@ describe('useCategoryMutations', () => {
   })
 
   it('toggleActive: ativar → toast "Categoria ativada."', async () => {
-    mockToggle.mockResolvedValueOnce({ id: 'c-1', nome: 'X', isActive: true })
+    mockToggle.mockResolvedValueOnce({ id: 1, nome: 'X', isActive: true })
     const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-    act(() => result.current.toggleActive.mutate({ id: 'c-1', isActive: true }))
+    act(() => result.current.toggleActive.mutate({ id: 1, isActive: true }))
     await waitFor(() => expect(result.current.toggleActive.isSuccess).toBe(true))
 
-    expect(mockToggle).toHaveBeenCalledWith('c-1', true)
+    expect(mockToggle).toHaveBeenCalledWith(1, true)
     expect(mockToastSuccess).toHaveBeenCalledWith('Categoria ativada.')
   })
 
@@ -75,7 +75,7 @@ describe('useCategoryMutations', () => {
     mockToggle.mockResolvedValueOnce({ id: 'c-1', nome: 'X', isActive: false })
     const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-    act(() => result.current.toggleActive.mutate({ id: 'c-1', isActive: false }))
+    act(() => result.current.toggleActive.mutate({ id: 1, isActive: false }))
     await waitFor(() => expect(result.current.toggleActive.isSuccess).toBe(true))
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Categoria desativada.')
@@ -85,7 +85,7 @@ describe('useCategoryMutations', () => {
     mockDelete.mockRejectedValueOnce(new Error('Categoria em uso'))
     const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-    act(() => result.current.remove.mutate('c-1'))
+    act(() => result.current.remove.mutate(1))
     await waitFor(() => expect(result.current.remove.isError).toBe(true))
 
     expect(mockToastError).toHaveBeenCalledWith('Categoria em uso')

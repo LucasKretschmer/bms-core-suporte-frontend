@@ -28,7 +28,7 @@ type PlanHealthChartProps = {
   items: PlanHealthItemDto[]
   isLoading?: boolean
   height?: number
-  onClientClick?: (clientId: string) => void
+  onClientClick?: (clientId: number) => void
   className?: string
 }
 

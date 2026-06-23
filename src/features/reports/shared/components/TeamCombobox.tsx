@@ -28,7 +28,7 @@ export function TeamCombobox({
 
   const options: ComboboxOption[] = [
     { value: '', label: 'Todas as equipes' },
-    ...(data ?? []).map((t) => ({ value: t.id, label: t.nome })),
+    ...(data ?? []).map((t) => ({ value: String(t.id), label: t.nome })),
   ]
 
   return (

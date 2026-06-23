@@ -28,16 +28,16 @@ describe('useClientTickets', () => {
   })
 
   it('passa o clientId ao service', async () => {
-    renderHook(() => useClientTickets('c1'), { wrapper: wrapper() })
+    renderHook(() => useClientTickets(1), { wrapper: wrapper() })
     await waitFor(() => {
       expect(service.listClientTickets).toHaveBeenCalledWith(
-        expect.objectContaining({ clientId: 'c1' }),
+        expect.objectContaining({ clientId: 1 }),
       )
     })
   })
 
   it('inicia com status array vazio e sortDirection desc', () => {
-    const { result } = renderHook(() => useClientTickets('c1'), { wrapper: wrapper() })
+    const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
     expect(result.current.filters.status).toEqual([])
     expect(result.current.sortDirection).toBe('desc')
   })

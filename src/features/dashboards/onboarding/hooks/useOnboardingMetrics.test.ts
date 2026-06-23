@@ -63,7 +63,7 @@ const MOCK_COM_DADOS: OnboardingMetricsDto = {
     resolvidos: 12,
     porAtendente: [
       {
-        userId: 'user-1',
+        userId: 1,
         nome: 'Ana Silva',
         equipe: 'Integração',
         nAtendimentos: 8,

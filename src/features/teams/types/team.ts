@@ -6,10 +6,10 @@
  * GET /api/v1/teams         → ApiResponse<TeamDto[]>  (já existe em reportsService)
  */
 export type AgentDto = {
-  userId: string
+  userId: number
   nome: string
   email: string | null
-  equipeId: string | null
+  equipeId: number | null
   equipeNome: string | null
   /** "GERENTE" | "COORDENADOR" | "ATENDENTE" | "ADMIN" — vem pronto do backend */
   papel: string
@@ -17,9 +17,9 @@ export type AgentDto = {
 
 /** Equipe com seus membros — agrupado no client a partir de AgentDto[]. */
 export type TeamWithMembers = {
-  id: string | null
+  id: number | null
   nome: string
-  membros: { userId: string; nome: string; papel: string }[]
+  membros: { userId: number; nome: string; papel: string }[]
 }
 
 /** Agrupa atendentes por equipe para os cards. Usuários sem equipe ficam num grupo "Sem equipe". */
@@ -27,7 +27,7 @@ export function groupAgentsByTeam(agents: AgentDto[]): TeamWithMembers[] {
   const map = new Map<string, TeamWithMembers>()
 
   for (const agent of agents) {
-    const key = agent.equipeId ?? '__sem_equipe__'
+    const key = agent.equipeId !== null ? String(agent.equipeId) : '__sem_equipe__'
     const existing = map.get(key)
     if (existing) {
       existing.membros.push({ userId: agent.userId, nome: agent.nome, papel: agent.papel })

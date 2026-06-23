@@ -48,7 +48,7 @@ export default function PlanConsumptionPage() {
       saveReportFilters(FILTERS_KEY, { ...filters, sortBy, sortDirection })
       void navigate({
         to: '/relatorios/clientes/$clientId',
-        params: { clientId: row.clientId },
+        params: { clientId: String(row.clientId) },
         search: { from: 'consumo-planos' },
       })
     },

@@ -28,7 +28,7 @@ export function PlanCombobox({
 
   const options: ComboboxOption[] = [
     { value: '', label: 'Todos os planos' },
-    ...(data ?? []).map((p) => ({ value: p.id, label: p.nome })),
+    ...(data ?? []).map((p) => ({ value: String(p.id), label: p.nome })),
   ]
 
   return (

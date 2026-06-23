@@ -15,8 +15,8 @@ import type { ClientReportItemDto } from '../shared/types/reports'
 // ── Fixture ──────────────────────────────────────────────────────────────────
 
 const BASE_ITEM: ClientReportItemDto = {
-  timeEntryId: 'entry-1',
-  ticketId: 'ticket-1',
+  timeEntryId: 1,
+  ticketId: 1,
   hubspotTicketId: '12345',
   assunto: 'Problema com login',
   equipeAtribuida: 'Suporte N1',

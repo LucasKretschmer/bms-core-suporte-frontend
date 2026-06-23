@@ -23,7 +23,7 @@ type TeamRulesCardProps = {
   isLoading: boolean
   isError: boolean
   isSaving: boolean
-  onSave: (args: { ruleId: string | null; chave: string; valor: RuleValue }) => void
+  onSave: (args: { ruleId: number | null; chave: string; valor: RuleValue }) => void
 }
 
 /**

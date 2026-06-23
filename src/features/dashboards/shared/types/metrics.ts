@@ -23,7 +23,7 @@ export type MetricsBaseParams = {
 // ── TeamDto atualizado (adendo Item 3) ───────────────────────────────────────
 
 export type TeamDto = {
-  id: string
+  id: number
   nome: string
   gerencia: string | null  // 'suporte' | 'onboarding' | null (não classificada)
 }
@@ -97,7 +97,7 @@ export type ByCategoryDto = {
 // ── GET /metrics/plan-health ─────────────────────────────────────────────────
 
 export type PlanHealthItemDto = {
-  clientId: string
+  clientId: number
   nomeCliente: string | null
   nomePlano: string | null
   percentualConsumo: number
@@ -120,7 +120,7 @@ export type PlanHealthResponseDto = {
 // ── GET /metrics/by-agent ─────────────────────────────────────────────────────
 
 export type AgentMetricsDtoItem = {
-  userId: string
+  userId: number
   nome: string
   equipe: string | null
   nAtendimentos: number
@@ -147,7 +147,7 @@ export type OnboardingProjectStatsDto = {
 }
 
 export type OnboardingAgentTicketDto = {
-  userId: string
+  userId: number
   nome: string
   equipe: string | null
   nAtendimentos: number
@@ -178,8 +178,8 @@ export type OnboardingMetricsDto = {
 // ── Drill-down rows (overview?format=rows) ───────────────────────────────────
 
 export type TimeEntryRowDto = {
-  timeEntryId: string
-  ticketId: string
+  timeEntryId: number
+  ticketId: number
   hubspotTicketId: string
   assunto: string | null
   atendente: string

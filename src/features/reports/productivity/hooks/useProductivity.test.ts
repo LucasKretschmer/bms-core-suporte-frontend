@@ -89,7 +89,7 @@ describe('useProductivity — AHT null exibe "—"', () => {
   it('coluna AHT exibe "—" quando ahtSegundos é null', () => {
     const ahtCol = productivityColumns.find((c) => c.key === 'ahtSegundos')
     const rowWithNull: AgentMetricDto = {
-      userId: '1',
+      userId: 1,
       nome: 'Analista',
       equipe: null,
       nAtendimentos: 10,
@@ -103,7 +103,7 @@ describe('useProductivity — AHT null exibe "—"', () => {
   it('coluna AHT formata segundos quando ahtSegundos não é null', () => {
     const ahtCol = productivityColumns.find((c) => c.key === 'ahtSegundos')
     const rowWithValue: AgentMetricDto = {
-      userId: '2',
+      userId: 2,
       nome: 'Analista',
       equipe: 'Equipe A',
       nAtendimentos: 5,

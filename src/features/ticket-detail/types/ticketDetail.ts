@@ -10,7 +10,7 @@
 
 /** Segmento WORK/PAUSE de um apontamento (TimeLogResponseDto reutilizado pelo backend). */
 export type TicketSegmentDto = {
-  id: string
+  id: number
   type: 'WORK' | 'PAUSE'
   segmentStart: string // ISO Z
   segmentEnd: string // ISO Z
@@ -18,10 +18,10 @@ export type TicketSegmentDto = {
 
 /** Apontamento do ticket com nome de agente e categoria (B2/B3 — TicketTimeEntryDto). */
 export type TicketTimeEntryDto = {
-  id: string
-  userId: string
+  id: number
+  userId: number
   agenteNome: string
-  serviceCategoryId: string | null
+  serviceCategoryId: number | null
   categorizacaoNome: string | null
   billableOutsidePlan: boolean
   status: string // RUNNING | PAUSED | COMPLETED | CANCELLED
@@ -35,14 +35,14 @@ export type TicketTimeEntryDto = {
 
 /** Owner/atendente do ticket (OwnerDto do backend). */
 export type TicketOwnerDto = {
-  userId: string
+  userId: number
   nome: string
   hubspotOwnerId: number
 }
 
 /** Cliente resumido do ticket (ClientDto do backend). */
 export type TicketClientDto = {
-  id: string
+  id: number
   nomeFantasia: string | null
   razaoSocial: string | null
   cnpj: string | null
@@ -62,7 +62,7 @@ export type TicketRequesterDto = {
  * vindos do HubSpot.
  */
 export type TicketHeaderDto = {
-  id: string
+  id: number
   hubspotTicketId: string
   assunto: string | null
   categoria: string | null

@@ -7,8 +7,8 @@ import type { TicketHeaderDto, TicketTimeEntryDto } from '../types/ticketDetail'
  * Ambos endpoints usam ApiResponse<T> enveloped (B2/B3/B8) → retornar data.data.
  */
 
-/** Header/meta do ticket por UUID interno (B8). */
-export async function getTicketById(ticketId: string): Promise<TicketHeaderDto> {
+/** Header/meta do ticket por id interno (B8). */
+export async function getTicketById(ticketId: number): Promise<TicketHeaderDto> {
   const { data } = await api.get<ApiResponse<TicketHeaderDto>>(
     `/api/v1/tickets/by-id/${ticketId}`,
   )
@@ -17,7 +17,7 @@ export async function getTicketById(ticketId: string): Promise<TicketHeaderDto> 
 
 /** Apontamentos do ticket com nome de agente/categoria e segmentos (B2/B3). */
 export async function listTicketTimeEntries(
-  ticketId: string,
+  ticketId: number,
 ): Promise<TicketTimeEntryDto[]> {
   const { data } = await api.get<ApiResponse<TicketTimeEntryDto[]>>(
     `/api/v1/tickets/${ticketId}/time-entries`,

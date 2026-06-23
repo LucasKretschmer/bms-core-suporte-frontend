@@ -5,7 +5,7 @@ import { GLOBAL_IDLE_KEY, asMinutes, resolveRule, type BusinessRuleDto } from '.
 type GlobalRulesCardProps = {
   rules: BusinessRuleDto[]
   isSaving: boolean
-  onSaveIdle: (args: { ruleId: string | null; minutes: number }) => void
+  onSaveIdle: (args: { ruleId: number | null; minutes: number }) => void
 }
 
 /**

@@ -24,7 +24,7 @@ import { buildTicketBreadcrumb, type TicketDetailOrigin } from './utils/buildBre
 import type { TicketTimeEntryDto } from './types/ticketDetail'
 
 type TicketDetailPageProps = {
-  ticketId: string
+  ticketId: number
   from: TicketDetailOrigin
   clientId?: string
 }
@@ -37,7 +37,7 @@ type ModalState =
 export default function TicketDetailPage({ ticketId, from, clientId }: TicketDetailPageProps) {
   const { isCoordenadorOuAcima } = usePermissions()
   const { user } = useAuth()
-  const currentUserId = user?.id ?? ''
+  const currentUserId = user?.id ?? 0
 
   const headerQuery = useTicketDetail(ticketId)
   const entriesQuery = useTicketTimeEntries(ticketId)

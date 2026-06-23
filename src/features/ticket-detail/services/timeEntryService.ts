@@ -20,23 +20,23 @@ export type WorkBlockPayload = {
 }
 
 export type CreateManualTimeEntryPayload = {
-  ticketId: string
-  userId?: string
-  serviceCategoryId: string
+  ticketId: number
+  userId?: number
+  serviceCategoryId: number
   billableOutsidePlan: boolean
   note?: string
   works: WorkBlockPayload[]
 }
 
 export type UpdateManualTimeEntryPayload = {
-  serviceCategoryId: string
+  serviceCategoryId: number
   billableOutsidePlan: boolean
   note?: string
   works: WorkBlockPayload[]
 }
 
 /** Resposta crua do entry — não precisamos tipar todos os campos (a tela refaz fetch). */
-type TimeEntryResponse = { id: string }
+type TimeEntryResponse = { id: number }
 
 export async function createManualTimeEntry(
   payload: CreateManualTimeEntryPayload,
@@ -51,7 +51,7 @@ export async function createManualTimeEntry(
 }
 
 export async function updateManualTimeEntry(
-  id: string,
+  id: number,
   payload: UpdateManualTimeEntryPayload,
 ): Promise<TimeEntryResponse> {
   const { data } = await api.put<ApiResponse<TimeEntryResponse>>(
@@ -61,6 +61,6 @@ export async function updateManualTimeEntry(
   return data.data
 }
 
-export async function deleteTimeEntry(id: string): Promise<void> {
+export async function deleteTimeEntry(id: number): Promise<void> {
   await api.delete(`/api/v1/time-entries/${id}`)
 }

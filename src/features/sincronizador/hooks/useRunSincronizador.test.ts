@@ -70,7 +70,7 @@ describe('useRunSincronizador', () => {
   })
 
   it('sucesso → toast.info chamado com mensagem de iniciada', async () => {
-    mockRunSincronizador.mockResolvedValueOnce({ logId: 'abc' })
+    mockRunSincronizador.mockResolvedValueOnce({ logId: 99 })
 
     const { result } = renderHook(() => useRunSincronizador(), { wrapper: createWrapper() })
 
@@ -84,7 +84,7 @@ describe('useRunSincronizador', () => {
   })
 
   it('sucesso → invalida sincronizador-status e sincronizador-logs', async () => {
-    mockRunSincronizador.mockResolvedValueOnce({ logId: 'abc' })
+    mockRunSincronizador.mockResolvedValueOnce({ logId: 99 })
 
     const { result } = renderHook(() => useRunSincronizador(), { wrapper: createWrapper() })
 

@@ -7,7 +7,7 @@ import type { ClientKpis } from '../types/clientTickets'
  * queryKey inclui clientId para cache correto. Retorna null se o cliente não tiver linha
  * no relatório de consumo (cliente sem plano) — a UI trata como KPIs "—".
  */
-export function useClientKpis(clientId: string) {
+export function useClientKpis(clientId: number) {
   return useQuery<ClientKpis | null>({
     queryKey: ['client-kpis', clientId],
     queryFn: () => getClientKpis(clientId),

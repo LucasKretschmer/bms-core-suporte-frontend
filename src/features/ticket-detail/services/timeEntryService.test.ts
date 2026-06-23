@@ -22,11 +22,11 @@ describe('timeEntryService', () => {
   })
 
   it('createManualTimeEntry envia Idempotency-Key e desempacota ApiResponse', async () => {
-    mockedPost.mockResolvedValueOnce({ data: { data: { id: 'e1' }, message: 'ok' } })
+    mockedPost.mockResolvedValueOnce({ data: { data: { id: 1 }, message: 'ok' } })
     const payload = {
-      ticketId: 't1',
-      userId: 'u1',
-      serviceCategoryId: 'sc1',
+      ticketId: 10,
+      userId: 1,
+      serviceCategoryId: 2,
       billableOutsidePlan: false,
       works: [{ start: '2026-06-19T11:00:00Z', end: '2026-06-19T12:00:00Z' }],
     }
@@ -36,25 +36,25 @@ describe('timeEntryService', () => {
       payload,
       { headers: { 'Idempotency-Key': 'key-123' } },
     )
-    expect(result).toEqual({ id: 'e1' })
+    expect(result).toEqual({ id: 1 })
   })
 
   it('updateManualTimeEntry chama PUT /manual/{id}', async () => {
-    mockedPut.mockResolvedValueOnce({ data: { data: { id: 'e1' }, message: 'ok' } })
-    await updateManualTimeEntry('e1', {
-      serviceCategoryId: 'sc1',
+    mockedPut.mockResolvedValueOnce({ data: { data: { id: 1 }, message: 'ok' } })
+    await updateManualTimeEntry(1, {
+      serviceCategoryId: 2,
       billableOutsidePlan: true,
       works: [{ start: '2026-06-19T11:00:00Z', end: '2026-06-19T12:00:00Z' }],
     })
     expect(mockedPut).toHaveBeenCalledWith(
-      '/api/v1/time-entries/manual/e1',
-      expect.objectContaining({ serviceCategoryId: 'sc1', billableOutsidePlan: true }),
+      '/api/v1/time-entries/manual/1',
+      expect.objectContaining({ serviceCategoryId: 2, billableOutsidePlan: true }),
     )
   })
 
   it('deleteTimeEntry chama DELETE /{id}', async () => {
     mockedDelete.mockResolvedValueOnce({ status: 204 })
-    await deleteTimeEntry('e1')
-    expect(mockedDelete).toHaveBeenCalledWith('/api/v1/time-entries/e1')
+    await deleteTimeEntry(1)
+    expect(mockedDelete).toHaveBeenCalledWith('/api/v1/time-entries/1')
   })
 })

@@ -34,6 +34,12 @@ Frontend do **Módulo Suporte** — Timer Migrate. Aplicação **standalone** (l
 
 ---
 
+## Contrato de IDs
+
+Os **IDs internos** da API são **números** (`number`) — chaves `int` sequenciais do banco (ex.: `id: 582`). Os tipos/DTOs e schemas Zod refletem isso (`number`). Os **IDs externos do HubSpot** (`hubspotTicketId` etc.) permanecem `string`. Parâmetros de **filtro** enviados via query string trafegam como texto (comboboxes/URL) e são convertidos no boundary (`Number(...)`/`String(...)`); o param de rota do TanStack Router é string e é convertido com `Number(...)` ao consumir.
+
+---
+
 ## Estrutura
 
 ```

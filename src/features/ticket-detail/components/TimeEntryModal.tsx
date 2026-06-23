@@ -16,7 +16,7 @@ import type { TicketTimeEntryDto } from '../types/ticketDetail'
 type TimeEntryModalProps = {
   isOpen: boolean
   mode: 'create' | 'edit'
-  ticketId: string
+  ticketId: number
   ticketLabel: string
   entry?: TicketTimeEntryDto
   agentOptions: ComboboxOption[]
@@ -25,7 +25,7 @@ type TimeEntryModalProps = {
   /** Pode trocar o atendente (Coordenador+); atendente comum só lança para si */
   canChangeAgent: boolean
   /** userId do usuário logado — default do atendente em modo create */
-  currentUserId: string
+  currentUserId: number
   /** Pode excluir o apontamento (ownership/role) */
   canDelete: boolean
   onClose: () => void
@@ -51,7 +51,7 @@ function PlusIcon() {
 /** Monta os valores iniciais do form (modo create vs edit). */
 function buildDefaults(
   mode: 'create' | 'edit',
-  currentUserId: string,
+  currentUserId: number,
   entry?: TicketTimeEntryDto,
 ): TimeEntryFormValues {
   if (mode === 'edit' && entry) {
@@ -62,15 +62,15 @@ function buildDefaults(
         end: isoToLocalInput(s.segmentEnd),
       }))
     return {
-      userId: entry.userId,
-      serviceCategoryId: entry.serviceCategoryId ?? '',
+      userId: String(entry.userId),
+      serviceCategoryId: entry.serviceCategoryId != null ? String(entry.serviceCategoryId) : '',
       billableOutsidePlan: entry.billableOutsidePlan,
       note: entry.note ?? '',
       works: works.length > 0 ? works : [{ start: '', end: '' }],
     }
   }
   return {
-    userId: currentUserId,
+    userId: String(currentUserId),
     serviceCategoryId: '',
     billableOutsidePlan: false,
     note: '',

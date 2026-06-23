@@ -105,14 +105,14 @@ export default function AppointmentsPage() {
   // Colunas com memoize — reconstrução apenas se necessário
   const columns = useMemo(() => buildAppointmentsColumns(), [])
 
-  // Navegação por linha: detalhe interno do ticket (por UUID).
+  // Navegação por linha: detalhe interno do ticket (por id interno).
   // O link externo do HubSpot continua na célula "Ticket" (stopPropagation).
   const handleRowClick = useCallback(
     (row: TicketReportItemDto) => {
       saveReportFilters(FILTERS_KEY, { ...filters, sortBy, sortDirection })
       void navigate({
         to: '/relatorios/tickets/$ticketId',
-        params: { ticketId: row.ticketId },
+        params: { ticketId: String(row.ticketId) },
         search: { from: 'apontamentos' },
       })
     },

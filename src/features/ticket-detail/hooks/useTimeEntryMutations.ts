@@ -21,7 +21,7 @@ export function toWorkBlocksPayload(works: TimeEntryFormValues['works']): WorkBl
   }))
 }
 
-export function useTimeEntryMutations(ticketId: string) {
+export function useTimeEntryMutations(ticketId: number) {
   const queryClient = useQueryClient()
 
   function invalidateDetail() {
@@ -35,8 +35,8 @@ export function useTimeEntryMutations(ticketId: string) {
       return createManualTimeEntry(
         {
           ticketId,
-          userId: values.userId,
-          serviceCategoryId: values.serviceCategoryId,
+          userId: Number(values.userId),
+          serviceCategoryId: Number(values.serviceCategoryId),
           billableOutsidePlan: values.billableOutsidePlan,
           note: values.note?.trim() ? values.note.trim() : undefined,
           works: toWorkBlocksPayload(values.works),
@@ -48,9 +48,9 @@ export function useTimeEntryMutations(ticketId: string) {
   })
 
   const update = useMutation({
-    mutationFn: ({ id, values }: { id: string; values: TimeEntryFormValues }) =>
+    mutationFn: ({ id, values }: { id: number; values: TimeEntryFormValues }) =>
       updateManualTimeEntry(id, {
-        serviceCategoryId: values.serviceCategoryId,
+        serviceCategoryId: Number(values.serviceCategoryId),
         billableOutsidePlan: values.billableOutsidePlan,
         note: values.note?.trim() ? values.note.trim() : undefined,
         works: toWorkBlocksPayload(values.works),
@@ -59,7 +59,7 @@ export function useTimeEntryMutations(ticketId: string) {
   })
 
   const remove = useMutation({
-    mutationFn: (id: string) => deleteTimeEntry(id),
+    mutationFn: (id: number) => deleteTimeEntry(id),
     onSuccess: invalidateDetail,
   })
 

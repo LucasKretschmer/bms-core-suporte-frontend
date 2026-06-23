@@ -15,7 +15,7 @@ import type {
  */
 
 type ListClientTicketsParams = {
-  clientId: string
+  clientId: number
   search?: string
   status?: string[]
   sortBy?: string | null
@@ -42,7 +42,7 @@ export async function listClientTickets(
  * Retorna `null` se o cliente não tiver plano/linha no relatório.
  */
 export async function getClientKpis(
-  clientId: string,
+  clientId: number,
 ): Promise<PlanConsumptionItemDto | null> {
   const PAGE_SIZE = 200
   let page = 1

@@ -23,12 +23,12 @@ export function useModalOptions(enabled: boolean) {
   })
 
   const agentOptions: ComboboxOption[] = (agents.data ?? []).map((a) => ({
-    value: a.userId,
+    value: String(a.userId),
     label: a.equipeNome ? `${a.nome} · ${a.equipeNome}` : a.nome,
   }))
 
   const categoryOptions: ComboboxOption[] = (categories.data ?? []).map((c) => ({
-    value: c.id,
+    value: String(c.id),
     label: c.nome,
   }))
 

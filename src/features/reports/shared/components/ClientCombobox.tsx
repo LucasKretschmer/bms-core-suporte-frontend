@@ -35,7 +35,7 @@ export function ClientCombobox({
 
   const options =
     data?.items.map((c) => ({
-      value: c.id,
+      value: String(c.id),
       label: `${formatClientName(c)}${c.cnpj ? ` (${c.cnpj})` : ''}`,
     })) ?? []
 

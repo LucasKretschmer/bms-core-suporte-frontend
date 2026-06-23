@@ -37,22 +37,22 @@ describe('useRuleMutations', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('sucesso (equipe) → toast "Salvo." e invalida a query da equipe', async () => {
-    mockSave.mockResolvedValueOnce({ id: 'r-1' })
+    mockSave.mockResolvedValueOnce({ id: 1 })
     const { result } = renderHook(() => useRuleMutations(), { wrapper: createWrapper() })
 
     act(() =>
-      result.current.mutate({ ruleId: null, teamId: 't-1', chave: 'allowEditTimes', valor: true }),
+      result.current.mutate({ ruleId: null, teamId: 5, chave: 'allowEditTimes', valor: true }),
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Salvo.')
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['business-rules', 'team', 't-1'],
+      queryKey: ['business-rules', 'team', 5],
     })
   })
 
   it('sucesso (global) → invalida a query global', async () => {
-    mockSave.mockResolvedValueOnce({ id: 'r-2' })
+    mockSave.mockResolvedValueOnce({ id: 2 })
     const { result } = renderHook(() => useRuleMutations(), { wrapper: createWrapper() })
 
     act(() =>
@@ -68,7 +68,7 @@ describe('useRuleMutations', () => {
     const { result } = renderHook(() => useRuleMutations(), { wrapper: createWrapper() })
 
     act(() =>
-      result.current.mutate({ ruleId: 'r-1', teamId: 't-1', chave: 'allowEditTimes', valor: true }),
+      result.current.mutate({ ruleId: 1, teamId: 5, chave: 'allowEditTimes', valor: true }),
     )
     await waitFor(() => expect(result.current.isError).toBe(true))
 

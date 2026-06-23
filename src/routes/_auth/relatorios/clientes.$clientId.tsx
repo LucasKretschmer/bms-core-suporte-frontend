@@ -35,5 +35,5 @@ export const Route = createFileRoute('/_auth/relatorios/clientes/$clientId')({
 
 function RouteComponent() {
   const { clientId } = useParams({ from: '/_auth/relatorios/clientes/$clientId' })
-  return <ClientTicketsPage clientId={clientId} />
+  return <ClientTicketsPage clientId={Number(clientId)} />
 }

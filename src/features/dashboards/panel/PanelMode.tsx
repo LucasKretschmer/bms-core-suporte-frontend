@@ -123,7 +123,7 @@ export function PanelMode({
     if (scope === 'global') return 'Global'
     if (scope.startsWith('team:')) {
       const teamId = scope.slice(5)
-      const found = teams.find((t) => t.id === teamId)
+      const found = teams.find((t) => t.id === Number(teamId))
       return found?.nome ?? teamId
     }
     return 'Global'

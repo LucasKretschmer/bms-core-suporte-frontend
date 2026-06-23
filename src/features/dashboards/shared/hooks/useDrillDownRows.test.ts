@@ -13,8 +13,8 @@ import type { PaginatedResponse } from '../../../../types/api'
 import type { TimeEntryRowDto } from '../types/metrics'
 
 const MOCK_ROW: TimeEntryRowDto = {
-  timeEntryId: 'te-1',
-  ticketId: 'ticket-1',
+  timeEntryId: 1,
+  ticketId: 1,
   hubspotTicketId: 'hs-101',
   assunto: 'Problema de acesso',
   atendente: 'Fulano',

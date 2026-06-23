@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { tokenStore } from '../../../utils/tokenStore'
 
 /**
- * Rota: /relatorios/tickets/$ticketId — Detalhe do ticket (F3, drill-down por UUID).
+ * Rota: /relatorios/tickets/$ticketId — Detalhe do ticket (F3, drill-down por id interno).
  *
  * Alcançada por drill-down de consumo-planos/clientes/apontamentos/cliente (não há
  * item de menu). Backend (AtendentePlus) é a fonte de verdade da autorização.
@@ -39,5 +39,5 @@ export const Route = createFileRoute('/_auth/relatorios/tickets/$ticketId')({
 function RouteComponent() {
   const { ticketId } = useParams({ from: '/_auth/relatorios/tickets/$ticketId' })
   const { from, clientId } = useSearch({ from: '/_auth/relatorios/tickets/$ticketId' })
-  return <TicketDetailPage ticketId={ticketId} from={from} clientId={clientId} />
+  return <TicketDetailPage ticketId={Number(ticketId)} from={from} clientId={clientId} />
 }

@@ -24,10 +24,10 @@ describe('useTicketTimeEntries', () => {
   it('busca apontamentos por ticketId e retorna os dados', async () => {
     vi.mocked(service.listTicketTimeEntries).mockResolvedValue([
       {
-        id: 'e1',
-        userId: 'u1',
+        id: 1,
+        userId: 1,
         agenteNome: 'Maria',
-        serviceCategoryId: 'sc1',
+        serviceCategoryId: 1,
         categorizacaoNome: 'Consultoria',
         billableOutsidePlan: false,
         status: 'COMPLETED',
@@ -39,14 +39,14 @@ describe('useTicketTimeEntries', () => {
         segments: [],
       },
     ])
-    const { result } = renderHook(() => useTicketTimeEntries('t1'), { wrapper: wrapper() })
+    const { result } = renderHook(() => useTicketTimeEntries(1), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(service.listTicketTimeEntries).toHaveBeenCalledWith('t1')
+    expect(service.listTicketTimeEntries).toHaveBeenCalledWith(1)
     expect(result.current.data).toHaveLength(1)
   })
 
   it('não busca quando ticketId é vazio', () => {
-    const { result } = renderHook(() => useTicketTimeEntries(''), { wrapper: wrapper() })
+    const { result } = renderHook(() => useTicketTimeEntries(0), { wrapper: wrapper() })
     expect(result.current.fetchStatus).toBe('idle')
     expect(service.listTicketTimeEntries).not.toHaveBeenCalled()
   })

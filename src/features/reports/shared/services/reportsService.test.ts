@@ -35,8 +35,8 @@ describe('reportsService', () => {
   describe('listTeams', () => {
     it('desempacota data.data do envelope ApiResponse', async () => {
       const teams: TeamDto[] = [
-        { id: 'team-1', nome: 'Suporte Nível 1' },
-        { id: 'team-2', nome: 'Suporte Nível 2' },
+        { id: 1, nome: 'Suporte Nível 1' },
+        { id: 2, nome: 'Suporte Nível 2' },
       ]
 
       vi.mocked(api.get).mockResolvedValueOnce({
@@ -76,7 +76,7 @@ describe('reportsService', () => {
   describe('getClientReport', () => {
     it('retorna ClientReportDto diretamente (sem desempacotamento extra)', async () => {
       const clientDetail: ClientDetailDto = {
-        id: 'client-1',
+        id: 1,
         hubspotCompanyId: 999,
         cnpj: '12.345.678/0001-00',
         razaoSocial: 'Empresa ABC Ltda',
@@ -162,7 +162,7 @@ describe('reportsService', () => {
 
     it('retorna PaginatedResponse com items', async () => {
       const item: PlanConsumptionItemDto = {
-        clientId: 'c1',
+        clientId: 1,
         cnpj: '12.345.678/0001-00',
         nomeFantasia: 'Empresa X',
         razaoSocial: 'Empresa X S.A.',
@@ -222,7 +222,7 @@ describe('reportsService', () => {
   describe('listTicketsReport', () => {
     it('retorna PaginatedResponse de tickets', async () => {
       const ticket: TicketReportItemDto = {
-        ticketId: 'tid-1',
+        ticketId: 1,
         hubspotTicketId: '10001',
         assunto: 'Erro no sistema',
         clienteNome: 'Cliente Y',
@@ -271,7 +271,7 @@ describe('reportsService', () => {
   describe('listProductivity', () => {
     it('retorna PaginatedResponse de AgentMetricDto', async () => {
       const agent: AgentMetricDto = {
-        userId: 'u1',
+        userId: 1,
         nome: 'Maria',
         equipe: 'Suporte N2',
         nAtendimentos: 15,

@@ -5,7 +5,7 @@ import { z } from 'zod'
  * GET /api/v1/service-categories?includeInactive=true → ApiResponse<ServiceCategoryDto[]>
  */
 export type ServiceCategoryDto = {
-  id: string
+  id: number
   nome: string
   isActive: boolean
 }

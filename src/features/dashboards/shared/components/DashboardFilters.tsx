@@ -84,7 +84,7 @@ export function DashboardFilters({
 
   const teamOptions = [
     { value: '', label: 'Global' },
-    ...(teams ?? []).map((t) => ({ value: t.id, label: t.nome })),
+    ...(teams ?? []).map((t) => ({ value: String(t.id), label: t.nome })),
   ]
 
   return (

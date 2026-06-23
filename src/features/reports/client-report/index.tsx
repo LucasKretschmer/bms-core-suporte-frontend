@@ -190,12 +190,12 @@ export default function ClientReportPage() {
     }
   }
 
-  /** Ao clicar numa linha, navega para o detalhe interno do ticket (por UUID). */
+  /** Ao clicar numa linha, navega para o detalhe interno do ticket (por id interno). */
   const handleRowClick = useCallback(
     (row: ClientReportItemDto) => {
       void navigate({
         to: '/relatorios/tickets/$ticketId',
-        params: { ticketId: row.ticketId },
+        params: { ticketId: String(row.ticketId) },
         search: { from: 'cliente', clientId: filters.clientId ?? undefined },
       })
     },

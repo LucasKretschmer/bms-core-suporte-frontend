@@ -31,7 +31,7 @@ import type { PaginatedResponse } from '../../../types/api'
 
 function makeLog(overrides?: Partial<LogDto>): LogDto {
   return {
-    logId: 'log-1',
+    logId: 1,
     status: 'concluido',
     disparo: 'automatico',
     iniciadoEm: '2026-06-19T10:00:00Z',
@@ -93,7 +93,7 @@ describe('sincronizadorService', () => {
       expect(result.statusSistema).toBe('online')
       expect(result.emExecucao).toBe(false)
       expect(result.intervaloMinutos).toBe(2)
-      expect(result.ultimaExecucao?.logId).toBe('log-1')
+      expect(result.ultimaExecucao?.logId).toBe(1)
       expect(result.ultimaExecucao?.duracaoMs).toBe(5000)
     })
 
@@ -129,7 +129,7 @@ describe('sincronizadorService', () => {
 
       expect(result.items).toHaveLength(1)
       expect(result.totalCount).toBe(1)
-      expect(result.items[0].logId).toBe('log-1')
+      expect(result.items[0].logId).toBe(1)
     })
 
     it('só envia params definidos (status/sortBy/sortDirection)', async () => {
@@ -167,12 +167,12 @@ describe('sincronizadorService', () => {
 
   describe('runSincronizador', () => {
     it('desempacota { data: { logId } }', async () => {
-      vi.mocked(api.post).mockResolvedValueOnce({ data: { data: { logId: 'run-1' } } })
+      vi.mocked(api.post).mockResolvedValueOnce({ data: { data: { logId: 99 } } })
 
       const result = await runSincronizador()
 
       expect(api.post).toHaveBeenCalledWith('/api/v1/sincronizador/run')
-      expect(result).toEqual({ logId: 'run-1' })
+      expect(result).toEqual({ logId: 99 })
     })
   })
 
@@ -196,7 +196,7 @@ describe('sincronizadorService', () => {
   describe('listRegistrosTickets', () => {
     it('mapeia items de PaginatedResponse para RegistroDto com tipo="ticket"', async () => {
       const ticket: TicketManutencaoDto = {
-        ticketId: 't-1',
+        ticketId: 1,
         hubspotId: '111',
         assunto: 'Erro de login',
         pipeline: 'Suporte',
@@ -235,7 +235,7 @@ describe('sincronizadorService', () => {
         data: {
           items: [
             {
-              ticketId: 't-2',
+              ticketId: 2,
               hubspotId: '222',
               assunto: null,
               pipeline: null,
@@ -263,7 +263,7 @@ describe('sincronizadorService', () => {
   describe('listRegistrosProjetos', () => {
     it('mapeia nome → assunto e injeta tipo="projeto"', async () => {
       const projeto: ProjetoManutencaoDto = {
-        projetoId: 'p-1',
+        projetoId: 1,
         hubspotId: '333',
         nome: 'Implantação ACME',
         tipo: 'Onboarding',
@@ -309,7 +309,7 @@ describe('sincronizadorService', () => {
           data: {
             items: [
               {
-                ticketId: 't-1',
+                ticketId: 1,
                 hubspotId: '111',
                 assunto: 'Ticket A',
                 pipeline: 'Suporte',
@@ -329,7 +329,7 @@ describe('sincronizadorService', () => {
           data: {
             items: [
               {
-                projetoId: 'p-1',
+                projetoId: 1,
                 hubspotId: '333',
                 nome: 'Projeto B',
                 tipo: null,

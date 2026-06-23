@@ -45,8 +45,8 @@ const MOCK_REPORT: ClientReportDto = {
   horasNaoFaturadoSegundos: 0,
   items: [
     {
-      timeEntryId: 'entry-1',
-      ticketId: 'ticket-1',
+      timeEntryId: 1,
+      ticketId: 1,
       hubspotTicketId: '1001',
       assunto: 'Ticket de teste',
       equipeAtribuida: 'N1',
@@ -250,8 +250,8 @@ describe('useClientReport — privacidade', () => {
       ...MOCK_REPORT,
       items: [
         {
-          timeEntryId: 'entry-1',
-          ticketId: 'ticket-1',
+          timeEntryId: 1,
+          ticketId: 1,
           hubspotTicketId: '1001',
           assunto: 'Ticket normal',
           equipeAtribuida: 'N1',

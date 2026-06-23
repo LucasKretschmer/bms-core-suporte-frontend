@@ -32,7 +32,7 @@ export async function createServiceCategory(nome: string): Promise<ServiceCatego
 
 /** Renomeia a categoria (PUT — atualização de nome). */
 export async function updateServiceCategory(
-  id: string,
+  id: number,
   nome: string,
 ): Promise<ServiceCategoryDto> {
   const { data } = await api.put<ApiResponse<ServiceCategoryDto>>(`${BASE}/${id}`, { nome })
@@ -44,7 +44,7 @@ export async function updateServiceCategory(
  * Contrato congelado: PATCH /service-categories/{id} body { isActive }.
  */
 export async function toggleServiceCategory(
-  id: string,
+  id: number,
   isActive: boolean,
 ): Promise<ServiceCategoryDto> {
   const { data } = await api.patch<ApiResponse<ServiceCategoryDto>>(`${BASE}/${id}`, {
@@ -53,6 +53,6 @@ export async function toggleServiceCategory(
   return data.data
 }
 
-export async function deleteServiceCategory(id: string): Promise<void> {
+export async function deleteServiceCategory(id: number): Promise<void> {
   await api.delete(`${BASE}/${id}`)
 }

@@ -18,7 +18,7 @@ const INITIAL_FILTERS: ClientTicketsFilters = {
  * Hook de tabela server-side para a tela "Tickets do cliente" (F2).
  * Sempre passa o clientId — a queryKey inclui clientId + filtros para cache correto.
  */
-export function useClientTickets(clientId: string) {
+export function useClientTickets(clientId: number) {
   const queryFn = useCallback(
     (params: TableParams<ClientTicketsFilters>) =>
       listClientTickets({

@@ -7,10 +7,10 @@ import { listAgents } from './teamsService'
 import type { AgentDto } from '../types/team'
 
 const agent: AgentDto = {
-  userId: 'u-1',
+  userId: 1,
   nome: 'Ana',
   email: 'ana@x.com',
-  equipeId: 't-1',
+  equipeId: 5,
   equipeNome: 'Suporte',
   papel: 'ATENDENTE',
 }

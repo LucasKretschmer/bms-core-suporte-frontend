@@ -97,7 +97,7 @@ describe('planConsumptionColumns — estrutura', () => {
   it('coluna CNPJ formata máscara corretamente', () => {
     const col = planConsumptionColumns.find((c) => c.key === 'cnpj')!
     const row = {
-      clientId: '1',
+      clientId: 1,
       cnpj: '12345678000195',
       nomeFantasia: null,
       razaoSocial: null,
@@ -116,7 +116,7 @@ describe('planConsumptionColumns — estrutura', () => {
   it('coluna CNPJ exibe "—" quando null', () => {
     const col = planConsumptionColumns.find((c) => c.key === 'cnpj')!
     const row = {
-      clientId: '1',
+      clientId: 1,
       cnpj: null,
       nomeFantasia: null,
       razaoSocial: null,

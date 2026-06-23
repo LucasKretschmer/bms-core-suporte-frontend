@@ -18,14 +18,14 @@ import type { BusinessRuleDto, RuleValue } from '../types/businessRule'
 
 const BASE = '/api/v1/business-rules'
 
-export async function listBusinessRules(teamId?: string | null): Promise<BusinessRuleDto[]> {
-  const params = teamId ? { teamId } : undefined
+export async function listBusinessRules(teamId?: number | null): Promise<BusinessRuleDto[]> {
+  const params = teamId != null ? { teamId } : undefined
   const { data } = await api.get<ApiResponse<BusinessRuleDto[]>>(BASE, { params })
   return data.data
 }
 
 export async function createBusinessRule(body: {
-  teamId: string | null
+  teamId: number | null
   chave: string
   valor: RuleValue
 }): Promise<BusinessRuleDto> {
@@ -34,7 +34,7 @@ export async function createBusinessRule(body: {
 }
 
 export async function updateBusinessRule(
-  id: string,
+  id: number,
   valor: RuleValue,
 ): Promise<BusinessRuleDto> {
   const { data } = await api.put<ApiResponse<BusinessRuleDto>>(`${BASE}/${id}`, { valor })
@@ -46,8 +46,8 @@ export async function updateBusinessRule(
  * Centraliza a lógica "upsert por chave" para os hooks de mutation.
  */
 export async function saveBusinessRule(args: {
-  ruleId: string | null
-  teamId: string | null
+  ruleId: number | null
+  teamId: number | null
   chave: string
   valor: RuleValue
 }): Promise<BusinessRuleDto> {

@@ -13,7 +13,7 @@ export type RequesterDto = {
 // ── Configuração ─────────────────────────────────────────────────────────────
 
 export type SupportPlanDto = {
-  id: string
+  id: number
   nome: string
   horasMes: number
   precoHoraExtra: number | null
@@ -22,7 +22,7 @@ export type SupportPlanDto = {
 }
 
 export type ClientListItemDto = {
-  id: string
+  id: number
   hubspotCompanyId: number
   cnpj: string | null
   razaoSocial: string | null
@@ -31,7 +31,7 @@ export type ClientListItemDto = {
 }
 
 export type ClientDetailDto = {
-  id: string
+  id: number
   hubspotCompanyId: number
   cnpj: string | null
   razaoSocial: string | null
@@ -42,14 +42,14 @@ export type ClientDetailDto = {
 }
 
 export type TeamDto = {
-  id: string
+  id: number
   nome: string
 }
 
 // ── U3 — Consumo de Planos ───────────────────────────────────────────────────
 
 export type PlanConsumptionItemDto = {
-  clientId: string
+  clientId: number
   cnpj: string | null
   nomeFantasia: string | null
   razaoSocial: string | null
@@ -66,7 +66,7 @@ export type PlanConsumptionItemDto = {
 // ── U4 — Apontamentos por Ticket ─────────────────────────────────────────────
 
 export type TicketReportItemDto = {
-  ticketId: string
+  ticketId: number
   hubspotTicketId: string
   assunto: string | null
   clienteNome: string | null
@@ -84,8 +84,8 @@ export type TicketReportItemDto = {
 export type FaturamentoStatus = 'Plano de Suporte' | 'Faturado' | 'Não faturado'
 
 export type ClientReportItemDto = {
-  timeEntryId: string
-  ticketId: string
+  timeEntryId: number
+  ticketId: number
   hubspotTicketId: string
   assunto: string | null
   equipeAtribuida: string | null
@@ -113,7 +113,7 @@ export type ClientReportDto = {
 // ── U6 — Produtividade por Analista ─────────────────────────────────────────
 
 export type AgentMetricDto = {
-  userId: string
+  userId: number
   nome: string
   equipe: string | null
   nAtendimentos: number

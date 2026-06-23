@@ -9,7 +9,7 @@ import {
 
 function makeRule(over: Partial<BusinessRuleDto>): BusinessRuleDto {
   return {
-    id: 'r',
+    id: 1,
     teamId: null,
     chave: 'k',
     valor: true,
@@ -21,8 +21,8 @@ function makeRule(over: Partial<BusinessRuleDto>): BusinessRuleDto {
 
 describe('resolveRule', () => {
   it('retorna valor e ruleId quando a regra existe', () => {
-    const rules = [makeRule({ id: 'r-1', chave: 'allowEditTimes', valor: true })]
-    expect(resolveRule(rules, 'allowEditTimes')).toEqual({ value: true, ruleId: 'r-1' })
+    const rules = [makeRule({ id: 1, chave: 'allowEditTimes', valor: true })]
+    expect(resolveRule(rules, 'allowEditTimes')).toEqual({ value: true, ruleId: 1 })
   })
 
   it('aplica default e ruleId null quando ausente', () => {

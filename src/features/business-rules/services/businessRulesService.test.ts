@@ -14,8 +14,8 @@ import {
 import type { BusinessRuleDto } from '../types/businessRule'
 
 const rule: BusinessRuleDto = {
-  id: 'r-1',
-  teamId: 't-1',
+  id: 1,
+  teamId: 5,
   chave: 'singleActiveTimer',
   valor: true,
   criadoEm: '2026-06-19T00:00:00Z',
@@ -34,8 +34,8 @@ describe('businessRulesService', () => {
 
     it('com teamId → GET com params { teamId }', async () => {
       vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [rule] } })
-      const result = await listBusinessRules('t-1')
-      expect(api.get).toHaveBeenCalledWith('/api/v1/business-rules', { params: { teamId: 't-1' } })
+      const result = await listBusinessRules(5)
+      expect(api.get).toHaveBeenCalledWith('/api/v1/business-rules', { params: { teamId: 5 } })
       expect(result).toEqual([rule])
     })
   })
@@ -43,9 +43,9 @@ describe('businessRulesService', () => {
   describe('createBusinessRule', () => {
     it('faz POST com { teamId, chave, valor }', async () => {
       vi.mocked(api.post).mockResolvedValueOnce({ data: { data: rule } })
-      await createBusinessRule({ teamId: 't-1', chave: 'singleActiveTimer', valor: true })
+      await createBusinessRule({ teamId: 5, chave: 'singleActiveTimer', valor: true })
       expect(api.post).toHaveBeenCalledWith('/api/v1/business-rules', {
-        teamId: 't-1',
+        teamId: 5,
         chave: 'singleActiveTimer',
         valor: true,
       })
@@ -55,24 +55,24 @@ describe('businessRulesService', () => {
   describe('updateBusinessRule', () => {
     it('faz PUT { valor } no id', async () => {
       vi.mocked(api.put).mockResolvedValueOnce({ data: { data: rule } })
-      await updateBusinessRule('r-1', false)
-      expect(api.put).toHaveBeenCalledWith('/api/v1/business-rules/r-1', { valor: false })
+      await updateBusinessRule(1, false)
+      expect(api.put).toHaveBeenCalledWith('/api/v1/business-rules/1', { valor: false })
     })
   })
 
   describe('saveBusinessRule (upsert)', () => {
     it('com ruleId → PUT (update)', async () => {
       vi.mocked(api.put).mockResolvedValueOnce({ data: { data: rule } })
-      await saveBusinessRule({ ruleId: 'r-1', teamId: 't-1', chave: 'allowEditTimes', valor: true })
-      expect(api.put).toHaveBeenCalledWith('/api/v1/business-rules/r-1', { valor: true })
+      await saveBusinessRule({ ruleId: 1, teamId: 5, chave: 'allowEditTimes', valor: true })
+      expect(api.put).toHaveBeenCalledWith('/api/v1/business-rules/1', { valor: true })
       expect(api.post).not.toHaveBeenCalled()
     })
 
     it('sem ruleId → POST (create)', async () => {
       vi.mocked(api.post).mockResolvedValueOnce({ data: { data: rule } })
-      await saveBusinessRule({ ruleId: null, teamId: 't-1', chave: 'allowEditTimes', valor: true })
+      await saveBusinessRule({ ruleId: null, teamId: 5, chave: 'allowEditTimes', valor: true })
       expect(api.post).toHaveBeenCalledWith('/api/v1/business-rules', {
-        teamId: 't-1',
+        teamId: 5,
         chave: 'allowEditTimes',
         valor: true,
       })

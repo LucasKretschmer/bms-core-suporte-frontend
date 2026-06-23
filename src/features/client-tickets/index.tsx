@@ -38,7 +38,7 @@ const PERCENT_SUBTEXT: Record<ReturnType<typeof getPercentClass>, 'positive' | '
 }
 
 type ClientTicketsPageProps = {
-  clientId: string
+  clientId: number
 }
 
 export default function ClientTicketsPage({ clientId }: ClientTicketsPageProps) {
@@ -74,8 +74,8 @@ export default function ClientTicketsPage({ clientId }: ClientTicketsPageProps) 
     (row: ClientTicketItemDto) => {
       void navigate({
         to: '/relatorios/tickets/$ticketId',
-        params: { ticketId: row.ticketId },
-        search: { from: 'clientes', clientId },
+        params: { ticketId: String(row.ticketId) },
+        search: { from: 'clientes', clientId: String(clientId) },
       })
     },
     [navigate, clientId],

@@ -19,12 +19,12 @@ export type UserRole = 'ATENDENTE' | 'COORDENADOR' | 'GERENTE' | 'ADMIN'
 
 /** Usuário autenticado (mapeado de UserResponseDto do backend). */
 export type AuthUser = {
-  id: string
+  id: number
   nome: string
   email: string
   role: UserRole
   hubspotOwnerId: number
-  primaryTeamId: string | null
+  primaryTeamId: number | null
 }
 
 /** Response do login (mapeado de LoginResponseDto do backend). */

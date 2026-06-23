@@ -30,7 +30,7 @@ export function useCategoryMutations() {
   })
 
   const toggleActive = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       toggleServiceCategory(id, isActive),
     onSuccess: (_data, variables) => {
       toast.success(variables.isActive ? 'Categoria ativada.' : 'Categoria desativada.')
@@ -40,7 +40,7 @@ export function useCategoryMutations() {
   })
 
   const remove = useMutation({
-    mutationFn: (id: string) => deleteServiceCategory(id),
+    mutationFn: (id: number) => deleteServiceCategory(id),
     onSuccess: () => {
       toast.success('Categoria removida.')
       invalidate()

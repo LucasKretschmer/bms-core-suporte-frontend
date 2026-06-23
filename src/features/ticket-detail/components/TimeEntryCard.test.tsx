@@ -6,10 +6,10 @@ import type { TicketTimeEntryDto } from '../types/ticketDetail'
 
 function entry(overrides: Partial<TicketTimeEntryDto> = {}): TicketTimeEntryDto {
   return {
-    id: 'e1',
-    userId: 'u1',
+    id: 1,
+    userId: 1,
     agenteNome: 'Maria',
-    serviceCategoryId: 'sc1',
+    serviceCategoryId: 2,
     categorizacaoNome: 'Consultoria',
     billableOutsidePlan: false,
     status: 'COMPLETED',
@@ -19,7 +19,7 @@ function entry(overrides: Partial<TicketTimeEntryDto> = {}): TicketTimeEntryDto 
     note: null,
     pendingCategory: false,
     segments: [
-      { id: 's1', type: 'WORK', segmentStart: '2026-06-19T11:00:00Z', segmentEnd: '2026-06-19T12:00:00Z' },
+      { id: 10, type: 'WORK', segmentStart: '2026-06-19T11:00:00Z', segmentEnd: '2026-06-19T12:00:00Z' },
     ],
     ...overrides,
   }
