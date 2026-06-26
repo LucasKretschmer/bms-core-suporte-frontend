@@ -108,7 +108,7 @@ export function DashboardFilters({
       {/* Período */}
       <PeriodFilter from={from} to={to} onChange={onPeriodChange} />
 
-      {/* Equipe (apenas quando teams é fornecido) — largura ×2 (019) */}
+      {/* Equipe (apenas quando teams é fornecido) — largura reduzida p/ ~70% (022; era sm:w-64 lg:w-80 na 019) */}
       {teams !== undefined && onScopeChange && (
         <Combobox
           label="Equipe"
@@ -118,7 +118,7 @@ export function DashboardFilters({
           placeholder="Global"
           id={teamComboId}
           isLoading={isTeamsLoading}
-          className="w-full sm:w-64 lg:w-80"
+          className="w-full sm:w-44 lg:w-56"
         />
       )}
 
