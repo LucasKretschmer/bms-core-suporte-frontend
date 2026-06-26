@@ -3,6 +3,12 @@ import { clsx } from 'clsx'
 type BadgeProps = {
   value: string
   className?: string
+  /**
+   * Quando true, limita o texto a uma linha com reticências (`truncate`).
+   * Combine com uma classe de largura máxima em `className` (ex.: `max-w-[140px]`).
+   * O valor completo fica acessível via `title`/`aria-label`.
+   */
+  truncate?: boolean
 }
 
 /**
@@ -22,14 +28,17 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
 
 const FALLBACK: BadgeStyle = { bg: 'bg-badge-neutro-bg', fg: 'text-badge-neutro-fg' }
 
-export function Badge({ value, className }: BadgeProps) {
+export function Badge({ value, className, truncate = false }: BadgeProps) {
   const style = BADGE_MAP[value] ?? FALLBACK
 
   return (
     <span
       aria-label={value}
+      // title só quando truncado: garante o valor completo via tooltip nativo
+      title={truncate ? value : undefined}
       className={clsx(
         'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+        truncate && 'max-w-full truncate',
         style.bg,
         style.fg,
         className,

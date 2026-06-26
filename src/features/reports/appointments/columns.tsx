@@ -100,9 +100,13 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       sortKey: 'status',
       align: 'center',
       width: '160px',
+      // Status pode vir como label longo do backend (ex.: "Em atendimento (Relacionamento BR)").
+      // Truncamos com reticências + tooltip (title) para não estourar a largura da coluna.
       accessor: (row) =>
         row.status ? (
-          <Badge value={row.status} />
+          <div className="flex justify-center">
+            <Badge value={row.status} truncate className="max-w-[140px]" />
+          </div>
         ) : (
           <span className="text-foreground/40">—</span>
         ),
