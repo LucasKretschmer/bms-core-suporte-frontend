@@ -48,7 +48,7 @@ export function useTicketDrill(
 
   // Resetar paginação/ordenação ao trocar de drill (metric ou params).
   const drillKey = activeDrill
-    ? `${activeDrill.metric}|${activeDrill.params?.stageId ?? ''}|${activeDrill.params?.sla ?? ''}`
+    ? `${activeDrill.metric}|${activeDrill.params?.statusKey ?? ''}|${activeDrill.params?.stageId ?? ''}|${activeDrill.params?.sla ?? ''}`
     : null
 
   useEffect(() => {
@@ -61,6 +61,7 @@ export function useTicketDrill(
     queryKey: [
       'metric-rows',
       activeDrill?.metric,
+      activeDrill?.params?.statusKey,
       activeDrill?.params?.stageId,
       activeDrill?.params?.sla,
       baseParams.scope,
@@ -79,6 +80,7 @@ export function useTicketDrill(
         from: baseParams.from,
         to: baseParams.to,
         clientId: baseParams.clientId,
+        statusKey: activeDrill!.params?.statusKey ?? null,
         stageId: activeDrill!.params?.stageId ?? null,
         sla: activeDrill!.params?.sla ?? null,
         page,

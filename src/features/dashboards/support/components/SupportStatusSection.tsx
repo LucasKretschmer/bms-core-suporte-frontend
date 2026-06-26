@@ -8,7 +8,7 @@
 import { useStatusDistribution } from '../../shared/hooks/useStatusDistribution'
 import { StatusDistributionChart } from '../../shared/components/StatusDistributionChart'
 import { ChartCard } from '../../shared/components/ChartCard'
-import type { MetricsScope } from '../../shared/types/metrics'
+import type { DrillSpec, MetricsScope } from '../../shared/types/metrics'
 
 type SupportStatusSectionProps = {
   scope: MetricsScope
@@ -16,6 +16,11 @@ type SupportStatusSectionProps = {
   to: string | null
   clientId?: string | null
   planId?: string | null
+  /**
+   * Drill (016/020): clique numa barra de status → tabela dos tickets do grupo (statusKey).
+   * O backend resolve os stageIds membros (A01).
+   */
+  onStatusDrill?: (spec: DrillSpec) => void
 }
 
 export function SupportStatusSection({
@@ -24,6 +29,7 @@ export function SupportStatusSection({
   to,
   clientId,
   planId,
+  onStatusDrill,
 }: SupportStatusSectionProps) {
   const { data: dist, isLoading, isError, refetch } = useStatusDistribution({
     scope,
@@ -41,8 +47,9 @@ export function SupportStatusSection({
       dist.data.length === 0 ||
       (dist.byTeam && dist.data.every((team) => team.porStatus.length === 0)))
 
-  // Título reflete o escopo: global mostra a matriz equipe × status.
-  const title = dist?.byTeam ? 'Status por Equipe' : 'Status em Aberto (por etapa)'
+  // Título reflete o escopo: global mostra a matriz equipe × status; equipe mostra o
+  // somatório por status agrupado (020 — não é mais "por etapa").
+  const title = dist?.byTeam ? 'Status por Equipe' : 'Status em Aberto'
 
   return (
     <ChartCard
@@ -54,7 +61,22 @@ export function SupportStatusSection({
       onRetry={refetch}
       height={260}
     >
-      {dist && <StatusDistributionChart data={dist} height={260} />}
+      {dist && (
+        <StatusDistributionChart
+          data={dist}
+          height={260}
+          onSliceClick={
+            onStatusDrill
+              ? (statusKey, status) =>
+                  onStatusDrill({
+                    metric: 'tickets-backlog',
+                    title: `Tickets — ${status}`,
+                    params: { statusKey },
+                  })
+              : undefined
+          }
+        />
+      )}
     </ChartCard>
   )
 }

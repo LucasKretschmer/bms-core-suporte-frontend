@@ -103,6 +103,7 @@ export function TicketDrillModal({
         from: baseParams.from,
         to: baseParams.to,
         clientId: baseParams.clientId,
+        statusKey: activeDrill.params?.statusKey ?? null,
         stageId: activeDrill.params?.stageId ?? null,
         sla: activeDrill.params?.sla ?? null,
         sortBy: drill.sortBy,

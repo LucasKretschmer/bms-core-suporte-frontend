@@ -41,7 +41,11 @@ type StatusDistributionChartProps = {
   data: StatusDistributionDto
   isLoading?: boolean
   height?: number
-  onSliceClick?: (stageId: string) => void
+  /**
+   * Drill por GRUPO de status (020): recebe a chave de grupo (`statusKey`) e o rótulo
+   * exibido (`status`, para o título do modal). O backend resolve os stageIds membros.
+   */
+  onSliceClick?: (statusKey: string, status: string) => void
   className?: string
 }
 
@@ -93,14 +97,17 @@ export function collectStatuses(data: StatusDistributionDto): string[] {
   return Array.from(new Set(statuses)).sort((a, b) => a.localeCompare(b))
 }
 
-/** Mapa status → stageId (para drill-down a partir do nome da série). */
-function buildStageIdByStatus(data: StatusDistributionDto): Record<string, string> {
+/**
+ * Mapa status (rótulo exibido) → statusKey (chave de grupo, 020) para o drill a partir
+ * do nome da série (modo global empilhado, onde o clique conhece só o `name` da série).
+ */
+export function buildStatusKeyByStatus(data: StatusDistributionDto): Record<string, string> {
   const items: StatusDistributionItemDto[] = data.byTeam
     ? data.data.flatMap((team) => team.porStatus)
     : data.data
   const map: Record<string, string> = {}
   for (const item of items) {
-    if (!(item.status in map)) map[item.status] = item.stageId
+    if (!(item.status in map)) map[item.status] = item.statusKey
   }
   return map
 }
@@ -153,7 +160,7 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
     () => buildColorByStatus(statuses, palette),
     [statuses, palette],
   )
-  const stageIdByStatus = useMemo(() => buildStageIdByStatus(data), [data])
+  const statusKeyByStatus = useMemo(() => buildStatusKeyByStatus(data), [data])
 
   const stackedRows = useMemo(
     () => (data.byTeam ? toStackedRows(data.data) : []),
@@ -214,8 +221,8 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
                 onClick={
                   onSliceClick
                     ? () => {
-                        const stageId = stageIdByStatus[status]
-                        if (stageId) onSliceClick(stageId)
+                        const statusKey = statusKeyByStatus[status]
+                        if (statusKey) onSliceClick(statusKey, status)
                       }
                     : undefined
                 }
@@ -263,17 +270,43 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
               onSliceClick
                 ? (bar: BarRectangleItem) => {
                     const item = bar.payload as StatusDistributionItemDto | undefined
-                    if (item?.stageId) onSliceClick(item.stageId)
+                    if (item?.statusKey) onSliceClick(item.statusKey, item.status)
                   }
                 : undefined
             }
           >
             {teamRows.map((item) => (
-              <Cell key={item.stageId} fill={colorByStatus[item.status]} />
+              <Cell key={item.statusKey} fill={colorByStatus[item.status]} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+
+      {/* OBS-1 (QA 016): Recharts não expõe as barras ao teclado. Alternativa acessível
+          — botões focáveis (Tab/Enter) que disparam o mesmo drill por statusKey.
+          Visualmente discretos abaixo do gráfico; presentes só quando há drill habilitado. */}
+      {onSliceClick && (
+        <ul className="mt-2 flex flex-wrap gap-2" aria-label="Abrir tickets por status">
+          {teamRows.map((item) => (
+            <li key={item.statusKey}>
+              <button
+                type="button"
+                onClick={() => onSliceClick(item.statusKey, item.status)}
+                className="inline-flex items-center gap-1.5 rounded-[5px] border border-border px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]"
+                aria-label={`Ver tickets do status ${item.status} (${item.count})`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block w-2 h-2 rounded-[2px]"
+                  style={{ backgroundColor: colorByStatus[item.status] }}
+                />
+                <span className="break-words">{item.status}</span>
+                <strong>{item.count}</strong>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 })

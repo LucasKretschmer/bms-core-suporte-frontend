@@ -78,6 +78,29 @@ describe('getMetricRows', () => {
     expect(callParams.sla).toBe('on')
   })
 
+  it('repassa statusKey no drill de status agrupado (020)', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({ data: EMPTY_PAGE })
+
+    await getMetricRows({
+      metric: 'tickets-backlog',
+      scope: 'management:suporte',
+      from: null,
+      to: null,
+      clientId: null,
+      statusKey: 'em atendimento',
+      stageId: null,
+      sla: null,
+      page: 1,
+      pageSize: 25,
+    })
+
+    const callParams = vi.mocked(api.get).mock.calls[0][1]?.params as Record<string, unknown>
+    expect(callParams.metric).toBe('tickets-backlog')
+    expect(callParams.statusKey).toBe('em atendimento')
+    // stageId null é removido pelo cleanParams (statusKey tem precedência no BE).
+    expect('stageId' in callParams).toBe(false)
+  })
+
   it('remove params null/undefined/vazio antes de enviar (cleanParams)', async () => {
     vi.mocked(api.get).mockResolvedValueOnce({ data: EMPTY_PAGE })
 

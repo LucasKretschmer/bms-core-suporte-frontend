@@ -8,12 +8,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import {
   StatusDistributionChart,
   buildColorByStatus,
   toStackedRows,
   collectStatuses,
+  buildStatusKeyByStatus,
 } from './StatusDistributionChart'
 import { CATEGORIAS_PROIBIDAS } from '../utils/kpiCatalog'
 import type {
@@ -32,12 +33,13 @@ vi.mock('../utils/chartTokens', () => ({
 
 // ── Dados ─────────────────────────────────────────────────────────────────────
 
+// 020: stageId carrega a chave do grupo por retrocompat; statusKey é a identidade real.
 const TEAM_DATA: StatusDistributionTeamScopeDto = {
   byTeam: false,
   data: [
-    { stageId: '1', status: 'Em atendimento', count: 8 },
-    { stageId: '2', status: 'Aguardando Cliente', count: 3 },
-    { stageId: '3', status: 'Novo', count: 5 },
+    { stageId: 'em atendimento', statusKey: 'em atendimento', status: 'Em atendimento', count: 8 },
+    { stageId: 'aguardando cliente', statusKey: 'aguardando cliente', status: 'Aguardando Cliente', count: 3 },
+    { stageId: 'novo', statusKey: 'novo', status: 'Novo', count: 5 },
   ],
 }
 
@@ -47,16 +49,16 @@ const GLOBAL_DATA: StatusDistributionGlobalScopeDto = {
     {
       equipe: 'Suporte N1',
       porStatus: [
-        { stageId: '1', status: 'Em atendimento', count: 8 },
-        { stageId: '2', status: 'Aguardando Cliente', count: 3 },
+        { stageId: 'em atendimento', statusKey: 'em atendimento', status: 'Em atendimento', count: 8 },
+        { stageId: 'aguardando cliente', statusKey: 'aguardando cliente', status: 'Aguardando Cliente', count: 3 },
       ],
     },
     {
       equipe: 'Suporte N2',
       porStatus: [
-        { stageId: '1', status: 'Em atendimento', count: 2 },
+        { stageId: 'em atendimento', statusKey: 'em atendimento', status: 'Em atendimento', count: 2 },
         // 'Aguardando Cliente' ausente nesta equipe — não deve quebrar
-        { stageId: '3', status: 'Novo', count: 4 },
+        { stageId: 'novo', statusKey: 'novo', status: 'Novo', count: 4 },
       ],
     },
   ],
@@ -113,8 +115,8 @@ describe('toStackedRows — pivot equipe × status', () => {
       {
         equipe: 'X',
         porStatus: [
-          { stageId: '1', status: 'Novo', count: 2 },
-          { stageId: '1', status: 'Novo', count: 3 },
+          { stageId: 'novo', statusKey: 'novo', status: 'Novo', count: 2 },
+          { stageId: 'novo', statusKey: 'novo', status: 'Novo', count: 3 },
         ],
       },
     ])
@@ -142,6 +144,21 @@ describe('collectStatuses — conjunto único alfabético', () => {
       'Em atendimento',
       'Novo',
     ])
+  })
+})
+
+describe('buildStatusKeyByStatus — mapa rótulo → chave de grupo (020)', () => {
+  it('escopo equipe: mapeia cada status para seu statusKey', () => {
+    const map = buildStatusKeyByStatus(TEAM_DATA)
+    expect(map['Em atendimento']).toBe('em atendimento')
+    expect(map['Aguardando Cliente']).toBe('aguardando cliente')
+    expect(map['Novo']).toBe('novo')
+  })
+
+  it('escopo global: usa a primeira ocorrência de cada status', () => {
+    const map = buildStatusKeyByStatus(GLOBAL_DATA)
+    expect(map['Em atendimento']).toBe('em atendimento')
+    expect(map['Novo']).toBe('novo')
   })
 })
 
@@ -189,6 +206,29 @@ describe('StatusDistributionChart — render', () => {
     expect(() =>
       render(<StatusDistributionChart data={TEAM_DATA} onSliceClick={onSliceClick} height={300} />),
     ).not.toThrow()
+  })
+
+  it('modo equipe: botão acessível de cada status dispara drill com (statusKey, status) — OBS-1', () => {
+    const onSliceClick = vi.fn()
+    render(<StatusDistributionChart data={TEAM_DATA} onSliceClick={onSliceClick} />)
+
+    // Botões focáveis por teclado (alternativa às barras do Recharts).
+    const btn = screen.getByRole('button', { name: /Ver tickets do status Em atendimento/i })
+    fireEvent.click(btn)
+
+    expect(onSliceClick).toHaveBeenCalledTimes(1)
+    expect(onSliceClick).toHaveBeenCalledWith('em atendimento', 'Em atendimento')
+  })
+
+  it('modo equipe: um botão de drill por status agrupado', () => {
+    const onSliceClick = vi.fn()
+    render(<StatusDistributionChart data={TEAM_DATA} onSliceClick={onSliceClick} />)
+    expect(screen.getAllByRole('button')).toHaveLength(TEAM_DATA.data.length)
+  })
+
+  it('sem onSliceClick: não renderiza botões de drill (não interativo)', () => {
+    render(<StatusDistributionChart data={TEAM_DATA} />)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
   })
 
   it('AP-SECURITY-001: nenhuma categoria proibida aparece no DOM', () => {

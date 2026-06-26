@@ -74,12 +74,19 @@ export type MetricsDailyDto = {
 // ── GET /metrics/status-distribution ────────────────────────────────────────
 
 /**
- * Um status de pipeline com sua contagem. `status` = label legível resolvido pelo
- * backend (via pipelinestages). Fallback do BE: se não houver match, `status` vem
- * com o stageId cru — o FE renderiza o que vier, sem mapeamento de código (#2).
+ * Um status de pipeline AGRUPADO com sua contagem somada (020). `status` = label
+ * legível resolvido pelo backend (via pipelinestages). `statusKey` = chave de grupo
+ * (Nome normalizado) — identidade do item (key React, cor) e param do drill por grupo.
+ *
+ * `stageId` permanece no contrato por RETROCOMPAT (carrega a mesma chave do grupo),
+ * mas o FE usa `statusKey` como identidade/drill — não tratar como stageId único (020/D2).
+ *
+ * #2: se o BE não casar o label, `status` vem com o stageId cru — o FE renderiza assim.
  */
 export type StatusDistributionItemDto = {
+  /** @deprecated 020: usar `statusKey`. Mantido por retrocompat (carrega a chave do grupo). */
   stageId: string
+  statusKey: string
   status: string
   count: number
 }
@@ -261,7 +268,12 @@ export type TicketMetricKey =
 
 /** Parâmetros específicos por metric (todos opcionais; validados no backend). */
 export type DrillParams = {
-  /** tickets-backlog (donut por etapa) — id da etapa do pipeline. */
+  /**
+   * tickets-backlog (020) — chave de status agrupado. O backend resolve os stageIds
+   * membros do grupo (A01 — nunca aceita lista de stageIds do FE). Caminho oficial.
+   */
+  statusKey?: string
+  /** @deprecated tickets-backlog: stageId único. Use `statusKey` (tem precedência no BE). */
   stageId?: string
   /** tickets-sla — 'on' (no prazo / MET) | 'late' (fora / MISSED). Obrigatório para tickets-sla. */
   sla?: 'on' | 'late'
@@ -286,6 +298,8 @@ export type MetricRowsParams = {
   to?: string | null
   clientId?: string | null
   stageId?: string | null
+  /** tickets-backlog (020): chave de status agrupado. Precedência sobre `stageId` no BE. */
+  statusKey?: string | null
   sla?: 'on' | 'late' | null
   sortBy?: string | null
   sortDirection?: 'asc' | 'desc'

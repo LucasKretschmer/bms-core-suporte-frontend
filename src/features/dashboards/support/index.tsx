@@ -148,14 +148,14 @@ export default function DashboardSuportePage() {
         planId={planId}
       />
 
-      {/* Status em Aberto — Fase 1A */}
-      {/* TODO 016: drill de status (fatia → tickets do status) via statusKey após merge da 020 */}
+      {/* Status em Aberto — Fase 1A. Drill por statusKey (016+020): barra → tickets do grupo. */}
       <SupportStatusSection
         scope={scope}
         from={from}
         to={to}
         clientId={clientId}
         planId={planId}
+        onStatusDrill={panelActive ? undefined : setActiveDrill}
       />
 
       {/* Chamados por Categoria — Fase 1B */}
