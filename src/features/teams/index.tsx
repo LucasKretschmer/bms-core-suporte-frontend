@@ -6,17 +6,20 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { PageWrapper } from '../../components/layout/PageWrapper'
+import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
-import { agentColumns, agentSortValue } from './columns'
+import { buildAgentColumns, agentSortValue } from './columns'
 import { useTeamMembers } from './hooks/useTeamMembers'
 import { groupAgentsByTeam } from './types/team'
 
 /**
- * F7 — Equipes e Atendentes (somente leitura).
+ * F7 — Equipes e Atendentes.
  * Visível para CoordenadorPlus (UX); backend é a fonte de verdade.
+ * Alterar o perfil (papel) exige GerentePlus — combobox só habilitado para esses (#13).
  */
 export default function TeamsPage() {
-  const { isCoordenadorOuAcima } = usePermissions()
+  const { isCoordenadorOuAcima, isGerentePlus } = usePermissions()
+  const { user } = useAuth()
   const { data, isLoading, isError, refetch } = useTeamMembers()
 
   const [sortState, setSortState] = useState<SortState>({ sortBy: 'nome', sortDirection: 'asc' })
@@ -40,6 +43,11 @@ export default function TeamsPage() {
   }, [data, sortState])
 
   const teams = useMemo(() => (data ? groupAgentsByTeam(data) : []), [data])
+
+  const columns = useMemo(
+    () => buildAgentColumns({ canEditRole: isGerentePlus, currentUserId: user?.id ?? null }),
+    [isGerentePlus, user?.id],
+  )
 
   if (!isCoordenadorOuAcima) {
     return (
@@ -82,7 +90,7 @@ export default function TeamsPage() {
               <div className="bg-card rounded-[5px] border border-border overflow-hidden">
                 <DataTable
                   tableId="teams-agents"
-                  columns={agentColumns}
+                  columns={columns}
                   data={sortedAgents}
                   sortState={sortState}
                   onSort={handleSort}
