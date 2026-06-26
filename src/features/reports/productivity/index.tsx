@@ -6,8 +6,11 @@ import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
 import { TeamCombobox } from '../shared/components/TeamCombobox'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
-import type { ExportColumn } from '../shared/utils/exportTable'
+import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
+import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPaginated'
 import { listProductivity } from '../shared/services/reportsService'
+import { useToast } from '../../../components/ui/Toast'
+import type { AgentMetricDto } from '../shared/types/reports'
 import { productivityColumns } from './columns'
 import { useProductivity } from './hooks/useProductivity'
 import { formatSeconds, formatDecimal } from '../shared/utils/formatters'
@@ -35,6 +38,7 @@ export default function ProductivityPage() {
   } = useProductivity()
 
   const [isExporting, setIsExporting] = useState(false)
+  const toast = useToast()
 
   const exportColumns: ExportColumn[] = [
     { header: 'Analista', key: 'nome' },
@@ -45,53 +49,61 @@ export default function ProductivityPage() {
     { header: 'Média de Pausas', key: 'mediaPausas' },
   ]
 
-  /** Busca todas as páginas para export completo */
-  const fetchAllForExport = useCallback(async () => {
-    const PAGE_SIZE = 200
-    const allItems: Record<string, string | number | null>[] = []
-    let currentPage = 1
-    let totalPages = 1
+  function mapToExportRow(item: AgentMetricDto): ExportRow {
+    return {
+      nome: item.nome,
+      equipe: item.equipe ?? '—',
+      nAtendimentos: item.nAtendimentos,
+      totalSegundos: formatSeconds(item.totalSegundos),
+      ahtSegundos: item.ahtSegundos !== null ? formatSeconds(item.ahtSegundos) : '—',
+      mediaPausas: formatDecimal(item.mediaPausas),
+    }
+  }
 
-    do {
-      const result = await listProductivity({
-        from: filters.from,
-        to: filters.to,
-        teamId: filters.teamId,
-        page: currentPage,
-        pageSize: PAGE_SIZE,
-      })
-      totalPages = result.totalPages
-      result.items.forEach((item) => {
-        allItems.push({
-          nome: item.nome,
-          equipe: item.equipe ?? '—',
-          nAtendimentos: item.nAtendimentos,
-          totalSegundos: formatSeconds(item.totalSegundos),
-          ahtSegundos: item.ahtSegundos !== null ? formatSeconds(item.ahtSegundos) : '—',
-          mediaPausas: formatDecimal(item.mediaPausas),
-        })
-      })
-      currentPage++
-    } while (currentPage <= totalPages)
-
-    return allItems
-  }, [filters, sortBy, sortDirection]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** Busca todas as páginas do conjunto filtrado para export completo */
+  const fetchAllForExport = useCallback(
+    () =>
+      fetchAllPaginated<AgentMetricDto>((page, pageSize) =>
+        listProductivity({
+          from: filters.from,
+          to: filters.to,
+          teamId: filters.teamId,
+          page,
+          pageSize,
+        }),
+      ),
+    [filters],
+  )
 
   async function handleExportCsv() {
+    if (isExporting) return
     setIsExporting(true)
+    toast.info('Carregando dados para exportar…')
     try {
-      const rows = await fetchAllForExport()
-      exportToCsv('produtividade-analistas', exportColumns, rows)
+      const items = await fetchAllForExport()
+      exportToCsv('produtividade-analistas', exportColumns, items.map(mapToExportRow))
+      toast.success('Exportação CSV concluída.')
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
     } finally {
       setIsExporting(false)
     }
   }
 
   async function handleExportXlsx() {
+    if (isExporting) return
     setIsExporting(true)
+    toast.info('Carregando dados para exportar…')
     try {
-      const rows = await fetchAllForExport()
-      await exportToXlsx('produtividade-analistas', exportColumns, rows)
+      const items = await fetchAllForExport()
+      await exportToXlsx('produtividade-analistas', exportColumns, items.map(mapToExportRow))
+      toast.success('Exportação Excel concluída.')
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
     } finally {
       setIsExporting(false)
     }

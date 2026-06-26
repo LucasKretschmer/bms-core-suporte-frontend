@@ -8,9 +8,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { ClientTicketsPanel } from './ClientTicketsPanel'
+import { ToastProvider } from '../../../components/ui/Toast'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
 import type { ClientTicketItemDto } from '../types/clientTickets'
+
+/** Render com ToastProvider — o painel usa useToast() para feedback de export. */
+function renderPanel(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>)
+}
 
 vi.mock('../hooks/useClientTickets')
 vi.mock('../hooks/useClientKpis')
@@ -50,7 +56,7 @@ beforeEach(() => {
 describe('ClientTicketsPanel — estados de UI', () => {
   it('mostra Skeleton enquanto carrega', () => {
     mockedTickets.mockReturnValue(ticketsState({ isLoading: true }))
-    render(<ClientTicketsPanel clientId={1} />)
+    renderPanel(<ClientTicketsPanel clientId={1} />)
     expect(screen.queryByText(/Nenhum ticket encontrado/i)).not.toBeInTheDocument()
     // Sem tabela durante loading
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -58,7 +64,7 @@ describe('ClientTicketsPanel — estados de UI', () => {
 
   it('mostra ErrorState em erro', () => {
     mockedTickets.mockReturnValue(ticketsState({ isError: true }))
-    render(<ClientTicketsPanel clientId={1} />)
+    renderPanel(<ClientTicketsPanel clientId={1} />)
     expect(screen.getByText(/tentar novamente/i)).toBeInTheDocument()
   })
 
@@ -68,7 +74,7 @@ describe('ClientTicketsPanel — estados de UI', () => {
         data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
       }),
     )
-    render(<ClientTicketsPanel clientId={1} />)
+    renderPanel(<ClientTicketsPanel clientId={1} />)
     expect(screen.getByText(/Nenhum ticket encontrado para este cliente/i)).toBeInTheDocument()
   })
 
@@ -92,7 +98,7 @@ describe('ClientTicketsPanel — estados de UI', () => {
         data: { items, totalCount: 1, page: 1, pageSize: 25, totalPages: 1 },
       }),
     )
-    render(<ClientTicketsPanel clientId={1} />)
+    renderPanel(<ClientTicketsPanel clientId={1} />)
     expect(screen.getByText('Erro no login')).toBeInTheDocument()
     expect(screen.getByText('#555')).toBeInTheDocument()
   })

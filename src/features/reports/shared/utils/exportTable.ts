@@ -28,9 +28,19 @@ export function exportToCsv(filename: string, columns: ExportColumn[], rows: Exp
   downloadBlob(blob, `${filename}.csv`)
 }
 
+/**
+ * Endurece a célula para CSV (A03 — CSV/Formula Injection).
+ * - Prefixa com aspa simples toda célula que comece com = + - @ (e tab/CR
+ *   iniciais, que o Excel também interpreta como início de fórmula).
+ * - Escapa aspas duplas e remove quebras de linha.
+ * Dado pode vir de assunto/nome de cliente — entrada hostil até prova em contrário.
+ */
 function escapeCell(value: string): string {
-  // Escapa aspas duplas e remove quebras de linha para CSV seguro
-  return value.replace(/"/g, '""').replace(/[\r\n]+/g, ' ')
+  let sanitized = value
+  if (/^[=+\-@\t\r]/.test(sanitized)) {
+    sanitized = `'${sanitized}`
+  }
+  return sanitized.replace(/"/g, '""').replace(/[\r\n]+/g, ' ')
 }
 
 // ── Excel (.xlsx) ─────────────────────────────────────────────────────────────
@@ -61,9 +71,9 @@ export async function exportToXlsx(
     fgColor: { argb: 'FFE2E8F0' },
   }
 
-  // Dados
+  // Dados — sanitiza strings contra fórmula (A03); números/null passam direto.
   rows.forEach((row) => {
-    sheet.addRow(columns.map((c) => row[c.key] ?? ''))
+    sheet.addRow(columns.map((c) => sanitizeXlsxCell(row[c.key])))
   })
 
   // Download
@@ -72,6 +82,20 @@ export async function exportToXlsx(
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
   downloadBlob(blob, `${filename}.xlsx`)
+}
+
+/**
+ * Endurece célula do XLSX (A03 — Formula Injection no Excel).
+ * Strings que começam com = + - @ (ou tab/CR) recebem prefixo de aspa simples.
+ * Números e null/undefined são mantidos como estão.
+ */
+function sanitizeXlsxCell(
+  value: string | number | null | undefined,
+): string | number {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'number') return value
+  if (/^[=+\-@\t\r]/.test(value)) return `'${value}`
+  return value
 }
 
 // ── Utilitário de download ────────────────────────────────────────────────────

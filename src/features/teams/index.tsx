@@ -6,11 +6,36 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { PageWrapper } from '../../components/layout/PageWrapper'
+import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
+import { ExportButtons } from '../reports/shared/components/ExportButtons'
+import {
+  exportToCsv,
+  exportToXlsx,
+  type ExportColumn,
+  type ExportRow,
+} from '../reports/shared/utils/exportTable'
 import { buildAgentColumns, agentSortValue } from './columns'
 import { useTeamMembers } from './hooks/useTeamMembers'
-import { groupAgentsByTeam } from './types/team'
+import { groupAgentsByTeam, type AgentDto } from './types/team'
+
+/** Colunas de export — espelham as colunas visíveis (sem campos internos). */
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Atendente', key: 'nome' },
+  { header: 'E-mail', key: 'email' },
+  { header: 'Equipe', key: 'equipe' },
+  { header: 'Perfil', key: 'papel' },
+]
+
+function mapAgentToExportRow(agent: AgentDto): ExportRow {
+  return {
+    nome: agent.nome,
+    email: agent.email ?? '—',
+    equipe: agent.equipeNome ?? '—',
+    papel: agent.papel,
+  }
+}
 
 /**
  * F7 — Equipes e Atendentes.
@@ -21,6 +46,8 @@ export default function TeamsPage() {
   const { isCoordenadorOuAcima, isGerentePlus } = usePermissions()
   const { user } = useAuth()
   const { data, isLoading, isError, refetch } = useTeamMembers()
+  const toast = useToast()
+  const [isExporting, setIsExporting] = useState(false)
 
   const [sortState, setSortState] = useState<SortState>({ sortBy: 'nome', sortDirection: 'asc' })
 
@@ -48,6 +75,32 @@ export default function TeamsPage() {
     () => buildAgentColumns({ canEditRole: isGerentePlus, currentUserId: user?.id ?? null }),
     [isGerentePlus, user?.id],
   )
+
+  function handleExportCsv() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      exportToCsv('equipes-atendentes', EXPORT_COLUMNS, sortedAgents.map(mapAgentToExportRow))
+      toast.success('Exportação CSV concluída.')
+    } catch {
+      toast.error('Erro ao exportar. Tente novamente.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleExportXlsx() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      await exportToXlsx('equipes-atendentes', EXPORT_COLUMNS, sortedAgents.map(mapAgentToExportRow))
+      toast.success('Exportação Excel concluída.')
+    } catch {
+      toast.error('Erro ao exportar. Tente novamente.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   if (!isCoordenadorOuAcima) {
     return (
@@ -84,9 +137,16 @@ export default function TeamsPage() {
           <>
             {/* Tabela atendente / equipe / papel */}
             <section aria-labelledby="atendentes-heading" className="flex flex-col gap-2">
-              <h2 id="atendentes-heading" className="text-[16px] font-medium text-foreground">
-                Atendentes
-              </h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="atendentes-heading" className="text-[16px] font-medium text-foreground">
+                  Atendentes
+                </h2>
+                <ExportButtons
+                  onExportCsv={handleExportCsv}
+                  onExportXlsx={() => void handleExportXlsx()}
+                  isExporting={isExporting}
+                />
+              </div>
               <div className="bg-card rounded-[5px] border border-border overflow-hidden">
                 <DataTable
                   tableId="teams-agents"

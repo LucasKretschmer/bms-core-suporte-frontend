@@ -24,16 +24,18 @@ export function ExportButtons({
         onClick={onExportCsv}
         isLoading={isExporting}
         disabled={isExporting}
+        aria-label="Baixar CSV"
       >
-        Exportar CSV
+        Baixar CSV
       </Button>
       <Button
         variant="secondary"
         onClick={onExportXlsx}
         isLoading={isExporting}
         disabled={isExporting}
+        aria-label="Baixar Excel"
       >
-        Exportar Excel
+        Baixar Excel
       </Button>
       {onExportPdf && (
         <Button

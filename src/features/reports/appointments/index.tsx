@@ -25,6 +25,7 @@ import { listTicketsReport } from '../shared/services/reportsService'
 import { formatSeconds } from '../shared/utils/formatters'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
+import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPaginated'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { saveReportFilters } from '../../../utils/reportFilters'
 import { useAppointments } from './hooks/useAppointments'
@@ -125,25 +126,9 @@ export default function AppointmentsPage() {
 
   // ── Export ──────────────────────────────────────────────────────────────────
 
-  async function fetchAllForExport(): Promise<TicketReportItemDto[]> {
-    const PAGE_SIZE = 200
-    const firstPage = await listTicketsReport({
-      scope: filters.scope,
-      search: filters.search || undefined,
-      status: filters.status.length > 0 ? filters.status : undefined,
-      from: filters.from ?? undefined,
-      to: filters.to ?? undefined,
-      sortBy: sortBy ?? undefined,
-      sortDirection,
-      page: 1,
-      pageSize: PAGE_SIZE,
-    })
-
-    const allItems = [...firstPage.items]
-    const totalPages = firstPage.totalPages
-
-    for (let p = 2; p <= totalPages; p++) {
-      const next = await listTicketsReport({
+  function fetchAllForExport(): Promise<TicketReportItemDto[]> {
+    return fetchAllPaginated<TicketReportItemDto>((page, pageSize) =>
+      listTicketsReport({
         scope: filters.scope,
         search: filters.search || undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
@@ -151,13 +136,10 @@ export default function AppointmentsPage() {
         to: filters.to ?? undefined,
         sortBy: sortBy ?? undefined,
         sortDirection,
-        page: p,
-        pageSize: PAGE_SIZE,
-      })
-      allItems.push(...next.items)
-    }
-
-    return allItems
+        page,
+        pageSize,
+      }),
+    )
   }
 
   async function handleExportCsv() {
@@ -168,8 +150,10 @@ export default function AppointmentsPage() {
       const items = await fetchAllForExport()
       exportToCsv('apontamentos-por-ticket', EXPORT_COLUMNS, items.map(mapToExportRow))
       toast.success('Exportação CSV concluída.')
-    } catch {
-      toast.error('Erro ao exportar. Tente novamente.')
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
     } finally {
       setIsExporting(false)
     }
@@ -183,8 +167,10 @@ export default function AppointmentsPage() {
       const items = await fetchAllForExport()
       await exportToXlsx('apontamentos-por-ticket', EXPORT_COLUMNS, items.map(mapToExportRow))
       toast.success('Exportação Excel concluída.')
-    } catch {
-      toast.error('Erro ao exportar. Tente novamente.')
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
     } finally {
       setIsExporting(false)
     }

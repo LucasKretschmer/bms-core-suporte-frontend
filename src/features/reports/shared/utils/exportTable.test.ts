@@ -85,4 +85,63 @@ describe('exportToCsv', () => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
+
+  describe('hardening contra CSV/Formula injection (A03)', () => {
+    function captureCsv(columns: ExportColumn[], rows: ExportRow[]): string {
+      const capturedParts: string[] = []
+      const OriginalBlob = Blob
+      vi.stubGlobal('Blob', function (parts: BlobPart[], options?: BlobPropertyBag) {
+        if (parts && typeof parts[0] === 'string') capturedParts.push(parts[0] as string)
+        return new OriginalBlob(parts, options)
+      })
+      vi.stubGlobal('URL', {
+        createObjectURL: vi.fn(() => 'blob:mock'),
+        revokeObjectURL: vi.fn(),
+      })
+      vi.spyOn(document, 'createElement').mockReturnValue({
+        click: vi.fn(),
+        href: '',
+        download: '',
+        rel: '',
+      } as unknown as HTMLElement)
+      vi.spyOn(document.body, 'appendChild').mockImplementation(vi.fn())
+      vi.spyOn(document.body, 'removeChild').mockImplementation(vi.fn())
+
+      exportToCsv('teste', columns, rows)
+
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+      return capturedParts.join('')
+    }
+
+    const columns: ExportColumn[] = [{ header: 'Assunto', key: 'assunto' }]
+
+    it('prefixa aspa simples em célula iniciando com "="', () => {
+      const csv = captureCsv(columns, [{ assunto: '=SUM(A1:A2)' }])
+      expect(csv).toContain(`"'=SUM(A1:A2)"`)
+    })
+
+    it('prefixa aspa simples em célula iniciando com "+", "-" e "@"', () => {
+      expect(captureCsv(columns, [{ assunto: '+1' }])).toContain(`"'+1"`)
+      expect(captureCsv(columns, [{ assunto: '-1+1' }])).toContain(`"'-1+1"`)
+      expect(captureCsv(columns, [{ assunto: '@cmd' }])).toContain(`"'@cmd"`)
+    })
+
+    it('não prefixa células seguras', () => {
+      const csv = captureCsv(columns, [{ assunto: 'Texto normal' }])
+      expect(csv).toContain(`"Texto normal"`)
+      expect(csv).not.toContain(`"'Texto normal"`)
+    })
+
+    it('mantém o BOM UTF-8 para acentos abrirem no Excel pt-BR', () => {
+      const csv = captureCsv(columns, [{ assunto: 'Configuração' }])
+      expect(csv.charCodeAt(0)).toBe(0xfeff)
+      expect(csv).toContain('Configuração')
+    })
+
+    it('escapa aspas duplas e remove quebras de linha', () => {
+      const csv = captureCsv(columns, [{ assunto: 'Linha 1\nLinha 2 "com aspas"' }])
+      expect(csv).toContain(`"Linha 1 Linha 2 ""com aspas"""`)
+    })
+  })
 })

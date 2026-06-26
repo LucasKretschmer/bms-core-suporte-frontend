@@ -10,10 +10,37 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Input } from '../../../components/ui/Input'
 import { Skeleton } from '../../../components/ui/Skeleton'
+import { useToast } from '../../../components/ui/Toast'
+import { ExportButtons } from '../../reports/shared/components/ExportButtons'
+import {
+  exportToCsv,
+  exportToXlsx,
+  type ExportColumn,
+  type ExportRow,
+} from '../../reports/shared/utils/exportTable'
 import { useDeleteRegistro } from '../hooks/useDeleteRegistro'
 import { useRegistrosBusca } from '../hooks/useRegistrosBusca'
 import type { BuscaRegistroFormData, RegistroDto, RegistroTipo } from '../types/sincronizador'
 import { buscaRegistroSchema } from '../types/sincronizador'
+
+/** Colunas de export — espelham a tabela visível (sem a coluna de ação). */
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Tipo', key: 'tipo' },
+  { header: 'ID HubSpot', key: 'hubspotId' },
+  { header: 'Assunto', key: 'assunto' },
+  { header: 'Pipeline', key: 'pipeline' },
+  { header: 'Criado em', key: 'criadoEm' },
+]
+
+function mapRegistroToExportRow(registro: RegistroDto): ExportRow {
+  return {
+    tipo: registro.tipo === 'ticket' ? 'Ticket' : 'Projeto',
+    hubspotId: registro.hubspotId,
+    assunto: registro.assunto,
+    pipeline: registro.pipeline ?? '—',
+    criadoEm: formatDate(registro.criadoEm),
+  }
+}
 
 type ManutencaoRegistrosProps = {
   className?: string
@@ -112,6 +139,8 @@ function RegistroRow({
 export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
   const { query, handleBusca } = useRegistrosBusca()
   const deleteMutation = useDeleteRegistro()
+  const toast = useToast()
+  const [isExporting, setIsExporting] = useState(false)
   const [registroSelecionado, setRegistroSelecionado] = useState<RegistroSelecionado | null>(null)
   const desativarButtonRef = useRef<HTMLButtonElement | null>(null)
 
@@ -147,6 +176,32 @@ export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
 
   const registros: RegistroDto[] = query.data ?? []
 
+  function handleExportCsv() {
+    if (isExporting || registros.length === 0) return
+    setIsExporting(true)
+    try {
+      exportToCsv('sincronizador-registros', EXPORT_COLUMNS, registros.map(mapRegistroToExportRow))
+      toast.success('Exportação CSV concluída.')
+    } catch {
+      toast.error('Erro ao exportar. Tente novamente.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleExportXlsx() {
+    if (isExporting || registros.length === 0) return
+    setIsExporting(true)
+    try {
+      await exportToXlsx('sincronizador-registros', EXPORT_COLUMNS, registros.map(mapRegistroToExportRow))
+      toast.success('Exportação Excel concluída.')
+    } catch {
+      toast.error('Erro ao exportar. Tente novamente.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className={className}>
       {/* Formulário de busca */}
@@ -180,6 +235,16 @@ export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
         )}
         {!query.isFetching && !query.isError && query.data !== undefined && registros.length === 0 && (
           <EmptyState message="Nenhum registro encontrado para esta busca." />
+        )}
+
+        {registros.length > 0 && (
+          <div className="mb-3 flex justify-end">
+            <ExportButtons
+              onExportCsv={handleExportCsv}
+              onExportXlsx={() => void handleExportXlsx()}
+              isExporting={isExporting}
+            />
+          </div>
         )}
 
         {registros.length > 0 && (

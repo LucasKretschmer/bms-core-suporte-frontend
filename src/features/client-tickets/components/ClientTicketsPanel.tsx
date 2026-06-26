@@ -19,14 +19,50 @@ import { Input } from '../../../components/ui/Input'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Skeleton } from '../../../components/ui/Skeleton'
+import { useToast } from '../../../components/ui/Toast'
 import { KpiCard } from '../../dashboards/shared/components/KpiCard'
 import { KpiCardGrid } from '../../dashboards/shared/components/KpiCardGrid'
-import { formatHours, formatPercent } from '../../reports/shared/utils/formatters'
+import { ExportButtons } from '../../reports/shared/components/ExportButtons'
+import {
+  exportToCsv,
+  exportToXlsx,
+  type ExportColumn,
+  type ExportRow,
+} from '../../reports/shared/utils/exportTable'
+import {
+  fetchAllPaginated,
+  ExportLimitError,
+} from '../../reports/shared/utils/fetchAllPaginated'
+import { formatHours, formatPercent, formatSeconds } from '../../reports/shared/utils/formatters'
 import { getPercentClass } from '../../reports/plan-consumption/columns'
 import type { ClientTicketItemDto } from '../types/clientTickets'
 import { buildClientTicketsColumns } from '../columns'
+import { listClientTickets } from '../services/clientTicketsService'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
+
+/** Colunas de export — espelham a tabela visível (visão interna de drill-down). */
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'Ticket', key: 'ticket' },
+  { header: 'Nome do ticket', key: 'assunto' },
+  { header: 'Equipe', key: 'equipe' },
+  { header: 'Atendente', key: 'owner' },
+  { header: 'Status', key: 'status' },
+  { header: 'Tempo do plano', key: 'tempo' },
+  { header: 'Apontamentos', key: 'apontamentos' },
+]
+
+function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
+  return {
+    ticket: `#${item.hubspotTicketId}`,
+    assunto: item.assunto ?? '—',
+    equipe: item.equipe ?? '—',
+    owner: item.ownerNome ?? '—',
+    status: item.status ?? '—',
+    tempo: formatSeconds(item.totalSeconds),
+    apontamentos: item.apontamentosCount,
+  }
+}
 
 const PERCENT_SUBTEXT: Record<
   ReturnType<typeof getPercentClass>,
@@ -77,10 +113,61 @@ export function ClientTicketsPanel({
 
   const columns = useMemo(() => buildClientTicketsColumns(), [])
 
+  const toast = useToast()
+  const [isExporting, setIsExporting] = useState(false)
+
   const kpis = kpisQuery.data
   const pctClass = getPercentClass(kpis?.percentualPlano ?? null)
 
   const isEmpty = !isLoading && !isError && (!data || data.items.length === 0)
+
+  function fetchAllForExport(): Promise<ClientTicketItemDto[]> {
+    return fetchAllPaginated<ClientTicketItemDto>((page, pageSize) =>
+      listClientTickets({
+        clientId,
+        search: filters.search || undefined,
+        status: filters.status.length > 0 ? filters.status : undefined,
+        sortBy: sortBy ?? undefined,
+        sortDirection,
+        page,
+        pageSize,
+      }),
+    )
+  }
+
+  async function handleExportCsv() {
+    if (isExporting) return
+    setIsExporting(true)
+    toast.info('Carregando dados para exportar…')
+    try {
+      const items = await fetchAllForExport()
+      exportToCsv('tickets-do-cliente', EXPORT_COLUMNS, items.map(mapTicketToExportRow))
+      toast.success('Exportação CSV concluída.')
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleExportXlsx() {
+    if (isExporting) return
+    setIsExporting(true)
+    toast.info('Carregando dados para exportar…')
+    try {
+      const items = await fetchAllForExport()
+      await exportToXlsx('tickets-do-cliente', EXPORT_COLUMNS, items.map(mapTicketToExportRow))
+      toast.success('Exportação Excel concluída.')
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -125,7 +212,7 @@ export function ClientTicketsPanel({
 
       {/* Filtros */}
       <div className="p-4 bg-card rounded-[5px] border border-border">
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <Input
             label="Buscar"
             id={`${tableId}-search`}
@@ -135,6 +222,13 @@ export function ClientTicketsPanel({
             placeholder="Ticket, assunto, atendente…"
             className="min-w-[220px]"
           />
+          {!isEmpty && (
+            <ExportButtons
+              onExportCsv={() => void handleExportCsv()}
+              onExportXlsx={() => void handleExportXlsx()}
+              isExporting={isExporting}
+            />
+          )}
         </div>
       </div>
 
