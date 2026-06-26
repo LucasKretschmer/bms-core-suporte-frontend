@@ -1,7 +1,7 @@
 /**
  * Seção de Saúde dos Planos do Dashboard Suporte.
  * Sempre scope=global — ignora filtro de equipe.
- * Gráfico de barras (verde/amarelo/vermelho) + tabela de clientes.
+ * Gráfico de barras (verde/amarelo/vermelho).
  * AP-SECURITY-001: labels "< 80% (ok)", "80–95% (atenção)", "≥ 95% (crítico)" — sem categoria HubSpot.
  */
 
@@ -31,9 +31,8 @@ export function SupportPlanHealthSection({
     supportPlanId: planId,
   })
 
-  const items = data?.data ?? []
   const summary = data?.summary ?? null
-  const isEmpty = !isLoading && !isError && !summary && items.length === 0
+  const isEmpty = !isLoading && !isError && !summary
 
   return (
     <ChartCard
@@ -45,11 +44,7 @@ export function SupportPlanHealthSection({
       onRetry={refetch}
       height={220}
     >
-      <PlanHealthChart
-        summary={summary}
-        items={items}
-        height={220}
-      />
+      <PlanHealthChart summary={summary} height={220} />
     </ChartCard>
   )
 }
