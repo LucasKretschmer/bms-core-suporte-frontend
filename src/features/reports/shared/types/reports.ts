@@ -44,6 +44,8 @@ export type ClientDetailDto = {
 export type TeamDto = {
   id: number
   nome: string
+  /** Derivado de appsettings no backend; null p/ equipes sincronizadas. */
+  gerencia: string | null
 }
 
 // ── U3 — Consumo de Planos ───────────────────────────────────────────────────

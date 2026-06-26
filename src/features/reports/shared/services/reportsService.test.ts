@@ -35,8 +35,8 @@ describe('reportsService', () => {
   describe('listTeams', () => {
     it('desempacota data.data do envelope ApiResponse', async () => {
       const teams: TeamDto[] = [
-        { id: 1, nome: 'Suporte Nível 1' },
-        { id: 2, nome: 'Suporte Nível 2' },
+        { id: 1, nome: 'Suporte Nível 1', gerencia: 'suporte' },
+        { id: 2, nome: 'Suporte Nível 2', gerencia: null },
       ]
 
       vi.mocked(api.get).mockResolvedValueOnce({

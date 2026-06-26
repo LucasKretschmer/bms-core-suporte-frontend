@@ -2,7 +2,7 @@
  * Testes para o hook useAppointments (U4 — Apontamentos por Ticket).
  *
  * Verifica:
- * - scope padrão é 'mine'
+ * - scope default por papel (#9): Coordenador+ → 'all'; Atendente → 'mine'
  * - status é array (filter de múltiplos valores)
  * - filtros são passados corretamente ao service
  * - ao mudar filtro, página volta para 1
@@ -10,8 +10,9 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, act } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useAppointments } from './useAppointments'
+import { usePermissions } from '../../../../hooks/usePermissions'
 import type { PaginatedResponse } from '../../../../types/api'
 import type { TicketReportItemDto } from '../../shared/types/reports'
 
@@ -26,6 +27,25 @@ vi.mock('../../shared/services/reportsService', () => ({
   } satisfies PaginatedResponse<TicketReportItemDto>),
 }))
 
+// Mock de permissões — o scope default depende do papel.
+vi.mock('../../../../hooks/usePermissions')
+const mockedPermissions = vi.mocked(usePermissions)
+
+function setRole(isCoordenadorOuAcima: boolean) {
+  mockedPermissions.mockReturnValue({
+    role: isCoordenadorOuAcima ? 'COORDENADOR' : 'ATENDENTE',
+    isCoordenadorOuAcima,
+    isGerentePlus: false,
+    isAtendente: !isCoordenadorOuAcima,
+    isAuthenticated: true,
+  })
+}
+
+beforeEach(() => {
+  // Default da maioria dos casos: Atendente (scope 'mine').
+  setRole(false)
+})
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -38,11 +58,20 @@ function createWrapper() {
 }
 
 describe('useAppointments', () => {
-  it('inicia com scope padrão "mine"', () => {
+  it('Atendente inicia com scope "mine"', () => {
+    setRole(false)
     const { result } = renderHook(() => useAppointments(), {
       wrapper: createWrapper(),
     })
     expect(result.current.filters.scope).toBe('mine')
+  })
+
+  it('Coordenador+ inicia com scope "all" (#9)', () => {
+    setRole(true)
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+    expect(result.current.filters.scope).toBe('all')
   })
 
   it('status é um array vazio por padrão', () => {

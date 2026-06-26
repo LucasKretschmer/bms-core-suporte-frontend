@@ -1,5 +1,6 @@
 import { api } from '../../../services/api'
 import type { PaginatedResponse } from '../../../types/api'
+import type { TicketScope } from '../../../utils/reportScope'
 import type {
   PlanConsumptionItemDto,
   TicketReportItemDto,
@@ -16,6 +17,8 @@ import type {
 
 type ListClientTicketsParams = {
   clientId: number
+  /** Default 'all': drill-down é CoordenadorPlus e deve listar TODOS os tickets do cliente. */
+  scope?: TicketScope
   search?: string
   status?: string[]
   sortBy?: string | null
@@ -27,9 +30,13 @@ type ListClientTicketsParams = {
 export async function listClientTickets(
   params: ListClientTicketsParams,
 ): Promise<PaginatedResponse<TicketReportItemDto>> {
+  // Sem scope explícito o backend assume 'mine' (só tickets do owner logado).
+  // Aqui forçamos 'all' por default — a tela é CoordenadorPlus e o drill-down
+  // precisa de TODOS os chamados do cliente, independente de owner/TimeEntry.
+  const { scope = 'all', ...rest } = params
   const { data } = await api.get<PaginatedResponse<TicketReportItemDto>>(
     '/api/v1/reports/tickets',
-    { params: cleanParams(params) },
+    { params: cleanParams({ scope, ...rest }) },
   )
   return data
 }

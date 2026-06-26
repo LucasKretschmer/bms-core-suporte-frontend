@@ -14,8 +14,9 @@ type ClientComboboxProps = {
 
 /**
  * Combobox assíncrono para seleção de cliente.
- * Busca via GET /api/v1/clients?search= com debounce 300ms.
- * Nunca carrega todos os clientes de uma vez (lista pode ser grande — R10).
+ * Carga inicial (search vazio) lista os primeiros 25 clientes ao abrir;
+ * ao digitar, a busca é server-side com debounce de 300ms (gerenciado pelo Combobox).
+ * Nunca carrega todos os clientes de uma vez (lista pode ser grande — R10): pageSize=25.
  */
 export function ClientCombobox({
   value,
@@ -29,8 +30,10 @@ export function ClientCombobox({
   const { data, isLoading } = useQuery({
     queryKey: ['clients-search', searchTerm],
     queryFn: () => listClients({ search: searchTerm, page: 1, pageSize: 25 }),
-    // Só busca com pelo menos 2 caracteres — evitar flood (R10)
-    enabled: searchTerm.length >= 2 || value !== null,
+    // Carga inicial lista os primeiros 25; ao digitar, busca server-side (debounce no Combobox).
+    enabled: true,
+    // staleTime curto evita refetch agressivo a cada reabertura do dropdown.
+    staleTime: 60 * 1000,
   })
 
   const options =

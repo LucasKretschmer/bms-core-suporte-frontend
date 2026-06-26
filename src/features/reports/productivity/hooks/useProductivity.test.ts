@@ -34,10 +34,35 @@ describe('useProductivity', () => {
     expect(result.current.pageSize).toBe(25)
   })
 
-  it('inicia com filtros vazios', () => {
+  it('inicia com período = mês corrente (1º dia do mês → hoje) e teamId nulo', () => {
+    vi.useFakeTimers()
+    // Data fixa no meio do mês para validar o 1º dia do mês como "from".
+    vi.setSystemTime(new Date(2024, 4, 15, 10, 30, 0)) // 2024-05-15
+
     const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
-    expect(result.current.filters.from).toBeNull()
-    expect(result.current.filters.to).toBeNull()
+
+    expect(result.current.filters.from).toBe('2024-05-01')
+    expect(result.current.filters.to).toBe('2024-05-15')
+    expect(result.current.filters.teamId).toBeNull()
+
+    vi.useRealTimers()
+  })
+
+  it('usa o fuso local (format), não UTC — sem off-by-one na virada de mês', () => {
+    vi.useFakeTimers()
+    // 1º dia do mês à meia-noite local: toISOString daria o dia anterior em fusos negativos.
+    vi.setSystemTime(new Date(2024, 2, 1, 0, 0, 0)) // 2024-03-01 00:00 local
+
+    const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
+
+    expect(result.current.filters.from).toBe('2024-03-01')
+    expect(result.current.filters.to).toBe('2024-03-01')
+
+    vi.useRealTimers()
+  })
+
+  it('inicia com teamId nulo (filtro de equipe não regride)', () => {
+    const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
     expect(result.current.filters.teamId).toBeNull()
   })
 

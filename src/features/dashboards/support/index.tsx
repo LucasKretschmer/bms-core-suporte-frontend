@@ -8,7 +8,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { startOfMonth } from 'date-fns'
+import { format, startOfMonth } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
@@ -33,10 +33,11 @@ export default function DashboardSuportePage() {
   const { isCoordenadorOuAcima } = usePermissions()
 
   const [scope, setScope] = useState<MetricsScope>('management:suporte')
+  // date-fns format (hora local) — evita off-by-one de timezone do toISOString (UTC).
   const [from, setFrom] = useState<string | null>(
-    startOfMonth(new Date()).toISOString().slice(0, 10),
+    format(startOfMonth(new Date()), 'yyyy-MM-dd'),
   )
-  const [to, setTo] = useState<string | null>(new Date().toISOString().slice(0, 10))
+  const [to, setTo] = useState<string | null>(format(new Date(), 'yyyy-MM-dd'))
   const [clientId, setClientId] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
   const [drillDownOpen, setDrillDownOpen] = useState(false)
@@ -45,25 +46,24 @@ export default function DashboardSuportePage() {
   // Ref para devolver o foco ao botão Apresentar ao sair do painel (acessibilidade)
   const apresentarButtonRef = useRef<HTMLButtonElement | null>(null)
 
-  // Equipes filtradas por gerência suporte — vindas do backend
+  // Todas as equipes vindas do backend (incl. equipes sincronizadas com gerencia=null).
+  // listTeams() retorna reports.ts#TeamDto, estruturalmente compatível com metrics.ts#TeamDto.
   const { data: allTeams, isLoading: isTeamsLoading } = useQuery<TeamDto[]>({
     queryKey: ['teams'],
     queryFn: async () => {
       const teams = await listTeams()
-      return teams as TeamDto[]
+      return teams.map((t) => ({ id: t.id, nome: t.nome, gerencia: t.gerencia ?? null }))
     },
     staleTime: 5 * 60 * 1000,
   })
 
-  // Filtra equipes por gerencia=suporte para o filtro do Dashboard Suporte
-  const supportTeams: TeamDto[] = (allTeams ?? []).filter(
-    (t) => (t as TeamDto & { gerencia?: string | null }).gerencia === 'suporte',
-  )
+  // Sem filtro por gerência: todas as equipes aparecem no combobox do Dashboard (#6).
+  const teams: TeamDto[] = allTeams ?? []
 
-  // Lista para o PanelMode: Global (sentinel id='') + equipes de suporte
+  // Lista para o PanelMode: Global (sentinel id=0) + todas as equipes
   const panelTeams: TeamDto[] = [
-    { id: 0, nome: 'Global', gerencia: 'suporte' },
-    ...supportTeams,
+    { id: 0, nome: 'Global', gerencia: null },
+    ...teams,
   ]
 
   // Hook de métricas overview (para passar SLA para SupportSlaSection)
@@ -167,7 +167,7 @@ export default function DashboardSuportePage() {
             setFrom(f)
             setTo(t)
           }}
-          teams={supportTeams}
+          teams={teams}
           selectedScope={scope}
           onScopeChange={setScope}
           isTeamsLoading={isTeamsLoading}

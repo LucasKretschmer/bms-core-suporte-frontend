@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Input } from '../../../components/ui/Input'
 import { Pagination } from '../../../components/ui/Pagination'
+import { Modal } from '../../../components/ui/Modal'
 import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
 import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
@@ -12,22 +12,21 @@ import type { ExportColumn } from '../shared/utils/exportTable'
 import { listPlanConsumption } from '../shared/services/reportsService'
 import { planConsumptionColumns } from './columns'
 import { usePlanConsumption } from './hooks/usePlanConsumption'
-import { formatHours, formatPercent } from '../shared/utils/formatters'
-import { saveReportFilters } from '../../../utils/reportFilters'
+import { formatClientName, formatHours, formatPercent } from '../shared/utils/formatters'
+import { ClientTicketsPanel } from '../../client-tickets/components/ClientTicketsPanel'
 import type { PlanConsumptionItemDto } from '../shared/types/reports'
 
 /** Chave única para persistência da ordem das colunas */
 const TABLE_ID = 'plan-consumption'
 
-/** Chave de persistência de filtros desta tela (R2) */
-const FILTERS_KEY = 'plan-consumption'
-
 /**
  * Página U3 — Consumo de Planos.
  * Restrita a CoordenadorPlus (guarda de rota configurada em routes/_auth/relatorios/consumo-planos.tsx).
+ *
+ * Drill-down (#11): clicar numa linha abre um drawer/modal com os chamados do
+ * cliente (ClientTicketsPanel, scope='all') NA PRÓPRIA tela — sem navegar.
  */
 export default function PlanConsumptionPage() {
-  const navigate = useNavigate()
   const {
     data,
     isLoading,
@@ -42,18 +41,26 @@ export default function PlanConsumptionPage() {
     setFilters,
   } = usePlanConsumption()
 
-  // Drill-down: linha → tickets do cliente (preserva filtros em sessionStorage, R2)
-  const handleRowClick = useCallback(
-    (row: PlanConsumptionItemDto) => {
-      saveReportFilters(FILTERS_KEY, { ...filters, sortBy, sortDirection })
-      void navigate({
-        to: '/relatorios/clientes/$clientId',
-        params: { clientId: String(row.clientId) },
-        search: { from: 'consumo-planos' },
-      })
-    },
-    [navigate, filters, sortBy, sortDirection],
-  )
+  // Drill-down inline (#11): abre um drawer com os chamados do cliente na própria tela.
+  const [openClient, setOpenClient] = useState<PlanConsumptionItemDto | null>(null)
+  // Ref para devolver o foco à última linha clicada ao fechar o drawer (AP-FRONTEND-004).
+  const lastTriggerRef = useRef<HTMLElement | null>(null)
+
+  const handleRowClick = useCallback((row: PlanConsumptionItemDto) => {
+    // Guarda o elemento focado (linha clicada) para restaurar o foco ao fechar.
+    lastTriggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setOpenClient(row)
+  }, [])
+
+  const handleCloseDrawer = useCallback(() => {
+    setOpenClient(null)
+    // Devolve o foco à linha que abriu o drawer (acessibilidade).
+    const trigger = lastTriggerRef.current
+    if (trigger && document.contains(trigger)) {
+      window.setTimeout(() => trigger.focus(), 0)
+    }
+  }, [])
 
   // Debounce para o campo de busca
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -208,6 +215,21 @@ export default function PlanConsumptionPage() {
             onPageSizeChange={setPageSize}
           />
         </div>
+      )}
+
+      {/* Drawer inline com os chamados do cliente (#11) */}
+      {openClient && (
+        <Modal
+          isOpen
+          onClose={handleCloseDrawer}
+          title={`Chamados — ${formatClientName(openClient)}`}
+          size="xl"
+        >
+          <ClientTicketsPanel
+            clientId={openClient.clientId}
+            tableId={`client-tickets-drawer-${openClient.clientId}`}
+          />
+        </Modal>
       )}
     </ReportPageLayout>
   )

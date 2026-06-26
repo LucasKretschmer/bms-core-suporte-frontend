@@ -19,7 +19,7 @@ describe('clientTicketsService', () => {
     mockedGet.mockReset()
   })
 
-  it('listClientTickets retorna PaginatedResponse cru e monta params com clientId', async () => {
+  it("listClientTickets retorna PaginatedResponse cru e monta params com clientId + scope='all' por default", async () => {
     mockedGet.mockResolvedValueOnce(paginated([{ ticketId: 1 }]))
     const result = await listClientTickets({
       clientId: 1,
@@ -28,9 +28,22 @@ describe('clientTicketsService', () => {
       pageSize: 25,
     })
     expect(mockedGet).toHaveBeenCalledWith('/api/v1/reports/tickets', {
-      params: expect.objectContaining({ clientId: 1, search: 'acme', page: 1, pageSize: 25 }),
+      params: expect.objectContaining({
+        clientId: 1,
+        scope: 'all',
+        search: 'acme',
+        page: 1,
+        pageSize: 25,
+      }),
     })
     expect(result.items).toHaveLength(1)
+  })
+
+  it('listClientTickets respeita scope explícito (override)', async () => {
+    mockedGet.mockResolvedValueOnce(paginated([]))
+    await listClientTickets({ clientId: 1, scope: 'mine', page: 1, pageSize: 25 })
+    const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
+    expect(callParams.scope).toBe('mine')
   })
 
   it('listClientTickets remove params vazios (cleanParams)', async () => {
