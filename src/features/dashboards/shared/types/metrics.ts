@@ -216,6 +216,83 @@ export type TimeEntryRowDto = {
   dataApontamento: string
 }
 
+// ── Drill-down paramétrico (016 — GET /metrics/rows?metric=) ─────────────────
+
+/**
+ * Linha da família TICKET (espelha TicketRowDto do backend).
+ * `ticketId` é o id INTERNO usado para navegar à tela de detalhe — NUNCA o HubSpot id.
+ * `status` é o label resolvido via pipelinestages — NUNCA a categoria HubSpot (AP-SECURITY-001).
+ */
+export type TicketRowDto = {
+  ticketId: number
+  hubspotTicketId: string
+  assunto: string | null
+  clienteNome: string | null
+  equipe: string | null
+  ownerNome: string | null
+  status: string | null
+  hsCriadoEm: string | null
+  fechadoEm: string | null
+  reabertoEm: string | null
+  frHoras: number | null
+  frHorasUteis: number | null
+  frSla: string | null
+  resHoras: number | null
+  resHorasUteis: number | null
+  csat: number | null
+  isOneTouch: boolean | null
+  hubspotUrl: string | null
+}
+
+/**
+ * Métricas da família TICKET disponíveis no backend (1ª onda da 016, já em main).
+ * Apontamento/Cliente/Projeto ainda retornam 422 no backend (ondas B1/B3/B4) — fora do
+ * union até existirem (drill desses indicadores fica como TODO no frontend).
+ */
+export type TicketMetricKey =
+  | 'tickets-backlog'
+  | 'tickets-abertos'
+  | 'tickets-resolvidos'
+  | 'tickets-reabertos'
+  | 'tickets-tempos'
+  | 'tickets-sla'
+  | 'tickets-csat'
+  | 'tickets-fcr'
+
+/** Parâmetros específicos por metric (todos opcionais; validados no backend). */
+export type DrillParams = {
+  /** tickets-backlog (donut por etapa) — id da etapa do pipeline. */
+  stageId?: string
+  /** tickets-sla — 'on' (no prazo / MET) | 'late' (fora / MISSED). Obrigatório para tickets-sla. */
+  sla?: 'on' | 'late'
+}
+
+/**
+ * Especificação de um drill-down: qual conjunto de registros abrir.
+ * Mapeia 1:1 com o `dDrill`/`dDrillChart` do protótipo.
+ */
+export type DrillSpec = {
+  metric: TicketMetricKey
+  /** Título seguro do modal (sem categoria HubSpot). */
+  title: string
+  params?: DrillParams
+}
+
+/** Parâmetros enviados a GET /metrics/rows (família ticket). */
+export type MetricRowsParams = {
+  metric: TicketMetricKey
+  scope?: MetricsScope
+  from?: string | null
+  to?: string | null
+  clientId?: string | null
+  stageId?: string | null
+  sla?: 'on' | 'late' | null
+  sortBy?: string | null
+  sortDirection?: 'asc' | 'desc'
+  page: number
+  pageSize: number
+}
+
 // ── SSE eventos ──────────────────────────────────────────────────────────────
 
 export type MetricsStreamEventType =

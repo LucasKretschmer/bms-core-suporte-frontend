@@ -6,6 +6,7 @@ export type TicketDetailOrigin =
   | 'apontamentos'
   | 'cliente'
   | 'clientes'
+  | 'dashboard'
   | undefined
 
 type BuildBreadcrumbInput = {
@@ -57,6 +58,11 @@ export function buildTicketBreadcrumb({
     items.push({
       label: 'Relatório do Cliente',
       href: '/relatorios/cliente',
+    })
+  } else if (from === 'dashboard') {
+    items.push({
+      label: 'Dashboard Suporte',
+      href: '/dashboards/suporte',
     })
   }
 

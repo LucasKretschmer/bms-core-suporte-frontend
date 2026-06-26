@@ -10,13 +10,19 @@ import { ErrorState } from '../../../../components/ui/ErrorState'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { KpiCard } from '../../shared/components/KpiCard'
 import { KpiCardGrid } from '../../shared/components/KpiCardGrid'
-import type { OnboardingTicketStatsDto, OnboardingAgentTicketDto } from '../../shared/types/metrics'
+import type {
+  DrillSpec,
+  OnboardingTicketStatsDto,
+  OnboardingAgentTicketDto,
+} from '../../shared/types/metrics'
 
 type OnboardingTicketSectionProps = {
   data: OnboardingTicketStatsDto | undefined
   isLoading: boolean
   isError: boolean
   onRetry: () => void
+  /** Drill (016): KPI de ticket clicável → tabela dos tickets (scope onboarding). */
+  onTicketDrill?: (spec: DrillSpec) => void
 }
 
 const intlPtBr = new Intl.NumberFormat('pt-BR')
@@ -137,6 +143,7 @@ export function OnboardingTicketSection({
   isLoading,
   isError,
   onRetry,
+  onTicketDrill,
 }: OnboardingTicketSectionProps) {
   if (isLoading) {
     return (
@@ -174,19 +181,37 @@ export function OnboardingTicketSection({
         Tickets
       </h2>
 
-      {/* KPI totais */}
+      {/* KPI totais — clicáveis (drill da família ticket, scope onboarding) */}
       <KpiCardGrid className="mb-4">
         <KpiCard
           label="Em aberto"
           value={data.emAberto}
           formatter={formatCount}
           tooltipText="Tickets com status não fechado das equipes de Onboarding"
+          onClick={
+            onTicketDrill
+              ? () =>
+                  onTicketDrill({
+                    metric: 'tickets-backlog',
+                    title: 'Tickets em aberto — Onboarding',
+                  })
+              : undefined
+          }
         />
         <KpiCard
           label="Resolvidos no período"
           value={data.resolvidos}
           formatter={formatCount}
           tooltipText="Tickets fechados no período pelas equipes de Onboarding"
+          onClick={
+            onTicketDrill
+              ? () =>
+                  onTicketDrill({
+                    metric: 'tickets-resolvidos',
+                    title: 'Tickets resolvidos no período — Onboarding',
+                  })
+              : undefined
+          }
         />
       </KpiCardGrid>
 

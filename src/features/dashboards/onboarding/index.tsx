@@ -11,12 +11,15 @@ import { startOfMonth } from 'date-fns'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
+import { TicketDrillModal } from '../shared/components/TicketDrillModal'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
+import { useTicketDrill } from '../shared/hooks/useTicketDrill'
 import { useOnboardingMetrics } from './hooks/useOnboardingMetrics'
 import { OnboardingProjectSection } from './components/OnboardingProjectSection'
 import { OnboardingTicketSection } from './components/OnboardingTicketSection'
 import { OnboardingNpsCard } from './components/OnboardingNpsCard'
 import { PanelMode } from '../panel/PanelMode'
+import type { DrillSpec } from '../shared/types/metrics'
 
 export default function DashboardOnboardingPage() {
   const { isCoordenadorOuAcima } = usePermissions()
@@ -30,6 +33,8 @@ export default function DashboardOnboardingPage() {
   const [panelActive, setPanelActive] = useState(false)
   // Tempo por tela no Modo Painel (segundos, clamp 4–180, default 12).
   const [panelSeconds, setPanelSeconds] = useState(12)
+  // Drill paramétrico da família ticket (016).
+  const [activeDrill, setActiveDrill] = useState<DrillSpec | null>(null)
 
   // Ref para devolver o foco ao botão Apresentar ao sair do painel
   const apresentarButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -38,6 +43,13 @@ export default function DashboardOnboardingPage() {
 
   // SSE — mantém o indicador "ao vivo" coerente durante a apresentação.
   const stream = useMetricsStream('management:onboarding')
+
+  // Drill da família ticket no scope da gerência de onboarding.
+  const ticketDrill = useTicketDrill(activeDrill, {
+    scope: 'management:onboarding',
+    from,
+    to,
+  })
 
   // Guarda de acesso — UX only (backend valida via 403)
   if (!isCoordenadorOuAcima) {
@@ -57,6 +69,7 @@ export default function DashboardOnboardingPage() {
   const dashboardContent = (
     <>
       {/* Projetos */}
+      {/* TODO 016: drill de projetos (KPIs/donuts) depende da família projeto no /metrics/rows (onda B4). */}
       <OnboardingProjectSection
         data={data?.projetos}
         isLoading={isLoading}
@@ -64,12 +77,14 @@ export default function DashboardOnboardingPage() {
         onRetry={refetch}
       />
 
-      {/* Tickets */}
+      {/* Tickets — KPIs de ticket clicáveis (016). */}
+      {/* TODO 016: drill "por atendente" depende da família apontamento no /metrics/rows (onda B1). */}
       <OnboardingTicketSection
         data={data?.tickets}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
+        onTicketDrill={panelActive ? undefined : setActiveDrill}
       />
 
       {/* NPS — placeholder fixo */}
@@ -100,6 +115,18 @@ export default function DashboardOnboardingPage() {
 
       {/* Conteúdo normal (oculto pelo PanelMode quando ativo) */}
       {!panelActive && dashboardContent}
+
+      {/* Drill-down paramétrico da família ticket (016) — montado só com drill ativo (fora do painel) */}
+      {!panelActive && activeDrill && (
+        <TicketDrillModal
+          activeDrill={activeDrill}
+          onClose={() => setActiveDrill(null)}
+          drill={ticketDrill}
+          baseParams={{ scope: 'management:onboarding', from, to }}
+          onStreamPause={stream.pause}
+          onStreamResume={stream.resume}
+        />
+      )}
 
       {/* Modo Painel — teams=[] → sem rotação, auto-scroll apenas */}
       {panelActive && (

@@ -21,6 +21,20 @@ vi.mock('../../../hooks/usePermissions', () => ({
   }),
 }))
 
+// useTicketDrill (016) usa useQuery — mockar react-query evita QueryClient real no teste de foco.
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>()
+  return {
+    ...actual,
+    useQuery: vi.fn().mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    }),
+  }
+})
+
 // Mock do PanelMode — ao clicar no botão de saída, chama onExit
 vi.mock('../panel/PanelMode', () => ({
   PanelMode: ({ onExit, children }: { isActive: boolean; onExit: () => void; children: React.ReactNode }) => (

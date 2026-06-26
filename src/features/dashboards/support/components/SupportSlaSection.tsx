@@ -7,6 +7,7 @@
 
 import { FirstResponseVsSlaChart } from '../../shared/components/FirstResponseVsSlaChart'
 import { ChartCard } from '../../shared/components/ChartCard'
+import type { DrillSpec } from '../../shared/types/metrics'
 
 type SupportSlaSectionProps = {
   respondidosNoPrazo: number | null
@@ -14,6 +15,8 @@ type SupportSlaSectionProps = {
   isLoading?: boolean
   isError?: boolean
   onRetry?: () => void
+  /** Drill (016): clique na fatia → tabela dos tickets daquele balde de SLA. */
+  onSegmentDrill?: (spec: DrillSpec) => void
 }
 
 export function SupportSlaSection({
@@ -22,6 +25,7 @@ export function SupportSlaSection({
   isLoading = false,
   isError = false,
   onRetry,
+  onSegmentDrill,
 }: SupportSlaSectionProps) {
   // Empty honesto e conservador (#5): dado de SLA depende de configuração no
   // Service Hub. Se QUALQUER um dos lados vier null, não há base confiável para
@@ -46,6 +50,19 @@ export function SupportSlaSection({
         respondidosNoPrazo={respondidosNoPrazo}
         respondidosForaDoPrazo={respondidosForaDoPrazo}
         height={220}
+        onSegmentClick={
+          onSegmentDrill
+            ? (sla) =>
+                onSegmentDrill({
+                  metric: 'tickets-sla',
+                  title:
+                    sla === 'on'
+                      ? 'Respondidos no prazo (SLA)'
+                      : 'Respondidos fora do prazo',
+                  params: { sla },
+                })
+            : undefined
+        }
       />
     </ChartCard>
   )

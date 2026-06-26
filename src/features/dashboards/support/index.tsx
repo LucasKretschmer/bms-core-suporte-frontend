@@ -14,11 +14,13 @@ import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
 import { DrillDownModal } from '../shared/components/DrillDownModal'
+import { TicketDrillModal } from '../shared/components/TicketDrillModal'
 import { useMetricsOverview } from '../shared/hooks/useMetricsOverview'
 import { useDrillDownRows } from '../shared/hooks/useDrillDownRows'
+import { useTicketDrill } from '../shared/hooks/useTicketDrill'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
 import { listTeams } from '../../reports/shared/services/reportsService'
-import type { MetricsScope, TeamDto } from '../shared/types/metrics'
+import type { DrillSpec, MetricsScope, TeamDto } from '../shared/types/metrics'
 import { PanelMode } from '../panel/PanelMode'
 
 // Seções implementadas
@@ -41,6 +43,8 @@ export default function DashboardSuportePage() {
   const [clientId, setClientId] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
   const [drillDownOpen, setDrillDownOpen] = useState(false)
+  // Drill paramétrico da família ticket (016): KPI/fatia clicada → tabela dos registros.
+  const [activeDrill, setActiveDrill] = useState<DrillSpec | null>(null)
   const [panelActive, setPanelActive] = useState(false)
   // Tempo por tela no Modo Painel (segundos, clamp 4–180, default 12 — espelha o protótipo).
   const [panelSeconds, setPanelSeconds] = useState(12)
@@ -96,8 +100,12 @@ export default function DashboardSuportePage() {
     supportPlanId: planId,
   })
 
-  // Hook de drill-down (controle centralizado)
+  // Hook de drill-down de apontamentos (legado — overview?format=rows)
   const drillDown = useDrillDownRows({ scope, from, to, clientId, supportPlanId: planId })
+
+  // Hook de drill-down paramétrico da família ticket (016)
+  // supportPlanId NÃO é repassado: /metrics/rows (família ticket) não aceita filtro de plano.
+  const ticketDrill = useTicketDrill(activeDrill, { scope, from, to, clientId })
 
   // SSE — atualizações em tempo real
   const stream = useMetricsStream(scope)
@@ -119,7 +127,7 @@ export default function DashboardSuportePage() {
   // Seções do dashboard — usadas tanto na view normal quanto dentro do PanelMode
   const dashboardSections = (
     <>
-      {/* KPIs — Fase 1A */}
+      {/* KPIs — Fase 1A. Drill da família ticket (016) habilitado fora do painel. */}
       <SupportKpiSection
         scope={scope}
         from={from}
@@ -127,9 +135,11 @@ export default function DashboardSuportePage() {
         clientId={clientId}
         planId={planId}
         onDrillDown={panelActive ? undefined : () => setDrillDownOpen(true)}
+        onTicketDrill={panelActive ? undefined : setActiveDrill}
       />
 
       {/* Movimentação Diária — Fase 1A */}
+      {/* TODO 016/021: drill da linha de movimentação depende do snapshot diário (021) */}
       <SupportMovimentacaoSection
         scope={scope}
         from={from}
@@ -139,6 +149,7 @@ export default function DashboardSuportePage() {
       />
 
       {/* Status em Aberto — Fase 1A */}
+      {/* TODO 016: drill de status (fatia → tickets do status) via statusKey após merge da 020 */}
       <SupportStatusSection
         scope={scope}
         from={from}
@@ -148,6 +159,7 @@ export default function DashboardSuportePage() {
       />
 
       {/* Chamados por Categoria — Fase 1B */}
+      {/* TODO 016: drill por categoria depende da família apontamento no /metrics/rows (onda B1) */}
       <SupportCategorySection
         scope={scope}
         from={from}
@@ -156,13 +168,14 @@ export default function DashboardSuportePage() {
         planId={planId}
       />
 
-      {/* 1ª Resposta vs SLA — Fase 1B (dados vêm do overview) */}
+      {/* 1ª Resposta vs SLA — Fase 1B (dados vêm do overview). Fatia clicável (016). */}
       <SupportSlaSection
         respondidosNoPrazo={overviewQuery.data?.respondidosNoPrazo ?? null}
         respondidosForaDoPrazo={overviewQuery.data?.respondidosForaDoPrazo ?? null}
         isLoading={overviewQuery.isLoading}
         isError={overviewQuery.isError}
         onRetry={overviewQuery.refetch}
+        onSegmentDrill={panelActive ? undefined : setActiveDrill}
       />
 
       {/* Saúde dos Planos (sempre global) — Fase 1B */}
@@ -207,13 +220,26 @@ export default function DashboardSuportePage() {
       {/* Seções normais (visíveis quando o painel não está ativo) */}
       {!panelActive && dashboardSections}
 
-      {/* Drill-down modal — apenas fora do modo painel */}
+      {/* Drill-down de apontamentos (legado) — apenas fora do modo painel */}
       {!panelActive && (
         <DrillDownModal
           isOpen={drillDownOpen}
           onClose={() => setDrillDownOpen(false)}
           title="Detalhes de apontamentos"
           drillDown={drillDown}
+          onStreamPause={stream.pause}
+          onStreamResume={stream.resume}
+        />
+      )}
+
+      {/* Drill-down paramétrico da família ticket (016) — KPI/fatia → tabela → ticket-detail.
+          Montado apenas quando há um drill ativo (fora do painel). */}
+      {!panelActive && activeDrill && (
+        <TicketDrillModal
+          activeDrill={activeDrill}
+          onClose={() => setActiveDrill(null)}
+          drill={ticketDrill}
+          baseParams={{ scope, from, to, clientId }}
           onStreamPause={stream.pause}
           onStreamResume={stream.resume}
         />

@@ -26,6 +26,8 @@ type FirstResponseVsSlaChartProps = {
   isLoading?: boolean
   height?: number
   className?: string
+  /** Drill (016): clique na barra → 'on' (no prazo) | 'late' (fora). */
+  onSegmentClick?: (sla: 'on' | 'late') => void
 }
 
 export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaChart({
@@ -34,6 +36,7 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
   isLoading = false,
   height = 240,
   className,
+  onSegmentClick,
 }: FirstResponseVsSlaChartProps) {
   const tokens = useMemo(() => getChartTokens(), [])
 
@@ -75,11 +78,15 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
             dataKey="noPrazo"
             name="Respondidos no prazo"
             fill={tokens['chart-verde']}
+            cursor={onSegmentClick ? 'pointer' : undefined}
+            onClick={onSegmentClick ? () => onSegmentClick('on') : undefined}
           />
           <Bar
             dataKey="foraDoPrazo"
             name="Respondidos fora do prazo"
             fill={tokens['chart-vermelho']}
+            cursor={onSegmentClick ? 'pointer' : undefined}
+            onClick={onSegmentClick ? () => onSegmentClick('late') : undefined}
           />
         </BarChart>
       </ResponsiveContainer>

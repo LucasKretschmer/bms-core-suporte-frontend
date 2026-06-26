@@ -17,7 +17,7 @@ import { tokenStore } from '../../../utils/tokenStore'
 
 const searchSchema = z.object({
   from: z
-    .enum(['consumo-planos', 'apontamentos', 'cliente', 'clientes'])
+    .enum(['consumo-planos', 'apontamentos', 'cliente', 'clientes', 'dashboard'])
     .optional(),
   clientId: z.string().optional(),
 })

@@ -12,7 +12,7 @@ import { KpiCard } from '../../shared/components/KpiCard'
 import { KpiCardGrid } from '../../shared/components/KpiCardGrid'
 import { ErrorState } from '../../../../components/ui/ErrorState'
 import { Skeleton } from '../../../../components/ui/Skeleton'
-import type { MetricsScope } from '../../shared/types/metrics'
+import type { DrillSpec, MetricsScope } from '../../shared/types/metrics'
 
 type SupportKpiSectionProps = {
   scope: MetricsScope
@@ -20,7 +20,10 @@ type SupportKpiSectionProps = {
   to: string | null
   clientId: string | null
   planId: string | null
+  /** Drill legado de apontamentos (KPI "Tempo total" — overview?format=rows). */
   onDrillDown?: () => void
+  /** Drill paramétrico da família ticket (016): abre a tabela do metric do KPI. */
+  onTicketDrill?: (spec: DrillSpec) => void
 }
 
 /**
@@ -54,6 +57,7 @@ export function SupportKpiSection({
   clientId,
   planId,
   onDrillDown,
+  onTicketDrill,
 }: SupportKpiSectionProps) {
   const { data, isLoading, isError, refetch } = useMetricsOverview({
     scope,
@@ -112,6 +116,16 @@ export function SupportKpiSection({
               ? rawValue
               : null
 
+        // Drill: família ticket (drill no catálogo) tem precedência; o KPI legado
+        // "Tempo total" usa o drill de apontamentos (overview?format=rows).
+        let onClick: (() => void) | undefined
+        if (kpiDef.drill && onTicketDrill) {
+          const spec = kpiDef.drill
+          onClick = () => onTicketDrill(spec)
+        } else if (onDrillDown && kpiDef.key === 'tempoTotalSegundos') {
+          onClick = onDrillDown
+        }
+
         return (
           <KpiCard
             key={kpiDef.key}
@@ -123,11 +137,7 @@ export function SupportKpiSection({
             subtext={subtext}
             subtextVariant={subtextVariant}
             tooltipText={kpiDef.tooltipText}
-            onClick={
-              onDrillDown && kpiDef.key === 'tempoTotalSegundos'
-                ? onDrillDown
-                : undefined
-            }
+            onClick={onClick}
           />
         )
       })}

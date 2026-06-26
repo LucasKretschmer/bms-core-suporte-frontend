@@ -10,7 +10,7 @@
  * a categoria interna do HubSpot.
  */
 
-import type { MetricsOverviewDto } from '../types/metrics'
+import type { DrillSpec, MetricsOverviewDto } from '../types/metrics'
 import {
   formatSeconds,
   formatHours,
@@ -29,6 +29,13 @@ export type KpiDefinition = {
   toleratesNull: boolean
   /** Texto de ajuda exibido no tooltip do KpiCard (AP-FRONTEND-003) */
   tooltipText?: string
+  /**
+   * Drill-down do KPI (016): quando definido, o card é clicável e abre a tabela
+   * dos registros que compõem o número (GET /metrics/rows?metric=...).
+   * Só preenchido para KPIs da família TICKET — a família apontamento ainda não
+   * tem endpoint de rows no backend (onda B1) → drill desses KPIs fica como TODO.
+   */
+  drill?: DrillSpec
 }
 
 /** Lista de categorias HubSpot que NUNCA devem aparecer em label/tooltip/legenda */
@@ -67,48 +74,57 @@ export const KPI_CATALOG: KpiDefinition[] = [
     label: 'Backlog (em aberto)',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: false,
+    drill: { metric: 'tickets-backlog', title: 'Backlog — tickets em aberto' },
   },
   {
     key: 'ticketsAbertos',
     label: 'Tickets abertos no período',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: false,
+    drill: { metric: 'tickets-abertos', title: 'Tickets abertos no período' },
   },
   {
     key: 'ticketsResolvidos',
     label: 'Tickets resolvidos no período',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: false,
+    drill: { metric: 'tickets-resolvidos', title: 'Tickets resolvidos no período' },
   },
   {
     key: 'taxaResolucao',
     label: 'Taxa de resolução',
     formatter: formatPercent,
     toleratesNull: true,
+    // Numerador da taxa = tickets resolvidos no período.
+    drill: { metric: 'tickets-resolvidos', title: 'Tickets resolvidos no período' },
   },
   {
     key: 'tmrHorasCorridas',
     label: 'TMR (corridas)',
     formatter: formatHours,
     toleratesNull: true,
+    drill: { metric: 'tickets-tempos', title: 'Tickets com tempos de atendimento' },
   },
   {
     key: 'tmrHorasUteis',
     label: 'TMR (horas úteis)',
     formatter: formatHours,
     toleratesNull: true,
+    drill: { metric: 'tickets-tempos', title: 'Tickets com tempos de atendimento' },
   },
   {
     key: 'tmeHorasCorridas',
     label: 'TME / 1ª resposta (corridas)',
     formatter: formatHours,
     toleratesNull: true,
+    drill: { metric: 'tickets-tempos', title: 'Tickets com tempos de atendimento' },
   },
   {
     key: 'tmeHorasUteis',
     label: '1ª resposta (horas úteis)',
     formatter: formatHours,
     toleratesNull: true,
+    drill: { metric: 'tickets-tempos', title: 'Tickets com tempos de atendimento' },
   },
   {
     key: 'respondidosNoPrazo',
@@ -116,18 +132,30 @@ export const KPI_CATALOG: KpiDefinition[] = [
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: true,
     tooltipText: 'Requer SLA configurado no Service Hub',
+    drill: {
+      metric: 'tickets-sla',
+      title: 'Respondidos no prazo (SLA)',
+      params: { sla: 'on' },
+    },
   },
   {
     key: 'respondidosForaDoPrazo',
     label: 'Respondidos fora do prazo',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: true,
+    drill: {
+      metric: 'tickets-sla',
+      title: 'Respondidos fora do prazo',
+      params: { sla: 'late' },
+    },
   },
   {
     key: 'ticketsReabertos',
     label: 'Tickets reabertos',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: true,
+    // Exemplo-âncora do PRD (016).
+    drill: { metric: 'tickets-reabertos', title: 'Tickets reabertos' },
   },
   {
     key: 'csat',
@@ -135,6 +163,7 @@ export const KPI_CATALOG: KpiDefinition[] = [
     formatter: formatDecimal,
     toleratesNull: true,
     tooltipText: 'Requer Service Hub configurado',
+    drill: { metric: 'tickets-csat', title: 'Tickets com CSAT respondido' },
   },
   {
     key: 'fcr',
@@ -142,6 +171,7 @@ export const KPI_CATALOG: KpiDefinition[] = [
     formatter: formatPercent,
     toleratesNull: true,
     tooltipText: 'Requer hs_is_one_touch_ticket configurado',
+    drill: { metric: 'tickets-fcr', title: 'Tickets — resolução no 1º contato (FCR)' },
   },
   {
     key: 'horasPlantao',

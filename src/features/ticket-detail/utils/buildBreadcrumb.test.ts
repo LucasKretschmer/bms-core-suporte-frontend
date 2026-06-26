@@ -73,6 +73,19 @@ describe('buildTicketBreadcrumb', () => {
     ])
   })
 
+  it('origem dashboard (016): usa Dashboard Suporte', () => {
+    const items = buildTicketBreadcrumb({
+      from: 'dashboard',
+      hubspotTicketId: '42',
+    })
+    expect(items.map((i) => i.label)).toEqual([
+      'Relatórios',
+      'Dashboard Suporte',
+      '#42',
+    ])
+    expect(items[1].href).toBe('/dashboards/suporte')
+  })
+
   it('sem origem: Relatórios + Ticket', () => {
     const items = buildTicketBreadcrumb({ from: undefined, hubspotTicketId: '1' })
     expect(items.map((i) => i.label)).toEqual(['Relatórios', '#1'])

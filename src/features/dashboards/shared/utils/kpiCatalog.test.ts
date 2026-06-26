@@ -93,3 +93,64 @@ describe('kpiCatalog — AP-SECURITY-001', () => {
     }
   })
 })
+
+describe('kpiCatalog — drill-down (016)', () => {
+  it('KPIs da família ticket têm drill com o metric correto', () => {
+    const expected: Record<string, string> = {
+      backlog: 'tickets-backlog',
+      ticketsAbertos: 'tickets-abertos',
+      ticketsResolvidos: 'tickets-resolvidos',
+      taxaResolucao: 'tickets-resolvidos',
+      tmrHorasCorridas: 'tickets-tempos',
+      tmrHorasUteis: 'tickets-tempos',
+      tmeHorasCorridas: 'tickets-tempos',
+      tmeHorasUteis: 'tickets-tempos',
+      respondidosNoPrazo: 'tickets-sla',
+      respondidosForaDoPrazo: 'tickets-sla',
+      ticketsReabertos: 'tickets-reabertos',
+      csat: 'tickets-csat',
+      fcr: 'tickets-fcr',
+    }
+
+    for (const [key, metric] of Object.entries(expected)) {
+      const kpi = KPI_CATALOG.find((k) => k.key === key)
+      expect(kpi, `KPI ${key} deve existir`).toBeDefined()
+      expect(kpi!.drill, `KPI ${key} deve ter drill`).toBeDefined()
+      expect(kpi!.drill!.metric).toBe(metric)
+    }
+  })
+
+  it('drill de SLA carrega o param sla on/late', () => {
+    const noPrazo = KPI_CATALOG.find((k) => k.key === 'respondidosNoPrazo')
+    const foraPrazo = KPI_CATALOG.find((k) => k.key === 'respondidosForaDoPrazo')
+    expect(noPrazo!.drill!.params?.sla).toBe('on')
+    expect(foraPrazo!.drill!.params?.sla).toBe('late')
+  })
+
+  it('KPIs da família apontamento NÃO têm drill (família ainda não disponível no backend)', () => {
+    // Estes ainda dependem da onda B1 (/metrics/rows família apontamento).
+    const apontamentoKpis = [
+      'tempoTotalSegundos',
+      'ahtSegundos',
+      'tempoMedioPausaSegundos',
+      'mediaPausasPorAtendimento',
+      'horasPlantao',
+      'horasPlano',
+      'horasFaturadoPorFora',
+      'horasAnalise',
+    ]
+    for (const key of apontamentoKpis) {
+      const kpi = KPI_CATALOG.find((k) => k.key === key)
+      expect(kpi!.drill, `KPI ${key} não deve ter drill ainda`).toBeUndefined()
+    }
+  })
+
+  it('nenhum título de drill expõe categoria proibida', () => {
+    for (const kpi of KPI_CATALOG) {
+      if (!kpi.drill) continue
+      for (const proibida of CATEGORIAS_PROIBIDAS) {
+        expect(kpi.drill.title).not.toContain(proibida)
+      }
+    }
+  })
+})

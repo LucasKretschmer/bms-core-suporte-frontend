@@ -15,6 +15,8 @@ import type {
   PlanHealthResponseDto,
   ByAgentDto,
   TimeEntryRowDto,
+  TicketRowDto,
+  MetricRowsParams,
 } from '../types/metrics'
 
 /** Remove null/undefined/'' dos params antes de enviar (mesmo padrão do reportsService) */
@@ -102,6 +104,22 @@ export async function getDrillDownRows(
 ): Promise<PaginatedResponse<TimeEntryRowDto>> {
   const { data } = await api.get<PaginatedResponse<TimeEntryRowDto>>(
     '/api/v1/metrics/overview',
+    { params: cleanParams(params as Record<string, unknown>) },
+  )
+  return data
+}
+
+/**
+ * GET /api/v1/metrics/rows — drill-down paramétrico (016).
+ * Família TICKET: cada `metric` define o conjunto-raiz de registros que compõem o KPI/série.
+ * Os MESMOS filtros/scope/período da tela são repassados (A01 — consistência número↔linhas).
+ * Retorna PaginatedResponse<TicketRowDto>.
+ */
+export async function getMetricRows(
+  params: MetricRowsParams,
+): Promise<PaginatedResponse<TicketRowDto>> {
+  const { data } = await api.get<PaginatedResponse<TicketRowDto>>(
+    '/api/v1/metrics/rows',
     { params: cleanParams(params as Record<string, unknown>) },
   )
   return data
