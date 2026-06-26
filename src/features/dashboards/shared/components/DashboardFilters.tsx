@@ -108,7 +108,7 @@ export function DashboardFilters({
       {/* Período */}
       <PeriodFilter from={from} to={to} onChange={onPeriodChange} />
 
-      {/* Equipe (apenas quando teams é fornecido) */}
+      {/* Equipe (apenas quando teams é fornecido) — largura ×2 (019) */}
       {teams !== undefined && onScopeChange && (
         <Combobox
           label="Equipe"
@@ -118,23 +118,29 @@ export function DashboardFilters({
           placeholder="Global"
           id={teamComboId}
           isLoading={isTeamsLoading}
+          className="w-full sm:w-64 lg:w-80"
         />
       )}
 
-      {/* Cliente */}
+      {/* Cliente — largura ×2 (019) via wrapper; sem CNPJ no rótulo, busca por CNPJ mantida */}
       {onClientChange && (
-        <ClientCombobox
-          value={clientId ?? null}
-          onChange={onClientChange}
-        />
+        <div className="w-full sm:w-72 lg:w-88">
+          <ClientCombobox
+            value={clientId ?? null}
+            onChange={onClientChange}
+            showCnpj={false}
+          />
+        </div>
       )}
 
-      {/* Plano */}
+      {/* Plano — largura +30% (019) via wrapper */}
       {onPlanChange && (
-        <PlanCombobox
-          value={supportPlanId ?? null}
-          onChange={onPlanChange}
-        />
+        <div className="w-full sm:w-48 lg:w-56">
+          <PlanCombobox
+            value={supportPlanId ?? null}
+            onChange={onPlanChange}
+          />
+        </div>
       )}
 
       {/* Tempo/tela — controle do Modo Painel (espelha o input do protótipo) */}

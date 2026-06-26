@@ -10,6 +10,12 @@ type ClientComboboxProps = {
   label?: string
   required?: boolean
   placeholder?: string
+  /**
+   * Exibe o CNPJ entre parênteses no rótulo da opção (ex.: "Acme (12.345.678/0001-90)").
+   * Default `true` para manter o comportamento dos relatórios (010/011/U5).
+   * A busca por CNPJ é server-side e independe deste flag — desligar só altera a exibição.
+   */
+  showCnpj?: boolean
 }
 
 /**
@@ -24,6 +30,7 @@ export function ClientCombobox({
   label = 'Cliente',
   required,
   placeholder = 'Buscar cliente…',
+  showCnpj = true,
 }: ClientComboboxProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -39,7 +46,11 @@ export function ClientCombobox({
   const options =
     data?.items.map((c) => ({
       value: String(c.id),
-      label: `${formatClientName(c)}${c.cnpj ? ` (${c.cnpj})` : ''}`,
+      // CNPJ no rótulo é só exibição; a busca por CNPJ é server-side (ver doc do componente).
+      label:
+        showCnpj && c.cnpj
+          ? `${formatClientName(c)} (${c.cnpj})`
+          : formatClientName(c),
     })) ?? []
 
   function handleSearch(query: string) {
