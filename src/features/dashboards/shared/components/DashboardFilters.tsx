@@ -36,6 +36,11 @@ type DashboardFiltersProps = {
   onPresentar?: () => void
   showPresentar?: boolean
 
+  /** Tempo por tela no Modo Painel, em segundos (4–180, default 12). */
+  panelSeconds?: number
+  /** Callback ao alterar o tempo por tela (já validado: clamp 4–180). */
+  onPanelSecondsChange?: (seconds: number) => void
+
   /**
    * Ref opcional para o botão "Apresentar".
    * Usado para devolver o foco ao sair do Modo Painel (AP-FRONTEND-004).
@@ -76,11 +81,17 @@ export function DashboardFilters({
   onPlanChange,
   onPresentar,
   showPresentar,
+  panelSeconds,
+  onPanelSecondsChange,
   apresentarButtonRef,
   className,
 }: DashboardFiltersProps) {
   const { isCoordenadorOuAcima } = usePermissions()
   const teamComboId = useId()
+  const panelSecondsId = useId()
+
+  const showPanelControls =
+    showPresentar && !!onPresentar && isCoordenadorOuAcima
 
   const teamOptions = [
     { value: '', label: 'Global' },
@@ -126,8 +137,41 @@ export function DashboardFilters({
         />
       )}
 
+      {/* Tempo/tela — controle do Modo Painel (espelha o input do protótipo) */}
+      {showPanelControls && onPanelSecondsChange && (
+        <div className="flex flex-col">
+          <label
+            htmlFor={panelSecondsId}
+            className="mb-0.5 text-xs lg:text-sm font-normal text-foreground"
+          >
+            Tempo/tela
+          </label>
+          <div className="flex items-center gap-1">
+            <input
+              id={panelSecondsId}
+              type="number"
+              min={4}
+              max={180}
+              value={panelSeconds ?? 12}
+              onChange={(e) => {
+                const raw = Number(e.target.value)
+                const clamped = Math.max(4, Math.min(180, Number.isFinite(raw) ? raw : 12))
+                onPanelSecondsChange(clamped)
+              }}
+              className={clsx(
+                'h-9 w-[76px] rounded-[5px] border border-border bg-card px-3',
+                'text-sm text-foreground',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              )}
+              title="Segundos que cada tela fica no painel (35% no topo, 30% rolando, 35% no fim)"
+            />
+            <span className="text-sm text-muted">s</span>
+          </div>
+        </div>
+      )}
+
       {/* Botão Apresentar */}
-      {showPresentar && onPresentar && isCoordenadorOuAcima && (
+      {showPanelControls && (
         <button
           ref={apresentarButtonRef}
           type="button"

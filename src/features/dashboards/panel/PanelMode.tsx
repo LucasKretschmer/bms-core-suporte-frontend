@@ -1,9 +1,18 @@
 /**
- * Modo Painel — overlay fullscreen completo.
- * Integra useFullscreen, usePanelRotation e useAutoScroll.
- * Renderiza o dashboard sem chrome (sem Sidebar, sem Header, sem DashboardFilters).
+ * Modo Painel — overlay fullscreen do dashboard, fiel ao protótipo (demanda 014).
  *
- * AP-FRONTEND-002: target="_blank" com rel="noopener noreferrer".
+ * Comportamento espelhado de `dPresent`/`panelSlide`/`dStopPanel` (Suporte) e
+ * `dPresentOnb`/`panelOnbTick` (Onboarding):
+ * - entra em fullscreen no DOCUMENTO inteiro (e funciona mesmo se for negado);
+ * - esconde TODO o chrome (overlay `fixed inset-0`; a página oculta filtros/sidebar);
+ * - rotaciona a equipe trocando o `scope` (Onboarding passa `teams=[]` = sem rotação);
+ * - auto-scroll 35% topo / 30% rolando / 35% fim por tela, em loop;
+ * - nome da equipe em destaque DENTRO do conteúdo rolável (PanelTitle ≈ `.dtitle`);
+ * - encerra com Escape OU ao sair do fullscreen (botão do browser).
+ *
+ * NÃO há setas prev/next nem barra de progresso — o protótipo não os tem.
+ *
+ * AP-FRONTEND-002: target="_blank" com rel="noopener noreferrer" (n/a aqui).
  * AP-FRONTEND-003: useId() nos elementos interativos reutilizáveis.
  */
 
@@ -11,33 +20,33 @@ import { useCallback, useEffect, useId, useRef } from 'react'
 import { useFullscreen } from './hooks/useFullscreen'
 import { usePanelRotation } from './hooks/usePanelRotation'
 import { useAutoScroll } from './hooks/useAutoScroll'
-import { PanelHeader } from './components/PanelHeader'
+import { PanelTitle } from './components/PanelTitle'
 import type { MetricsScope, TeamDto } from '../shared/types/metrics'
+
+type LiveStatus = 'connecting' | 'open' | 'error' | 'closed'
 
 type PanelModeProps = {
   isActive: boolean
   onExit: () => void
+  /** Lista de rotação JÁ filtrada (Global + equipes de Suporte). `[]` = sem rotação. */
   teams: TeamDto[]
   scope: MetricsScope
   onScopeChange: (scope: MetricsScope) => void
   from: string | null
   to: string | null
+  /** Tempo por tela em ms (rotação E scroll). Default 12s. */
   intervalMs?: number
-  liveStatus?: 'connecting' | 'open' | 'error' | 'closed'
-  /** Conteúdo do dashboard (sem filtros, sem sidebar) */
+  /** Índice inicial da rotação (equipe corrente da página). Default 0. */
+  initialIndex?: number
+  /** Rótulo do escopo exibido no título (ex.: "Suporte", "Onboarding"). */
+  scopeLabel?: string
+  liveStatus?: LiveStatus
+  /** Conteúdo do dashboard (sem filtros, sem sidebar). */
   children: React.ReactNode
 }
 
 const DEFAULT_INTERVAL_MS = 12_000
 
-/**
- * Overlay fullscreen do Modo Painel.
- * - usePanelRotation: rotaciona equipes trocando o scope a cada intervalMs.
- * - useAutoScroll: 35% topo / 30% rolando / 35% embaixo — sincronizado com intervalMs.
- * - useFullscreen: fullscreen real com fallback para overlay CSS.
- * - Barra de progresso horizontal na base do header indica tempo até a próxima troca.
- * - Esc ou botão X encerra o painel.
- */
 export function PanelMode({
   isActive,
   onExit,
@@ -47,6 +56,8 @@ export function PanelMode({
   from,
   to,
   intervalMs = DEFAULT_INTERVAL_MS,
+  initialIndex = 0,
+  scopeLabel = 'Suporte',
   liveStatus = 'closed',
   children,
 }: PanelModeProps) {
@@ -55,75 +66,90 @@ export function PanelMode({
   const contentRef = useRef<HTMLDivElement>(null)
   const exitButtonRef = useRef<HTMLButtonElement>(null)
 
-  const { enter, exit, isFullscreen } = useFullscreen(containerRef)
+  const { enter, exit } = useFullscreen()
 
-  // Entra em fullscreen ao ativar
+  // onExit estável para os listeners globais (Escape / fullscreenchange).
+  const onExitRef = useRef(onExit)
+  onExitRef.current = onExit
+
+  const handleExit = useCallback(() => {
+    void exit()
+    onExitRef.current()
+  }, [exit])
+
+  // Entra em fullscreen ao ativar o painel (sem depender do sucesso).
   useEffect(() => {
     if (isActive) {
       void enter()
-      // Foco no container para capturar Esc e navegação por teclado
       containerRef.current?.focus()
     }
   }, [isActive, enter])
 
-  // Ao sair do fullscreen pelo botão do browser → encerrar o painel também
+  // (BUG 014-g) Encerrar o painel ao sair do fullscreen (botão do browser) e com Escape.
+  // Escape funciona MESMO quando o fullscreen foi negado — o overlay é a fonte de verdade.
   useEffect(() => {
-    if (isActive && !isFullscreen) {
-      // isFullscreen muda para false quando o usuário sai pelo botão do browser
-      // Só encerrar se estivermos ativamente no painel (não na montagem inicial)
+    if (!isActive) return
+
+    function onFullscreenChange() {
+      // Saiu do fullscreen enquanto o painel estava ativo → encerrar.
+      if (!document.fullscreenElement) {
+        onExitRef.current()
+      }
     }
-  }, [isActive, isFullscreen])
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        void exit()
+        onExitRef.current()
+      }
+    }
 
-  const handleExit = useCallback(() => {
-    void exit()
-    onExit()
-  }, [exit, onExit])
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isActive, exit])
 
-  // Rotação de equipes
+  // Rotação de equipes (espelha panelSlide; inicia no scope corrente).
   const rotation = usePanelRotation({
     teams,
     intervalMs,
+    initialIndex,
     onScopeChange,
   })
 
-  // Sincroniza currentIndex com o scope externo na primeira montagem
-  // (quando PanelMode monta, a equipe ativa já é a do scope da página)
-  // O usePanelRotation começa no índice 0; na prática a página passa o scope corrente.
-
-  // Auto-scroll sincronizado com intervalMs
+  // Auto-scroll 35/30/35 sincronizado com o tempo por tela.
   const { reset: resetScroll } = useAutoScroll({
     containerRef: contentRef,
     totalMs: intervalMs,
     enabled: isActive,
   })
 
-  // Ao trocar de equipe: volta ao topo
+  // Ao trocar de equipe: volta ao topo (≈ scrollTop0() em panelSlide).
   useEffect(() => {
     if (isActive) {
       resetScroll()
     }
   }, [rotation.currentIndex, isActive, resetScroll])
 
-  // Formatar período para exibição
+  // Período formatado para o rótulo do título.
   const periodLabel =
     from && to
       ? `${from.split('-').reverse().join('/')} – ${to.split('-').reverse().join('/')}`
       : '—'
 
-  // Nome da equipe corrente: vem do usePanelRotation quando há equipes;
-  // caso teams=[] (Onboarding), mostra o nome derivado do scope externo.
+  // Nome da equipe corrente: da rotação quando há equipes; senão derivado do scope.
   const currentTeamName = (() => {
     if (teams.length > 0 && rotation.currentTeam) {
-      // "Global" quando id vazio (sentinel do usePanelRotation)
+      // id sentinel 0 = Global
       return rotation.currentTeam.id ? rotation.currentTeam.nome : 'Global'
     }
-    // Onboarding ou fallback: derivar do scope externo
     if (scope === 'management:onboarding') return 'Onboarding'
-    if (scope === 'management:suporte') return 'Global'
-    if (scope === 'global') return 'Global'
+    if (scope === 'management:suporte' || scope === 'global') return 'Global'
     if (scope.startsWith('team:')) {
       const teamId = scope.slice(5)
-      const found = teams.find((t) => t.id === Number(teamId))
+      const found = teams.find((t) => String(t.id) === teamId)
       return found?.nome ?? teamId
     }
     return 'Global'
@@ -141,22 +167,13 @@ export function PanelMode({
       className="fixed inset-0 z-50 bg-background overflow-hidden flex flex-col"
       tabIndex={-1}
     >
-      {/* Cabeçalho com nome da equipe, live indicator e período */}
-      <PanelHeader
-        teamName={currentTeamName}
-        scope={scope}
-        liveStatus={liveStatus}
-        period={periodLabel}
-        progress={rotation.progress}
-      />
-
-      {/* Botão de saída — canto superior direito, acima do header */}
+      {/* Botão de saída — canto superior direito, sobre o conteúdo. */}
       <button
         ref={exitButtonRef}
         type="button"
         onClick={handleExit}
         aria-label="Sair do Modo Painel (Esc)"
-        className="absolute top-3 right-4 z-10 text-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary rounded p-1"
+        className="absolute top-3 right-4 z-10 rounded p-1 text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <svg
           aria-hidden="true"
@@ -170,37 +187,13 @@ export function PanelMode({
         </svg>
       </button>
 
-      {/* Controles de navegação (prev/next) — só quando há mais de 1 equipe */}
-      {teams.length > 1 && (
-        <>
-          <button
-            type="button"
-            onClick={rotation.goPrev}
-            aria-label="Equipe anterior"
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 text-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary rounded"
-          >
-            <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={rotation.goNext}
-            aria-label="Próxima equipe"
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 text-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary rounded"
-          >
-            <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </>
-      )}
-
-      {/* Conteúdo do dashboard — com overflow-y-auto para o auto-scroll funcionar */}
-      <div
-        ref={contentRef}
-        className="flex-1 overflow-y-auto px-6 py-4"
-      >
+      {/* Conteúdo rolável — título da equipe + seções (auto-scroll atua aqui). */}
+      <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
+        <PanelTitle
+          teamName={currentTeamName}
+          scopeLabel={`${scopeLabel} · ${periodLabel}`}
+          liveStatus={liveStatus}
+        />
         {children}
       </div>
     </div>

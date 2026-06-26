@@ -59,6 +59,11 @@ vi.mock('./hooks/useOnboardingMetrics', () => ({
   }),
 }))
 
+// Mock do SSE — evita EventSource/QueryClient reais no teste de foco.
+vi.mock('../shared/hooks/useMetricsStream', () => ({
+  useMetricsStream: () => ({ status: 'closed', pause: vi.fn(), resume: vi.fn() }),
+}))
+
 // Mocks dos filtros para evitar Combobox/PeriodFilter reais
 vi.mock('../../../features/reports/shared/components/PeriodFilter', () => ({
   PeriodFilter: () => <div data-testid="period-filter" />,

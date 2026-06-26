@@ -2,56 +2,56 @@ import { useCallback, useEffect, useState } from 'react'
 
 type UseFullscreenReturn = {
   isFullscreen: boolean
+  /** Entra em fullscreen no documento inteiro (espelha o protótipo). Nunca lança. */
   enter: () => Promise<void>
+  /** Sai do fullscreen se ativo. Nunca lança. */
   exit: () => Promise<void>
   isSupported: boolean
 }
 
 /**
- * Wrapa Fullscreen API.
- * Trata ausência de suporte degradando para overlay CSS (isFullscreen via state).
- * Escuta fullscreenchange e keydown Escape para sair.
+ * Wrapa a Fullscreen API no DOCUMENTO inteiro (`document.documentElement`),
+ * espelhando `document.documentElement.requestFullscreen()` do protótipo.
+ *
+ * O painel NÃO depende do sucesso do fullscreen: `requestFullscreen` pode ser
+ * negado (sem gesto do usuário / política do browser). Por isso `enter`/`exit`
+ * engolem a rejeição (`.catch`) e o overlay `fixed inset-0` já esconde o chrome.
+ * A fonte de verdade de "estou no painel" é o `isActive` do PanelMode, não este
+ * `isFullscreen` (que serve só para refletir o estado real do browser).
  */
-export function useFullscreen(elementRef: React.RefObject<HTMLElement | null>): UseFullscreenReturn {
+export function useFullscreen(): UseFullscreenReturn {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const isSupported =
     typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
 
-  const exit = useCallback(async () => {
-    if (isSupported && document.fullscreenElement) {
-      await document.exitFullscreen()
-    } else {
-      setIsFullscreen(false)
+  const enter = useCallback(async () => {
+    if (!isSupported) return
+    try {
+      await document.documentElement.requestFullscreen()
+    } catch {
+      // Fullscreen negado/falhou — o overlay segue cobrindo a tela.
     }
   }, [isSupported])
 
-  const enter = useCallback(async () => {
-    if (!elementRef.current) return
-    if (isSupported) {
-      await elementRef.current.requestFullscreen()
-    } else {
-      setIsFullscreen(true) // fallback: overlay CSS
+  const exit = useCallback(async () => {
+    if (typeof document === 'undefined' || !document.fullscreenElement) return
+    try {
+      await document.exitFullscreen()
+    } catch {
+      // Sem fullscreen ativo / falha ao sair — ignorado.
     }
-  }, [elementRef, isSupported])
+  }, [])
 
+  // Reflete o estado real do fullscreen do browser.
   useEffect(() => {
     function onFullscreenChange() {
       setIsFullscreen(!!document.fullscreenElement)
     }
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        void exit()
-      }
-    }
-
     document.addEventListener('fullscreenchange', onFullscreenChange)
-    document.addEventListener('keydown', onKeyDown)
-
     return () => {
       document.removeEventListener('fullscreenchange', onFullscreenChange)
-      document.removeEventListener('keydown', onKeyDown)
     }
-  }, [exit])
+  }, [])
 
   return { isFullscreen, enter, exit, isSupported }
 }

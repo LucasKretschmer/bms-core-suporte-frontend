@@ -42,6 +42,8 @@ export default function DashboardSuportePage() {
   const [planId, setPlanId] = useState<string | null>(null)
   const [drillDownOpen, setDrillDownOpen] = useState(false)
   const [panelActive, setPanelActive] = useState(false)
+  // Tempo por tela no Modo Painel (segundos, clamp 4–180, default 12 — espelha o protótipo).
+  const [panelSeconds, setPanelSeconds] = useState(12)
 
   // Ref para devolver o foco ao botão Apresentar ao sair do painel (acessibilidade)
   const apresentarButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -60,11 +62,30 @@ export default function DashboardSuportePage() {
   // Sem filtro por gerência: todas as equipes aparecem no combobox do Dashboard (#6).
   const teams: TeamDto[] = allTeams ?? []
 
-  // Lista para o PanelMode: Global (sentinel id=0) + todas as equipes
+  // Lista de ROTAÇÃO do painel: Global (sentinel id=0) + equipes de SUPORTE,
+  // EXCLUINDO Integração e Customer Success (equipes de Onboarding).
+  // Espelha `SUPPORT_TEAMS = TEAMS.filter(t => !ONBOARDING_TEAMS.includes(t.name))` do protótipo.
+  // Fallback por nome cobre equipes sincronizadas com gerencia=null.
+  const ONBOARDING_TEAM_NAMES = ['Integração', 'Customer Success']
+  const supportTeams = teams.filter(
+    (t) =>
+      t.gerencia !== 'onboarding' && !ONBOARDING_TEAM_NAMES.includes(t.nome),
+  )
   const panelTeams: TeamDto[] = [
     { id: 0, nome: 'Global', gerencia: null },
-    ...teams,
+    ...supportTeams,
   ]
+
+  // Índice inicial da rotação = posição do scope ATUAL na lista (espelha S._pi).
+  // Global ('management:suporte'/'global') → índice 0. team:{id} → posição correspondente.
+  const panelInitialIndex = (() => {
+    if (scope.startsWith('team:')) {
+      const teamId = scope.slice(5)
+      const idx = panelTeams.findIndex((t) => String(t.id) === teamId)
+      return idx >= 0 ? idx : 0
+    }
+    return 0
+  })()
 
   // Hook de métricas overview (para passar SLA para SupportSlaSection)
   const overviewQuery = useMetricsOverview({
@@ -177,6 +198,8 @@ export default function DashboardSuportePage() {
           onPlanChange={setPlanId}
           showPresentar
           onPresentar={() => setPanelActive(true)}
+          panelSeconds={panelSeconds}
+          onPanelSecondsChange={setPanelSeconds}
           apresentarButtonRef={apresentarButtonRef}
         />
       )}
@@ -206,6 +229,9 @@ export default function DashboardSuportePage() {
           onScopeChange={setScope}
           from={from}
           to={to}
+          intervalMs={panelSeconds * 1000}
+          initialIndex={panelInitialIndex}
+          scopeLabel="Suporte"
           liveStatus={stream.status}
         >
           {dashboardSections}

@@ -11,6 +11,7 @@ import { startOfMonth } from 'date-fns'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
+import { useMetricsStream } from '../shared/hooks/useMetricsStream'
 import { useOnboardingMetrics } from './hooks/useOnboardingMetrics'
 import { OnboardingProjectSection } from './components/OnboardingProjectSection'
 import { OnboardingTicketSection } from './components/OnboardingTicketSection'
@@ -27,11 +28,16 @@ export default function DashboardOnboardingPage() {
     new Date().toISOString().slice(0, 10),
   )
   const [panelActive, setPanelActive] = useState(false)
+  // Tempo por tela no Modo Painel (segundos, clamp 4–180, default 12).
+  const [panelSeconds, setPanelSeconds] = useState(12)
 
   // Ref para devolver o foco ao botão Apresentar ao sair do painel
   const apresentarButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const { data, isLoading, isError, refetch } = useOnboardingMetrics({ from, to })
+
+  // SSE — mantém o indicador "ao vivo" coerente durante a apresentação.
+  const stream = useMetricsStream('management:onboarding')
 
   // Guarda de acesso — UX only (backend valida via 403)
   if (!isCoordenadorOuAcima) {
@@ -86,6 +92,8 @@ export default function DashboardOnboardingPage() {
           }}
           showPresentar={isCoordenadorOuAcima}
           onPresentar={() => setPanelActive(true)}
+          panelSeconds={panelSeconds}
+          onPanelSecondsChange={setPanelSeconds}
           apresentarButtonRef={apresentarButtonRef}
         />
       )}
@@ -105,7 +113,9 @@ export default function DashboardOnboardingPage() {
           }}
           from={from}
           to={to}
-          liveStatus="closed"
+          intervalMs={panelSeconds * 1000}
+          scopeLabel="Onboarding"
+          liveStatus={stream.status}
         >
           {dashboardContent}
         </PanelMode>
