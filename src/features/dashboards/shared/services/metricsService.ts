@@ -44,6 +44,11 @@ export async function getMetricsDaily(
   return data
 }
 
+/**
+ * GET /metrics/status-distribution.
+ * Retorna o corpo HTTP inteiro (`{ byTeam, data }`) — NÃO desempacota `.data`,
+ * pois `byTeam` vem no mesmo nível de `data` (contrato §6, união discriminada).
+ */
 export async function getStatusDistribution(
   params: MetricsBaseParams,
 ): Promise<StatusDistributionDto> {

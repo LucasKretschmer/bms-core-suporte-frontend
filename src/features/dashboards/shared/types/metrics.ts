@@ -73,14 +73,42 @@ export type MetricsDailyDto = {
 
 // ── GET /metrics/status-distribution ────────────────────────────────────────
 
+/**
+ * Um status de pipeline com sua contagem. `status` = label legível resolvido pelo
+ * backend (via pipelinestages). Fallback do BE: se não houver match, `status` vem
+ * com o stageId cru — o FE renderiza o que vier, sem mapeamento de código (#2).
+ */
 export type StatusDistributionItemDto = {
-  pipelineStage: string
+  stageId: string
+  status: string
   count: number
 }
 
-export type StatusDistributionDto = {
+/** Escopo de equipe (`byTeam: false`): lista de status. */
+export type StatusDistributionTeamScopeDto = {
+  byTeam: false
   data: StatusDistributionItemDto[]
 }
+
+/** Quebra de status de uma equipe (linha da matriz equipe × status). */
+export type TeamStatusDistributionDto = {
+  equipe: string  // "Sem equipe" para tickets sem PrimaryTeamId (decisão BE)
+  porStatus: StatusDistributionItemDto[]
+}
+
+/** Escopo global (`byTeam: true`): cada equipe com sua quebra por status. */
+export type StatusDistributionGlobalScopeDto = {
+  byTeam: true
+  data: TeamStatusDistributionDto[]
+}
+
+/**
+ * União discriminada por `byTeam`. O corpo HTTP inteiro (`{ byTeam, data }`) — o
+ * serviço NÃO desempacota `.data` (byTeam vem no mesmo nível de data, contrato §6).
+ */
+export type StatusDistributionDto =
+  | StatusDistributionTeamScopeDto
+  | StatusDistributionGlobalScopeDto
 
 // ── GET /metrics/by-category ─────────────────────────────────────────────────
 

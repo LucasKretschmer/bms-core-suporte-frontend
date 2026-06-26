@@ -7,6 +7,7 @@
 import { useMetricsDaily } from '../../shared/hooks/useMetricsDaily'
 import { LineChartMovimentacao } from '../../shared/components/LineChartMovimentacao'
 import { ChartCard } from '../../shared/components/ChartCard'
+import { isMovimentacaoEmpty } from '../../shared/utils/movimentacao'
 import type { MetricsScope } from '../../shared/types/metrics'
 
 type SupportMovimentacaoSectionProps = {
@@ -33,7 +34,9 @@ export function SupportMovimentacaoSection({
   })
 
   const days = data?.days ?? []
-  const isEmpty = !isLoading && !isError && days.length === 0
+  // Empty honesto (#1): sem dias OU dias retornados com todas as séries em zero.
+  // Não fingir "erro" quando simplesmente não houve movimentação no período.
+  const isEmpty = isMovimentacaoEmpty(days, isLoading, isError)
 
   return (
     <ChartCard
@@ -41,7 +44,7 @@ export function SupportMovimentacaoSection({
       isLoading={isLoading}
       isError={isError}
       isEmpty={isEmpty}
-      emptyMessage="Sem dados de movimentação para o período."
+      emptyMessage="Sem movimentação registrada no período."
       onRetry={refetch}
       height={260}
     >

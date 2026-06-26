@@ -72,7 +72,12 @@ export const CategoryChart = React.memo(function CategoryChart({
   }
 
   if (data.length === 0) {
-    return <EmptyState message="Sem dados de categoria para o período." className={className} />
+    return (
+      <EmptyState
+        message="Sem dados de categoria no período. A categoria pode não estar preenchida nos chamados."
+        className={className}
+      />
+    )
   }
 
   return (

@@ -41,7 +41,11 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
     return <Skeleton lines={1} height={`h-[${height}px]`} className={className} />
   }
 
-  if (respondidosNoPrazo === null && respondidosForaDoPrazo === null) {
+  // Empty conservador (#5): se QUALQUER lado for null, o dado de SLA é parcial/
+  // indisponível (depende de config do Service Hub). Não usar `?? 0` num lado
+  // null — mostraria "zero respostas" enganosamente. Defensivo caso o gráfico
+  // seja reusado sem o ChartCard da section.
+  if (respondidosNoPrazo === null || respondidosForaDoPrazo === null) {
     return (
       <EmptyState
         message="Dados de SLA não disponíveis. Requer configuração no Service Hub."
@@ -53,8 +57,8 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
   const chartData = [
     {
       name: 'SLA',
-      noPrazo: respondidosNoPrazo ?? 0,
-      foraDoPrazo: respondidosForaDoPrazo ?? 0,
+      noPrazo: respondidosNoPrazo,
+      foraDoPrazo: respondidosForaDoPrazo,
     },
   ]
 

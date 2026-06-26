@@ -23,11 +23,14 @@ export function SupportSlaSection({
   isError = false,
   onRetry,
 }: SupportSlaSectionProps) {
+  // Empty honesto e conservador (#5): dado de SLA depende de configuração no
+  // Service Hub. Se QUALQUER um dos lados vier null, não há base confiável para
+  // o gráfico — usar `?? 0` mostraria "zero respostas" enganosamente. Por isso
+  // o empty dispara se ambos OU apenas um forem null (estado parcial).
   const isEmpty =
     !isLoading &&
     !isError &&
-    respondidosNoPrazo === null &&
-    respondidosForaDoPrazo === null
+    (respondidosNoPrazo === null || respondidosForaDoPrazo === null)
 
   return (
     <ChartCard

@@ -12,7 +12,13 @@ type UseStatusDistributionParams = {
 
 /**
  * Hook de distribuição por status de pipeline.
- * staleTime 2min.
+ * staleTime 2min. Retorna a união discriminada `StatusDistributionDto`.
+ *
+ * A `queryKey` inclui `scope` → ao alternar global↔equipe a query reexecuta e a
+ * forma do dado muda. NÃO incluir `byTeam` na key (vem do dado). Com
+ * `keepPreviousData`, o consumidor deve SEMPRE discriminar por `data.byTeam` a cada
+ * render (não assumir a forma) — o shape antigo pode persistir por 1 render na troca
+ * de scope.
  */
 export function useStatusDistribution(params: UseStatusDistributionParams) {
   return useQuery({
