@@ -72,7 +72,7 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
     !entriesQuery.isLoading && !entriesQuery.isError && entries.length === 0
 
   return (
-    <PageWrapper title={ticket ? `#${ticket.hubspotTicketId}` : 'Detalhe do ticket'} breadcrumbItems={breadcrumbItems}>
+    <PageWrapper breadcrumbItems={breadcrumbItems}>
       <div className="flex flex-col gap-4">
         {/* Header */}
         {headerQuery.isLoading && (

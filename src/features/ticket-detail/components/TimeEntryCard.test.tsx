@@ -74,4 +74,34 @@ describe('TimeEntryCard', () => {
     render(<TimeEntryCard entry={entry({ note: 'Atendimento concluído' })} canEdit={false} onEdit={vi.fn()} />)
     expect(screen.getByText(/Atendimento concluído/)).toBeInTheDocument()
   })
+
+  it.each([
+    ['RUNNING', 'Em andamento'],
+    ['PAUSED', 'Pausado'],
+    ['COMPLETED', 'Concluído'],
+    ['CANCELLED', 'Cancelado'],
+  ])('mostra o badge de status "%s" como "%s"', (status, label) => {
+    render(<TimeEntryCard entry={entry({ status })} canEdit={false} onEdit={vi.fn()} />)
+    expect(screen.getByText(label)).toBeInTheDocument()
+  })
+
+  it('mapeia o status independente de caixa (lowercase)', () => {
+    render(<TimeEntryCard entry={entry({ status: 'running' })} canEdit={false} onEdit={vi.fn()} />)
+    expect(screen.getByText('Em andamento')).toBeInTheDocument()
+  })
+
+  it('usa o valor bruto como fallback para status desconhecido', () => {
+    render(<TimeEntryCard entry={entry({ status: 'ARCHIVED' })} canEdit={false} onEdit={vi.fn()} />)
+    expect(screen.getByText('ARCHIVED')).toBeInTheDocument()
+  })
+
+  it('exibe o atendente quando informado', () => {
+    render(<TimeEntryCard entry={entry({ agenteNome: 'Maria' })} canEdit={false} onEdit={vi.fn()} />)
+    expect(screen.getByText('Maria')).toBeInTheDocument()
+  })
+
+  it('exibe fallback quando o atendente está vazio', () => {
+    render(<TimeEntryCard entry={entry({ agenteNome: '' })} canEdit={false} onEdit={vi.fn()} />)
+    expect(screen.getByText('Atendente não informado')).toBeInTheDocument()
+  })
 })
