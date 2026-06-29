@@ -238,6 +238,7 @@ export default function ClientReportPage() {
             onChange={(clientId) => setFilters({ clientId })}
             required
             label="Cliente *"
+            showCnpj={false}
           />
           <PeriodFilter
             from={filters.month}

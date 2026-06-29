@@ -57,7 +57,22 @@ export function Combobox({
   const searchRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
 
-  const selectedLabel = options.find((o) => o.value === value)?.label ?? null
+  // Cache de rótulos já vistos {value→label}. No modo async, a lista de `options`
+  // muda a cada busca (ao fechar, o effect reseta search='' → refetch traz os 25
+  // primeiros). Se o item selecionado não estiver nessa lista, o rótulo se perderia
+  // e o trigger voltaria ao placeholder. O cache mantém o rótulo do selecionado
+  // independentemente da lista atual.
+  const labelCacheRef = useRef<Map<string, string>>(new Map())
+  for (const opt of options) {
+    labelCacheRef.current.set(opt.value, opt.label)
+  }
+
+  const selectedLabel =
+    value === null
+      ? null
+      : (options.find((o) => o.value === value)?.label ??
+        labelCacheRef.current.get(value) ??
+        null)
 
   const filteredOptions = isAsync
     ? options
@@ -96,6 +111,10 @@ export function Combobox({
   }
 
   function selectOption(val: string) {
+    // Fixa o rótulo do selecionado no cache antes de fechar — garante que o trigger
+    // mostre o nome mesmo que o refetch async (search vazio) não retorne este item.
+    const picked = options.find((o) => o.value === val)
+    if (picked) labelCacheRef.current.set(picked.value, picked.label)
     onChange(val)
     setIsOpen(false)
   }

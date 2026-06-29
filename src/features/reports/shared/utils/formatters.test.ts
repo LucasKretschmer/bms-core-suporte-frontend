@@ -102,4 +102,20 @@ describe('formatClientName', () => {
   it('retorna "—" quando ambos são null', () => {
     expect(formatClientName({ nomeFantasia: null, razaoSocial: null })).toBe('—')
   })
+
+  it('usa razaoSocial quando nomeFantasia é string vazia', () => {
+    expect(
+      formatClientName({ nomeFantasia: '', razaoSocial: 'Razão Social LTDA' }),
+    ).toBe('Razão Social LTDA')
+  })
+
+  it('usa razaoSocial quando nomeFantasia é só espaços/whitespace', () => {
+    expect(
+      formatClientName({ nomeFantasia: '   ', razaoSocial: 'Razão Social LTDA' }),
+    ).toBe('Razão Social LTDA')
+  })
+
+  it('retorna "—" quando ambos são string vazia/whitespace', () => {
+    expect(formatClientName({ nomeFantasia: '  ', razaoSocial: '' })).toBe('—')
+  })
 })

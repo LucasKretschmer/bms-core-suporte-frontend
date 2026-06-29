@@ -100,13 +100,15 @@ export function formatCurrency(value: number): string {
 
 /**
  * Nome do cliente para exibição.
- * Preferência: nomeFantasia → razaoSocial → "—"
+ * Preferência: nomeFantasia → razaoSocial → "—".
+ * Usa `||` sobre o valor já "trimado" para tratar string vazia/whitespace
+ * (e não apenas null/undefined) como "não preenchido".
  */
 export function formatClientName(item: {
   nomeFantasia?: string | null
   razaoSocial?: string | null
 }): string {
-  return item.nomeFantasia ?? item.razaoSocial ?? '—'
+  return item.nomeFantasia?.trim() || item.razaoSocial?.trim() || '—'
 }
 
 /** Número com 1 casa decimal ou "—" se null */
