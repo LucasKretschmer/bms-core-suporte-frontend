@@ -13,13 +13,38 @@ import { KpiCard } from '../../shared/components/KpiCard'
 import { KpiCardGrid } from '../../shared/components/KpiCardGrid'
 import { ChartCard } from '../../shared/components/ChartCard'
 import { DonutChart } from '../../shared/components/DonutChart'
-import type { OnboardingProjectStatsDto } from '../../shared/types/metrics'
+import type {
+  DrillParams,
+  DrillSpec,
+  OnboardingProjectStatsDto,
+} from '../../shared/types/metrics'
 
 type OnboardingProjectSectionProps = {
   data: OnboardingProjectStatsDto | undefined
   isLoading: boolean
   isError: boolean
   onRetry: () => void
+  /**
+   * Drill (016 B4): KPI/fatia de projeto clicável → tabela dos projetos do estágio/tipo.
+   * R5: a linha da tabela NÃO navega (não há tela de detalhe de projeto).
+   */
+  onProjectDrill?: (spec: DrillSpec) => void
+}
+
+/** DrillSpec por estágio (tipo=onboarding). */
+function stageDrill(
+  stage: NonNullable<DrillParams['stage']>,
+  title: string,
+): DrillSpec {
+  return { metric: 'projetos', title, params: { tipo: 'onboarding', stage } }
+}
+
+/** DrillSpec por tipo (POC/Treinamento). */
+function tipoDrill(
+  tipo: NonNullable<DrillParams['tipo']>,
+  title: string,
+): DrillSpec {
+  return { metric: 'projetos', title, params: { tipo } }
 }
 
 /**
@@ -50,6 +75,7 @@ export function OnboardingProjectSection({
   isLoading,
   isError,
   onRetry,
+  onProjectDrill,
 }: OnboardingProjectSectionProps) {
   if (isLoading) {
     return (
@@ -93,21 +119,31 @@ export function OnboardingProjectSection({
     )
   }
 
-  // Dados para DonutChart de estágio (apenas valores > 0 — Recharts exclui fatias zero)
+  /** Retorna onClick a partir de um DrillSpec (undefined se drill desabilitado). */
+  function drillClick(spec: DrillSpec): (() => void) | undefined {
+    return onProjectDrill ? () => onProjectDrill(spec) : undefined
+  }
+
+  // Dados para DonutChart de estágio (apenas valores > 0 — Recharts exclui fatias zero).
+  // `drill` carrega o DrillSpec de cada fatia (clique no donut → tabela do estágio).
   const estagioData = [
-    { name: 'Iniciado', value: data.iniciados },
-    { name: 'Em Execução', value: data.emExecucao },
-    { name: 'Parado', value: data.parados },
-    { name: 'Em Fechamento', value: data.emFechamento },
-    { name: 'Concluído', value: data.concluidos },
-    { name: 'Cancelado', value: data.cancelados },
+    { name: 'Iniciado', value: data.iniciados, drill: stageDrill('iniciados', 'Projetos iniciados no período') },
+    { name: 'Em Execução', value: data.emExecucao, drill: stageDrill('execucao', 'Projetos em execução') },
+    { name: 'Parado', value: data.parados, drill: stageDrill('parado', 'Projetos parados') },
+    { name: 'Em Fechamento', value: data.emFechamento, drill: stageDrill('fechamento', 'Projetos em fechamento') },
+    { name: 'Concluído', value: data.concluidos, drill: stageDrill('concluido', 'Projetos concluídos no período') },
+    { name: 'Cancelado', value: data.cancelados, drill: stageDrill('cancelado', 'Projetos cancelados no período') },
   ].filter((item) => item.value > 0)
 
   // Dados para DonutChart de tipo (iniciados no período)
   const tipoData = [
-    { name: 'Onboarding', value: data.iniciados - data.pocIniciadas - data.treinamentos > 0 ? data.iniciados - data.pocIniciadas - data.treinamentos : 0 },
-    { name: 'POC', value: data.pocIniciadas },
-    { name: 'Treinamento', value: data.treinamentos },
+    {
+      name: 'Onboarding',
+      value: data.iniciados - data.pocIniciadas - data.treinamentos > 0 ? data.iniciados - data.pocIniciadas - data.treinamentos : 0,
+      drill: stageDrill('iniciados', 'Projetos de onboarding iniciados'),
+    },
+    { name: 'POC', value: data.pocIniciadas, drill: tipoDrill('poc', 'POCs iniciadas no período') },
+    { name: 'Treinamento', value: data.treinamentos, drill: tipoDrill('treinamento', 'Treinamentos iniciados no período') },
   ].filter((item) => item.value > 0)
 
   const estagioEmpty = estagioData.length === 0
@@ -124,6 +160,7 @@ export function OnboardingProjectSection({
 
       {/* KPI Cards — estágio */}
       <KpiCardGrid className="mb-4">
+        {/* Total ativos é composto (vários estágios) — sem drill de um conjunto único. */}
         <KpiCard
           label="Total ativos"
           value={data.totalAtivos}
@@ -134,43 +171,51 @@ export function OnboardingProjectSection({
           label="Iniciados no período"
           value={data.iniciados}
           formatter={formatCount}
+          onClick={drillClick(stageDrill('iniciados', 'Projetos iniciados no período'))}
         />
         <KpiCard
           label="Em execução"
           value={data.emExecucao}
           formatter={formatCount}
+          onClick={drillClick(stageDrill('execucao', 'Projetos em execução'))}
         />
         <KpiCard
           label="Parados"
           value={data.parados}
           formatter={formatCount}
+          onClick={drillClick(stageDrill('parado', 'Projetos parados'))}
         />
         <KpiCard
           label="Em fechamento"
           value={data.emFechamento}
           formatter={formatCount}
+          onClick={drillClick(stageDrill('fechamento', 'Projetos em fechamento'))}
         />
         <KpiCard
           label="Concluídos no período"
           value={data.concluidos}
           formatter={formatCount}
+          onClick={drillClick(stageDrill('concluido', 'Projetos concluídos no período'))}
         />
         <KpiCard
           label="Cancelados no período"
           value={data.cancelados}
           formatter={formatCount}
+          onClick={drillClick(stageDrill('cancelado', 'Projetos cancelados no período'))}
         />
         <KpiCard
           label="POC iniciadas"
           value={data.pocIniciadas}
           formatter={formatCount}
           tooltipText="Projetos do tipo POC iniciados no período"
+          onClick={drillClick(tipoDrill('poc', 'POCs iniciadas no período'))}
         />
         <KpiCard
           label="Treinamentos"
           value={data.treinamentos}
           formatter={formatCount}
           tooltipText="Projetos do tipo Treinamento iniciados no período"
+          onClick={drillClick(tipoDrill('treinamento', 'Treinamentos iniciados no período'))}
         />
       </KpiCardGrid>
 
@@ -181,7 +226,18 @@ export function OnboardingProjectSection({
           isEmpty={estagioEmpty}
           emptyMessage="Nenhum projeto com estágio ativo no período."
         >
-          <DonutChart data={estagioData} height={240} />
+          <DonutChart
+            data={estagioData}
+            height={240}
+            onSliceClick={
+              onProjectDrill
+                ? (index) => {
+                    const item = estagioData[index]
+                    if (item?.drill) onProjectDrill(item.drill)
+                  }
+                : undefined
+            }
+          />
         </ChartCard>
 
         <ChartCard
@@ -189,7 +245,18 @@ export function OnboardingProjectSection({
           isEmpty={tipoEmpty}
           emptyMessage="Nenhum projeto iniciado no período."
         >
-          <DonutChart data={tipoData} height={240} />
+          <DonutChart
+            data={tipoData}
+            height={240}
+            onSliceClick={
+              onProjectDrill
+                ? (index) => {
+                    const item = tipoData[index]
+                    if (item?.drill) onProjectDrill(item.drill)
+                  }
+                : undefined
+            }
+          />
         </ChartCard>
       </div>
     </section>

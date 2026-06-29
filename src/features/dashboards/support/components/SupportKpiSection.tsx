@@ -20,10 +20,12 @@ type SupportKpiSectionProps = {
   to: string | null
   clientId: string | null
   planId: string | null
-  /** Drill legado de apontamentos (KPI "Tempo total" — overview?format=rows). */
-  onDrillDown?: () => void
-  /** Drill paramétrico da família ticket (016): abre a tabela do metric do KPI. */
-  onTicketDrill?: (spec: DrillSpec) => void
+  /**
+   * Drill paramétrico (016): abre a tabela dos registros que compõem o KPI.
+   * O metric do DrillSpec discrimina a família (apontamento/ticket) — a página pai
+   * decide qual modal/hook usar (MetricDrillModal genérico).
+   */
+  onDrillSpec?: (spec: DrillSpec) => void
 }
 
 /**
@@ -56,8 +58,7 @@ export function SupportKpiSection({
   to,
   clientId,
   planId,
-  onDrillDown,
-  onTicketDrill,
+  onDrillSpec,
 }: SupportKpiSectionProps) {
   const { data, isLoading, isError, refetch } = useMetricsOverview({
     scope,
@@ -116,14 +117,12 @@ export function SupportKpiSection({
               ? rawValue
               : null
 
-        // Drill: família ticket (drill no catálogo) tem precedência; o KPI legado
-        // "Tempo total" usa o drill de apontamentos (overview?format=rows).
+        // Drill paramétrico (016): qualquer KPI com `drill` no catálogo abre a tabela
+        // dos registros que o compõem. A família (apontamento/ticket) vem do metric.
         let onClick: (() => void) | undefined
-        if (kpiDef.drill && onTicketDrill) {
+        if (kpiDef.drill && onDrillSpec) {
           const spec = kpiDef.drill
-          onClick = () => onTicketDrill(spec)
-        } else if (onDrillDown && kpiDef.key === 'tempoTotalSegundos') {
-          onClick = onDrillDown
+          onClick = () => onDrillSpec(spec)
         }
 
         return (

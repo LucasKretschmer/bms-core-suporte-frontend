@@ -21,14 +21,16 @@ import { Skeleton } from '../../../../components/ui/Skeleton'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import type { PlanHealthSummaryDto } from '../types/metrics'
 
+type FaixaSaude = 'verde' | 'amarelo' | 'vermelho'
+
 type PlanHealthChartProps = {
   summary: PlanHealthSummaryDto | null
   isLoading?: boolean
   height?: number
   className?: string
+  /** Drill (016 B3): clique numa faixa → tabela dos clientes daquela faixa. */
+  onFaixaClick?: (faixa: FaixaSaude) => void
 }
-
-type FaixaSaude = 'verde' | 'amarelo' | 'vermelho'
 
 const FAIXA_LABEL: Record<FaixaSaude, string> = {
   verde: '< 80% (ok)',
@@ -41,6 +43,7 @@ export const PlanHealthChart = React.memo(function PlanHealthChart({
   isLoading = false,
   height = 200,
   className,
+  onFaixaClick,
 }: PlanHealthChartProps) {
   const tokens = useMemo(() => getChartTokens(), [])
 
@@ -72,9 +75,27 @@ export const PlanHealthChart = React.memo(function PlanHealthChart({
           <Legend
             formatter={(value: string) => FAIXA_LABEL[value as FaixaSaude] ?? value}
           />
-          <Bar dataKey="verde" name="verde" fill={tokens['chart-verde']} />
-          <Bar dataKey="amarelo" name="amarelo" fill={tokens['chart-amarelo']} />
-          <Bar dataKey="vermelho" name="vermelho" fill={tokens['chart-vermelho']} />
+          <Bar
+            dataKey="verde"
+            name="verde"
+            fill={tokens['chart-verde']}
+            cursor={onFaixaClick ? 'pointer' : undefined}
+            onClick={onFaixaClick ? () => onFaixaClick('verde') : undefined}
+          />
+          <Bar
+            dataKey="amarelo"
+            name="amarelo"
+            fill={tokens['chart-amarelo']}
+            cursor={onFaixaClick ? 'pointer' : undefined}
+            onClick={onFaixaClick ? () => onFaixaClick('amarelo') : undefined}
+          />
+          <Bar
+            dataKey="vermelho"
+            name="vermelho"
+            fill={tokens['chart-vermelho']}
+            cursor={onFaixaClick ? 'pointer' : undefined}
+            onClick={onFaixaClick ? () => onFaixaClick('vermelho') : undefined}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

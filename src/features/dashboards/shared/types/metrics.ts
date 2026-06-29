@@ -223,6 +223,62 @@ export type TimeEntryRowDto = {
   dataApontamento: string
 }
 
+// ── Drill-down paramétrico — família APONTAMENTO (016 B1) ─────────────────────
+
+/**
+ * Linha da família APONTAMENTO (espelha o TimeEntryRowDto do backend em /metrics/rows).
+ * Difere do TimeEntryRowDto legado (overview?format=rows) por carregar
+ * `categorizacaoAtendimento` (categorização interna — Plantão etc.). `ticketId` é o id
+ * INTERNO usado para navegar à tela do ticket do apontamento.
+ */
+export type TimeEntryDrillRowDto = {
+  timeEntryId: number
+  ticketId: number
+  hubspotTicketId: string
+  assunto: string | null
+  atendente: string
+  equipe: string | null
+  dataApontamento: string
+  totalSegundos: number
+  categorizacaoAtendimento: string | null
+}
+
+// ── Drill-down paramétrico — família CLIENTE (016 B3) ─────────────────────────
+
+/**
+ * Linha da família CLIENTE (espelha o PlanHealthItemDto de /metrics/rows no backend).
+ * `clientId` é o id INTERNO usado para navegar à tela do cliente (client-tickets).
+ * Os nomes de campo seguem o DTO de ROWS do backend (nomeFantasia/planNome/horas*),
+ * NÃO o tipo agregado legado PlanHealthItemDto deste arquivo.
+ */
+export type ClientRowDto = {
+  clientId: number
+  nomeFantasia: string | null
+  planNome: string | null
+  horasContratadas: number
+  horasConsumidas: number
+  percentualConsumo: number
+  faixa: 'verde' | 'amarelo' | 'vermelho'
+}
+
+// ── Drill-down paramétrico — família PROJETO (016 B4) ─────────────────────────
+
+/**
+ * Linha da família PROJETO (Onboarding). `projetoId` é o id interno, MAS R5: não existe
+ * tela de detalhe de projeto — a linha NÃO navega (somente exibição na tabela).
+ */
+export type ProjectRowDto = {
+  projetoId: number
+  nome: string | null
+  clienteNome: string | null
+  tipo: string
+  stage: string
+  ownerNome: string | null
+  equipe: string | null
+  iniciadoEm: string | null
+  concluidoEm: string | null
+}
+
 // ── Drill-down paramétrico (016 — GET /metrics/rows?metric=) ─────────────────
 
 /**
@@ -266,6 +322,25 @@ export type TicketMetricKey =
   | 'tickets-csat'
   | 'tickets-fcr'
 
+/** Métricas da família APONTAMENTO (016 B1, já em main). */
+export type ApontamentoMetricKey = 'apontamentos' | 'apontamentos-com-pausa'
+
+/** Métrica da família CLIENTE (016 B3). */
+export type ClienteMetricKey = 'plan-health-clientes'
+
+/** Métrica da família PROJETO (016 B4). */
+export type ProjetoMetricKey = 'projetos'
+
+/** Todas as métricas de /metrics/rows (whitelist do backend). */
+export type MetricKey =
+  | TicketMetricKey
+  | ApontamentoMetricKey
+  | ClienteMetricKey
+  | ProjetoMetricKey
+
+/** Família de cada metric — determina o DTO de linha e a navegação. */
+export type MetricFamily = 'ticket' | 'apontamento' | 'cliente' | 'projeto'
+
 /** Parâmetros específicos por metric (todos opcionais; validados no backend). */
 export type DrillParams = {
   /**
@@ -277,34 +352,71 @@ export type DrillParams = {
   stageId?: string
   /** tickets-sla — 'on' (no prazo / MET) | 'late' (fora / MISSED). Obrigatório para tickets-sla. */
   sla?: 'on' | 'late'
+  // ── Família APONTAMENTO (B1) ──
+  /** plano | fora | analise — espelha HorasPlano/Fora/Análise do overview. */
+  billing?: 'plano' | 'fora' | 'analise'
+  /** Categorização interna do atendimento (ex.: "Plantão"). */
+  serviceCategory?: string
+  /** Categoria do ticket (drill do "Chamados por Categoria"). "Problema - Invoicy" → 422. */
+  categoria?: string
+  /** Filtrar apontamentos por atendente (id interno). */
+  userId?: string
+  // ── Família CLIENTE (B3) ──
+  /** verde | amarelo | vermelho — faixa de saúde do plano. Obrigatório p/ plan-health-clientes. */
+  faixa?: 'verde' | 'amarelo' | 'vermelho'
+  // ── Família PROJETO (B4) ──
+  /** onboarding | poc | treinamento. */
+  tipo?: 'onboarding' | 'poc' | 'treinamento'
+  /** iniciados | execucao | parado | fechamento | concluido | cancelado. */
+  stage?: 'iniciados' | 'execucao' | 'parado' | 'fechamento' | 'concluido' | 'cancelado'
 }
 
 /**
  * Especificação de um drill-down: qual conjunto de registros abrir.
- * Mapeia 1:1 com o `dDrill`/`dDrillChart` do protótipo.
+ * Mapeia 1:1 com o `dDrill`/`dDrillChart` do protótipo. O `metric` discrimina a família
+ * (ticket/apontamento/cliente/projeto) — a coluna e a navegação derivam dele.
  */
 export type DrillSpec = {
-  metric: TicketMetricKey
+  metric: MetricKey
   /** Título seguro do modal (sem categoria HubSpot). */
   title: string
   params?: DrillParams
 }
 
-/** Parâmetros enviados a GET /metrics/rows (família ticket). */
+/** Parâmetros enviados a GET /metrics/rows (qualquer família). */
 export type MetricRowsParams = {
-  metric: TicketMetricKey
+  metric: MetricKey
   scope?: MetricsScope
   from?: string | null
   to?: string | null
   clientId?: string | null
+  supportPlanId?: string | null
   stageId?: string | null
   /** tickets-backlog (020): chave de status agrupado. Precedência sobre `stageId` no BE. */
   statusKey?: string | null
   sla?: 'on' | 'late' | null
+  // família apontamento
+  billing?: 'plano' | 'fora' | 'analise' | null
+  serviceCategory?: string | null
+  categoria?: string | null
+  userId?: string | null
+  // família cliente
+  faixa?: 'verde' | 'amarelo' | 'vermelho' | null
+  // família projeto
+  tipo?: 'onboarding' | 'poc' | 'treinamento' | null
+  stage?: string | null
   sortBy?: string | null
   sortDirection?: 'asc' | 'desc'
   page: number
   pageSize: number
+}
+
+/** Resolve a família de uma metric (para escolher DTO/colunas/navegação). */
+export function metricFamily(metric: MetricKey): MetricFamily {
+  if (metric.startsWith('tickets-')) return 'ticket'
+  if (metric === 'plan-health-clientes') return 'cliente'
+  if (metric === 'projetos') return 'projeto'
+  return 'apontamento'
 }
 
 // ── SSE eventos ──────────────────────────────────────────────────────────────

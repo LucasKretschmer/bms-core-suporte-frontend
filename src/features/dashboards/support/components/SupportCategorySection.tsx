@@ -3,13 +3,15 @@
  *
  * AP-SECURITY-001: exibe 'categoria' do DTO — o backend filtra as proibidas.
  * O teste CategoryChart.test.tsx varre o DOM por valores literais proibidos.
- * Drill-down NÃO habilitado aqui (endpoint ?format=rows por categoria não disponível).
+ * Drill-down (016 B1): clique numa barra → tabela dos apontamentos daquela categoria
+ * (família apontamento, metric=apontamentos&categoria=...). O backend rejeita categorias
+ * proibidas (422); o título do modal usa o nome da categoria já exibido no gráfico.
  */
 
 import { useByCategory } from '../../shared/hooks/useByCategory'
 import { CategoryChart } from '../../shared/components/CategoryChart'
 import { ChartCard } from '../../shared/components/ChartCard'
-import type { MetricsScope } from '../../shared/types/metrics'
+import type { DrillSpec, MetricsScope } from '../../shared/types/metrics'
 
 type SupportCategorySectionProps = {
   scope: MetricsScope
@@ -17,6 +19,8 @@ type SupportCategorySectionProps = {
   to: string | null
   clientId?: string | null
   planId?: string | null
+  /** Drill (016): clique na barra → tabela dos apontamentos da categoria. */
+  onCategoryDrill?: (spec: DrillSpec) => void
 }
 
 export function SupportCategorySection({
@@ -25,6 +29,7 @@ export function SupportCategorySection({
   to,
   clientId,
   planId,
+  onCategoryDrill,
 }: SupportCategorySectionProps) {
   const { data, isLoading, isError, refetch } = useByCategory({
     scope,
@@ -47,7 +52,20 @@ export function SupportCategorySection({
       onRetry={refetch}
       height={300}
     >
-      <CategoryChart data={items} height={300} />
+      <CategoryChart
+        data={items}
+        height={300}
+        onBarClick={
+          onCategoryDrill
+            ? (categoria) =>
+                onCategoryDrill({
+                  metric: 'apontamentos',
+                  title: `Apontamentos — ${categoria}`,
+                  params: { categoria },
+                })
+            : undefined
+        }
+      />
     </ChartCard>
   )
 }
