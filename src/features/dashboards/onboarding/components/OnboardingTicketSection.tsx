@@ -3,13 +3,25 @@
  *
  * Exibe totais de tickets em aberto e resolvidos das equipes de Onboarding,
  * e tabela de atendidos/horas por atendente.
+ *
+ * Export (017 Fase D): baixa o conjunto FILTRADO já em memória (data.porAtendente),
+ * sem ida extra ao backend. Só colunas visíveis — sem campos internos (AP-SECURITY-001).
  */
 
+import { useState } from 'react'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import { ErrorState } from '../../../../components/ui/ErrorState'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { KpiCard } from '../../shared/components/KpiCard'
 import { KpiCardGrid } from '../../shared/components/KpiCardGrid'
+import { ExportButtons } from '../../../reports/shared/components/ExportButtons'
+import {
+  exportToCsv,
+  exportToXlsx,
+  type ExportColumn,
+  type ExportRow,
+} from '../../../reports/shared/utils/exportTable'
+import { useToast } from '../../../../components/ui/Toast'
 import type {
   DrillSpec,
   OnboardingTicketStatsDto,
@@ -38,6 +50,25 @@ function formatSeconds(totalSeconds: number): string {
   if (hours === 0) return `${minutes}m`
   if (minutes === 0) return `${hours}h`
   return `${hours}h ${minutes}m`
+}
+
+/** Colunas de export — espelham as colunas visíveis (sem campos internos). */
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: '#', key: 'rank' },
+  { header: 'Atendente', key: 'atendente' },
+  { header: 'Equipe', key: 'equipe' },
+  { header: 'Atendimentos', key: 'atendimentos' },
+  { header: 'Horas', key: 'horas' },
+]
+
+function mapAgentToExportRow(agent: OnboardingAgentTicketDto, index: number): ExportRow {
+  return {
+    rank: index + 1,
+    atendente: agent.nome,
+    equipe: agent.equipe ?? '—',
+    atendimentos: intlPtBr.format(agent.nAtendimentos),
+    horas: formatSeconds(agent.totalSegundos),
+  }
 }
 
 type AgentRowProps = {
@@ -145,6 +176,46 @@ export function OnboardingTicketSection({
   onRetry,
   onTicketDrill,
 }: OnboardingTicketSectionProps) {
+  const toast = useToast()
+  const [isExporting, setIsExporting] = useState(false)
+
+  const agents = data?.porAtendente ?? []
+  const canExport = agents.length > 0
+
+  function handleExportCsv() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      exportToCsv(
+        'onboarding-atendimentos-por-atendente',
+        EXPORT_COLUMNS,
+        agents.map(mapAgentToExportRow),
+      )
+      toast.success('Exportação CSV concluída.')
+    } catch {
+      toast.error('Erro ao exportar. Tente novamente.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleExportXlsx() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      await exportToXlsx(
+        'onboarding-atendimentos-por-atendente',
+        EXPORT_COLUMNS,
+        agents.map(mapAgentToExportRow),
+      )
+      toast.success('Exportação Excel concluída.')
+    } catch {
+      toast.error('Erro ao exportar. Tente novamente.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <section aria-label="Tickets — carregando">
@@ -217,10 +288,17 @@ export function OnboardingTicketSection({
 
       {/* Tabela por atendente */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="p-4 pt-3 border-b border-border">
+        <div className="flex items-center justify-between gap-3 p-4 pt-3 border-b border-border">
           <h3 className="text-[16px] font-medium text-foreground">
             Atendimentos por atendente
           </h3>
+          {canExport && (
+            <ExportButtons
+              onExportCsv={handleExportCsv}
+              onExportXlsx={() => void handleExportXlsx()}
+              isExporting={isExporting}
+            />
+          )}
         </div>
         <AgentTable agents={data.porAtendente} />
       </div>

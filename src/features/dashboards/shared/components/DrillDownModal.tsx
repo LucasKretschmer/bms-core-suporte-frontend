@@ -2,9 +2,11 @@
  * Modal de drill-down — reutiliza Modal, DataTable, ExportButtons, Pagination da fundação 002.
  * Colunas exibidas: atendente, equipe, ticket (ID), assunto, data, horas.
  * NUNCA expõe categoria HubSpot (AP-SECURITY-001).
+ *
+ * Export do conjunto FILTRADO COMPLETO via fetchAllPaginated (não só a página visível) — 017 Fase C.
  */
 
-import { useId, useEffect } from 'react'
+import { useId, useEffect, useState } from 'react'
 import { Modal } from '../../../../components/ui/Modal'
 import { DataTable } from '../../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../../components/ui/Pagination'
@@ -13,9 +15,15 @@ import { ErrorState } from '../../../../components/ui/ErrorState'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { ExportButtons } from '../../../reports/shared/components/ExportButtons'
 import { exportToCsv, exportToXlsx } from '../../../reports/shared/utils/exportTable'
+import {
+  fetchAllPaginated,
+  ExportLimitError,
+} from '../../../reports/shared/utils/fetchAllPaginated'
+import { useToast } from '../../../../components/ui/Toast'
 import { formatDate, formatSeconds } from '../../../reports/shared/utils/formatters'
+import { getDrillDownRows } from '../services/metricsService'
 import type { ColumnDef, SortState } from '../../../../components/ui/DataTable/types'
-import type { TimeEntryRowDto } from '../types/metrics'
+import type { MetricsBaseParams, TimeEntryRowDto } from '../types/metrics'
 import type { useDrillDownRows } from '../hooks/useDrillDownRows'
 
 type DrillDownModalProps = {
@@ -25,6 +33,8 @@ type DrillDownModalProps = {
   title: string
   /** Hook de drill-down instanciado na página pai */
   drillDown: ReturnType<typeof useDrillDownRows>
+  /** Filtros/scope/período da tela — usados no export do conjunto filtrado completo. */
+  baseParams: MetricsBaseParams
   /** Pausa SSE ao abrir (opcional — passar stream.pause) */
   onStreamPause?: () => void
   /** Retoma SSE ao fechar (opcional — passar stream.resume) */
@@ -78,10 +88,13 @@ export function DrillDownModal({
   onClose,
   title,
   drillDown,
+  baseParams,
   onStreamPause,
   onStreamResume,
 }: DrillDownModalProps) {
   const modalId = useId()
+  const toast = useToast()
+  const [isExporting, setIsExporting] = useState(false)
 
   // Ao abrir: ativa a query e pausa o SSE
   useEffect(() => {
@@ -104,24 +117,47 @@ export function DrillDownModal({
     sortDirection: drillDown.sortDirection,
   }
 
-  function handleExportCsv() {
+  /** Busca o conjunto FILTRADO COMPLETO (todas as páginas) e devolve as linhas exportáveis. */
+  async function buildExportRows() {
+    const all = await fetchAllPaginated<TimeEntryRowDto>((page, pageSize) =>
+      getDrillDownRows({
+        ...baseParams,
+        format: 'rows',
+        page,
+        pageSize,
+        sortBy: drillDown.sortBy,
+        sortDirection: drillDown.sortDirection,
+      }),
+    )
     const exportCols = COLUMNS.map((c) => ({ header: c.header, key: c.key }))
-    const exportRows = items.map((row) =>
+    const exportRows = all.map((row) =>
       Object.fromEntries(
         COLUMNS.map((c) => [c.key, c.accessor(row) as string | number | null | undefined]),
       ),
     )
-    exportToCsv('drill-down', exportCols, exportRows)
+    return { exportCols, exportRows }
   }
 
-  function handleExportXlsx() {
-    const exportCols = COLUMNS.map((c) => ({ header: c.header, key: c.key }))
-    const exportRows = items.map((row) =>
-      Object.fromEntries(
-        COLUMNS.map((c) => [c.key, c.accessor(row) as string | number | null | undefined]),
-      ),
-    )
-    void exportToXlsx('drill-down', exportCols, exportRows)
+  async function runExport(kind: 'csv' | 'xlsx') {
+    if (isExporting) return
+    setIsExporting(true)
+    toast.info('Carregando dados para exportar…')
+    try {
+      const { exportCols, exportRows } = await buildExportRows()
+      if (kind === 'csv') {
+        exportToCsv('drill-down', exportCols, exportRows)
+        toast.success('Exportação CSV concluída.')
+      } else {
+        await exportToXlsx('drill-down', exportCols, exportRows)
+        toast.success('Exportação Excel concluída.')
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   function renderContent() {
@@ -159,8 +195,9 @@ export function DrillDownModal({
         {!drillDown.isLoading && !drillDown.isError && items.length > 0 && (
           <div className="flex justify-end">
             <ExportButtons
-              onExportCsv={handleExportCsv}
-              onExportXlsx={handleExportXlsx}
+              onExportCsv={() => void runExport('csv')}
+              onExportXlsx={() => void runExport('xlsx')}
+              isExporting={isExporting}
             />
           </div>
         )}
