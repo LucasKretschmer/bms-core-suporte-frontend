@@ -35,6 +35,11 @@ type OnboardingTicketSectionProps = {
   onRetry: () => void
   /** Drill (016): KPI de ticket clicável → tabela dos tickets (scope onboarding). */
   onTicketDrill?: (spec: DrillSpec) => void
+  /**
+   * Drill (016 B1): linha de atendente clicável → tabela dos apontamentos do atendente
+   * (família apontamento, metric=apontamentos&userId=...).
+   */
+  onAgentDrill?: (spec: DrillSpec) => void
 }
 
 const intlPtBr = new Intl.NumberFormat('pt-BR')
@@ -74,12 +79,28 @@ function mapAgentToExportRow(agent: OnboardingAgentTicketDto, index: number): Ex
 type AgentRowProps = {
   agent: OnboardingAgentTicketDto
   rank: number
+  onClick?: () => void
 }
 
-function AgentRow({ agent, rank }: AgentRowProps) {
+function AgentRow({ agent, rank, onClick }: AgentRowProps) {
+  const isClickable = !!onClick
   return (
     <tr
       className="border-b border-border last:border-0 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow"
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        isClickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick?.()
+              }
+            }
+          : undefined
+      }
+      style={isClickable ? { cursor: 'pointer' } : undefined}
     >
       <td className="py-[9px] px-5 text-xs font-normal text-foreground text-center">
         {rank}
@@ -102,9 +123,10 @@ function AgentRow({ agent, rank }: AgentRowProps) {
 
 type AgentTableProps = {
   agents: OnboardingAgentTicketDto[]
+  onAgentClick?: (agent: OnboardingAgentTicketDto) => void
 }
 
-function AgentTable({ agents }: AgentTableProps) {
+function AgentTable({ agents, onAgentClick }: AgentTableProps) {
   if (agents.length === 0) {
     return (
       <EmptyState
@@ -161,7 +183,12 @@ function AgentTable({ agents }: AgentTableProps) {
         </thead>
         <tbody>
           {agents.map((agent, index) => (
-            <AgentRow key={agent.userId} agent={agent} rank={index + 1} />
+            <AgentRow
+              key={agent.userId}
+              agent={agent}
+              rank={index + 1}
+              onClick={onAgentClick ? () => onAgentClick(agent) : undefined}
+            />
           ))}
         </tbody>
       </table>
@@ -175,6 +202,7 @@ export function OnboardingTicketSection({
   isError,
   onRetry,
   onTicketDrill,
+  onAgentDrill,
 }: OnboardingTicketSectionProps) {
   const toast = useToast()
   const [isExporting, setIsExporting] = useState(false)
@@ -300,7 +328,19 @@ export function OnboardingTicketSection({
             />
           )}
         </div>
-        <AgentTable agents={data.porAtendente} />
+        <AgentTable
+          agents={data.porAtendente}
+          onAgentClick={
+            onAgentDrill
+              ? (agent) =>
+                  onAgentDrill({
+                    metric: 'apontamentos',
+                    title: `Apontamentos — ${agent.nome}`,
+                    params: { userId: String(agent.userId) },
+                  })
+              : undefined
+          }
+        />
       </div>
     </section>
   )

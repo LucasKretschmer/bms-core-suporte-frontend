@@ -111,14 +111,15 @@ export async function getDrillDownRows(
 
 /**
  * GET /api/v1/metrics/rows — drill-down paramétrico (016).
- * Família TICKET: cada `metric` define o conjunto-raiz de registros que compõem o KPI/série.
+ * Cada `metric` define o conjunto-raiz de registros que compõem o KPI/série. O TIPO de linha
+ * varia por família (ticket→TicketRowDto, apontamento→TimeEntryDrillRowDto, cliente→ClientRowDto,
+ * projeto→ProjectRowDto) — o chamador informa o tipo via parâmetro genérico T.
  * Os MESMOS filtros/scope/período da tela são repassados (A01 — consistência número↔linhas).
- * Retorna PaginatedResponse<TicketRowDto>.
  */
-export async function getMetricRows(
+export async function getMetricRows<T = TicketRowDto>(
   params: MetricRowsParams,
-): Promise<PaginatedResponse<TicketRowDto>> {
-  const { data } = await api.get<PaginatedResponse<TicketRowDto>>(
+): Promise<PaginatedResponse<T>> {
+  const { data } = await api.get<PaginatedResponse<T>>(
     '/api/v1/metrics/rows',
     { params: cleanParams(params as Record<string, unknown>) },
   )

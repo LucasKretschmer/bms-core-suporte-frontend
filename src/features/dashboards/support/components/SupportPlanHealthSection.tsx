@@ -21,19 +21,27 @@ import {
 } from '../../../reports/shared/utils/exportTable'
 import { formatHours, formatPercent } from '../../../reports/shared/utils/formatters'
 import { useToast } from '../../../../components/ui/Toast'
-import type { PlanHealthItemDto } from '../../shared/types/metrics'
+import type { DrillSpec, PlanHealthItemDto } from '../../shared/types/metrics'
 
 type SupportPlanHealthSectionProps = {
   from: string | null
   to: string | null
   clientId?: string | null
   planId?: string | null
+  /** Drill (016 B3): clique numa faixa → tabela dos clientes daquela faixa de saúde. */
+  onFaixaDrill?: (spec: DrillSpec) => void
 }
 
 const FAIXA_LABEL: Record<PlanHealthItemDto['faixaSaude'], string> = {
   verde: 'Ok (< 80%)',
   amarelo: 'Atenção (80–95%)',
   vermelho: 'Crítico (≥ 95%)',
+}
+
+const FAIXA_DRILL_TITLE: Record<'verde' | 'amarelo' | 'vermelho', string> = {
+  verde: 'Planos saudáveis (< 80%)',
+  amarelo: 'Planos em atenção (80–95%)',
+  vermelho: 'Planos críticos (≥ 95%)',
 }
 
 /** Colunas de export — espelham os dados visíveis, sem campos internos (AP-SECURITY-001). */
@@ -62,6 +70,7 @@ export function SupportPlanHealthSection({
   to,
   clientId,
   planId,
+  onFaixaDrill,
 }: SupportPlanHealthSectionProps) {
   // Saúde de planos é SEMPRE global — não filtra por equipe (conforme análise §8.2)
   const { data, isLoading, isError, refetch } = usePlanHealth({
@@ -124,7 +133,20 @@ export function SupportPlanHealthSection({
         ) : undefined
       }
     >
-      <PlanHealthChart summary={summary} height={220} />
+      <PlanHealthChart
+        summary={summary}
+        height={220}
+        onFaixaClick={
+          onFaixaDrill
+            ? (faixa) =>
+                onFaixaDrill({
+                  metric: 'plan-health-clientes',
+                  title: FAIXA_DRILL_TITLE[faixa],
+                  params: { faixa },
+                })
+            : undefined
+        }
+      />
     </ChartCard>
   )
 }

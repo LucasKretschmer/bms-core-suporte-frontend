@@ -13,14 +13,22 @@ import { useQuery } from '@tanstack/react-query'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
-import { DrillDownModal } from '../shared/components/DrillDownModal'
 import { TicketDrillModal } from '../shared/components/TicketDrillModal'
+import { ApontamentoDrillModal } from '../shared/components/ApontamentoDrillModal'
+import { ClientDrillModal } from '../shared/components/ClientDrillModal'
 import { useMetricsOverview } from '../shared/hooks/useMetricsOverview'
-import { useDrillDownRows } from '../shared/hooks/useDrillDownRows'
-import { useTicketDrill } from '../shared/hooks/useTicketDrill'
+import { useMetricDrill } from '../shared/hooks/useMetricDrill'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
 import { listTeams } from '../../reports/shared/services/reportsService'
-import type { DrillSpec, MetricsScope, TeamDto } from '../shared/types/metrics'
+import { metricFamily } from '../shared/types/metrics'
+import type {
+  ClientRowDto,
+  DrillSpec,
+  MetricsScope,
+  TeamDto,
+  TicketRowDto,
+  TimeEntryDrillRowDto,
+} from '../shared/types/metrics'
 import { PanelMode } from '../panel/PanelMode'
 
 // Seções implementadas
@@ -42,8 +50,8 @@ export default function DashboardSuportePage() {
   const [to, setTo] = useState<string | null>(format(new Date(), 'yyyy-MM-dd'))
   const [clientId, setClientId] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
-  const [drillDownOpen, setDrillDownOpen] = useState(false)
-  // Drill paramétrico da família ticket (016): KPI/fatia clicada → tabela dos registros.
+  // Drill paramétrico (016): KPI/fatia clicada → tabela dos registros. O metric do
+  // DrillSpec discrimina a família (apontamento/ticket/cliente) → modal/hook correto.
   const [activeDrill, setActiveDrill] = useState<DrillSpec | null>(null)
   const [panelActive, setPanelActive] = useState(false)
   // Tempo por tela no Modo Painel (segundos, clamp 4–180, default 12 — espelha o protótipo).
@@ -100,12 +108,25 @@ export default function DashboardSuportePage() {
     supportPlanId: planId,
   })
 
-  // Hook de drill-down de apontamentos (legado — overview?format=rows)
-  const drillDown = useDrillDownRows({ scope, from, to, clientId, supportPlanId: planId })
+  // Família do drill ativo — decide qual hook fica habilitado (os demais recebem null).
+  const drillFamily = activeDrill ? metricFamily(activeDrill.metric) : null
 
-  // Hook de drill-down paramétrico da família ticket (016)
-  // supportPlanId NÃO é repassado: /metrics/rows (família ticket) não aceita filtro de plano.
-  const ticketDrill = useTicketDrill(activeDrill, { scope, from, to, clientId })
+  // Drill paramétrico (016): um hook por família. Só o da família ativa dispara a query
+  // (os demais recebem activeDrill=null → enabled:false). Hooks chamados sempre (regra do React).
+  // supportPlanId NÃO é repassado às famílias ticket/apontamento (o /metrics/rows dessas
+  // famílias não aceita filtro de plano); a família cliente é sempre global.
+  const ticketDrill = useMetricDrill<TicketRowDto>(
+    drillFamily === 'ticket' ? activeDrill : null,
+    { scope, from, to, clientId },
+  )
+  const apontamentoDrill = useMetricDrill<TimeEntryDrillRowDto>(
+    drillFamily === 'apontamento' ? activeDrill : null,
+    { scope, from, to, clientId, supportPlanId: planId },
+  )
+  const clientDrill = useMetricDrill<ClientRowDto>(
+    drillFamily === 'cliente' ? activeDrill : null,
+    { from, to, clientId },
+  )
 
   // SSE — atualizações em tempo real
   const stream = useMetricsStream(scope)
@@ -127,15 +148,14 @@ export default function DashboardSuportePage() {
   // Seções do dashboard — usadas tanto na view normal quanto dentro do PanelMode
   const dashboardSections = (
     <>
-      {/* KPIs — Fase 1A. Drill da família ticket (016) habilitado fora do painel. */}
+      {/* KPIs — Fase 1A. Drill paramétrico (016): ticket + apontamento (tempo/pausa/plantão/billing). */}
       <SupportKpiSection
         scope={scope}
         from={from}
         to={to}
         clientId={clientId}
         planId={planId}
-        onDrillDown={panelActive ? undefined : () => setDrillDownOpen(true)}
-        onTicketDrill={panelActive ? undefined : setActiveDrill}
+        onDrillSpec={panelActive ? undefined : setActiveDrill}
       />
 
       {/* Movimentação Diária — Fase 1A */}
@@ -158,14 +178,14 @@ export default function DashboardSuportePage() {
         onStatusDrill={panelActive ? undefined : setActiveDrill}
       />
 
-      {/* Chamados por Categoria — Fase 1B */}
-      {/* TODO 016: drill por categoria depende da família apontamento no /metrics/rows (onda B1) */}
+      {/* Chamados por Categoria — Fase 1B. Drill por categoria (016 B1, família apontamento). */}
       <SupportCategorySection
         scope={scope}
         from={from}
         to={to}
         clientId={clientId}
         planId={planId}
+        onCategoryDrill={panelActive ? undefined : setActiveDrill}
       />
 
       {/* 1ª Resposta vs SLA — Fase 1B (dados vêm do overview). Fatia clicável (016). */}
@@ -178,12 +198,13 @@ export default function DashboardSuportePage() {
         onSegmentDrill={panelActive ? undefined : setActiveDrill}
       />
 
-      {/* Saúde dos Planos (sempre global) — Fase 1B */}
+      {/* Saúde dos Planos (sempre global) — Fase 1B. Drill por faixa (016 B3, família cliente). */}
       <SupportPlanHealthSection
         from={from}
         to={to}
         clientId={clientId}
         planId={planId}
+        onFaixaDrill={panelActive ? undefined : setActiveDrill}
       />
     </>
   )
@@ -220,27 +241,37 @@ export default function DashboardSuportePage() {
       {/* Seções normais (visíveis quando o painel não está ativo) */}
       {!panelActive && dashboardSections}
 
-      {/* Drill-down de apontamentos (legado) — apenas fora do modo painel */}
-      {!panelActive && (
-        <DrillDownModal
-          isOpen={drillDownOpen}
-          onClose={() => setDrillDownOpen(false)}
-          title="Detalhes de apontamentos"
-          drillDown={drillDown}
+      {/* Drill-down paramétrico (016) — KPI/fatia → tabela → tela de detalhe.
+          O metric do DrillSpec escolhe o modal/hook da família. Montado só com drill ativo
+          (fora do painel). Cada modal pausa o SSE enquanto aberto (PRD §6). */}
+      {!panelActive && activeDrill && drillFamily === 'ticket' && (
+        <TicketDrillModal
+          activeDrill={activeDrill}
+          onClose={() => setActiveDrill(null)}
+          drill={ticketDrill}
+          baseParams={{ scope, from, to, clientId }}
+          onStreamPause={stream.pause}
+          onStreamResume={stream.resume}
+        />
+      )}
+
+      {!panelActive && activeDrill && drillFamily === 'apontamento' && (
+        <ApontamentoDrillModal
+          activeDrill={activeDrill}
+          onClose={() => setActiveDrill(null)}
+          drill={apontamentoDrill}
           baseParams={{ scope, from, to, clientId, supportPlanId: planId }}
           onStreamPause={stream.pause}
           onStreamResume={stream.resume}
         />
       )}
 
-      {/* Drill-down paramétrico da família ticket (016) — KPI/fatia → tabela → ticket-detail.
-          Montado apenas quando há um drill ativo (fora do painel). */}
-      {!panelActive && activeDrill && (
-        <TicketDrillModal
+      {!panelActive && activeDrill && drillFamily === 'cliente' && (
+        <ClientDrillModal
           activeDrill={activeDrill}
           onClose={() => setActiveDrill(null)}
-          drill={ticketDrill}
-          baseParams={{ scope, from, to, clientId }}
+          drill={clientDrill}
+          baseParams={{ from, to, clientId }}
           onStreamPause={stream.pause}
           onStreamResume={stream.resume}
         />

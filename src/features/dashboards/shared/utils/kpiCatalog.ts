@@ -50,24 +50,36 @@ export const KPI_CATALOG: KpiDefinition[] = [
     label: 'Tempo total no mês',
     formatter: formatSeconds,
     toleratesNull: false,
+    // Base completa de apontamentos do período/scope (== overview.NumEntries).
+    drill: { metric: 'apontamentos', title: 'Apontamentos do período' },
   },
   {
     key: 'ahtSegundos',
     label: 'TMA (Tempo Médio de Atendimento)',
     formatter: formatSeconds,
     toleratesNull: true,
+    // TMA é média sobre a mesma base de apontamentos.
+    drill: { metric: 'apontamentos', title: 'Apontamentos do período' },
   },
   {
     key: 'tempoMedioPausaSegundos',
     label: 'Tempo médio em pausa',
     formatter: formatSeconds,
     toleratesNull: true,
+    drill: {
+      metric: 'apontamentos-com-pausa',
+      title: 'Apontamentos com pausa',
+    },
   },
   {
     key: 'mediaPausasPorAtendimento',
     label: 'Média de interrupções / atend.',
     formatter: formatDecimal,
     toleratesNull: true,
+    drill: {
+      metric: 'apontamentos-com-pausa',
+      title: 'Apontamentos com pausa',
+    },
   },
   {
     key: 'backlog',
@@ -178,18 +190,33 @@ export const KPI_CATALOG: KpiDefinition[] = [
     label: 'Horas de plantão',
     formatter: formatSeconds,
     toleratesNull: false,
+    drill: {
+      metric: 'apontamentos',
+      title: 'Apontamentos de plantão',
+      params: { serviceCategory: 'Plantão' },
+    },
   },
   {
     key: 'horasPlano',
     label: 'Atendimento no plano',
     formatter: formatSeconds,
     toleratesNull: false,
+    drill: {
+      metric: 'apontamentos',
+      title: 'Atendimento no plano',
+      params: { billing: 'plano' },
+    },
   },
   {
     key: 'horasFaturadoPorFora',
     label: 'Consultoria / faturável por fora',
     formatter: formatSeconds,
     toleratesNull: false,
+    drill: {
+      metric: 'apontamentos',
+      title: 'Consultoria / faturável por fora',
+      params: { billing: 'fora' },
+    },
   },
   {
     key: 'horasAnalise',
@@ -197,5 +224,12 @@ export const KPI_CATALOG: KpiDefinition[] = [
     formatter: formatSeconds,
     toleratesNull: false,
     tooltipText: 'Apontamentos classificados como análise interna de produto',
+    // AP-SECURITY-001: o filtro billing=analise é server-side sobre a categoria interna;
+    // o título e as colunas NUNCA expõem a categoria HubSpot crua.
+    drill: {
+      metric: 'apontamentos',
+      title: 'Horas de análise',
+      params: { billing: 'analise' },
+    },
   },
 ]

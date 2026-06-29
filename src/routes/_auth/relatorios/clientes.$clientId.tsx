@@ -16,7 +16,8 @@ import { tokenStore } from '../../../utils/tokenStore'
  */
 
 const searchSchema = z.object({
-  from: z.enum(['consumo-planos']).optional(),
+  // 'dashboard' = origem do drill-down de Saúde dos Planos (016).
+  from: z.enum(['consumo-planos', 'dashboard']).optional(),
 })
 
 const ClientTicketsPage = lazyRouteComponent(

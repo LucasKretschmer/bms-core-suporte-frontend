@@ -127,21 +127,25 @@ describe('kpiCatalog — drill-down (016)', () => {
     expect(foraPrazo!.drill!.params?.sla).toBe('late')
   })
 
-  it('KPIs da família apontamento NÃO têm drill (família ainda não disponível no backend)', () => {
-    // Estes ainda dependem da onda B1 (/metrics/rows família apontamento).
-    const apontamentoKpis = [
-      'tempoTotalSegundos',
-      'ahtSegundos',
-      'tempoMedioPausaSegundos',
-      'mediaPausasPorAtendimento',
-      'horasPlantao',
-      'horasPlano',
-      'horasFaturadoPorFora',
-      'horasAnalise',
-    ]
-    for (const key of apontamentoKpis) {
+  it('KPIs da família apontamento têm drill paramétrico (016 B1 — wiring)', () => {
+    // Cada KPI de apontamento abre /metrics/rows da família apontamento com o filtro correto.
+    const expected: Record<string, { metric: string; param?: Record<string, string> }> = {
+      tempoTotalSegundos: { metric: 'apontamentos' },
+      ahtSegundos: { metric: 'apontamentos' },
+      tempoMedioPausaSegundos: { metric: 'apontamentos-com-pausa' },
+      mediaPausasPorAtendimento: { metric: 'apontamentos-com-pausa' },
+      horasPlantao: { metric: 'apontamentos', param: { serviceCategory: 'Plantão' } },
+      horasPlano: { metric: 'apontamentos', param: { billing: 'plano' } },
+      horasFaturadoPorFora: { metric: 'apontamentos', param: { billing: 'fora' } },
+      horasAnalise: { metric: 'apontamentos', param: { billing: 'analise' } },
+    }
+    for (const [key, exp] of Object.entries(expected)) {
       const kpi = KPI_CATALOG.find((k) => k.key === key)
-      expect(kpi!.drill, `KPI ${key} não deve ter drill ainda`).toBeUndefined()
+      expect(kpi!.drill, `KPI ${key} deve ter drill`).toBeDefined()
+      expect(kpi!.drill!.metric).toBe(exp.metric)
+      if (exp.param) {
+        expect(kpi!.drill!.params).toMatchObject(exp.param)
+      }
     }
   })
 

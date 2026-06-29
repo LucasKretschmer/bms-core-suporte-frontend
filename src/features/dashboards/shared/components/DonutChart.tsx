@@ -25,6 +25,11 @@ type DonutChartProps = {
   outerRadius?: number
   height?: number
   className?: string
+  /**
+   * Drill (016): clique numa fatia → callback com o índice da fatia (na ordem de `data`).
+   * Quando definido, as fatias ganham cursor pointer.
+   */
+  onSliceClick?: (index: number) => void
 }
 
 /**
@@ -41,6 +46,7 @@ export const DonutChart = React.memo(function DonutChart({
   outerRadius = 90,
   height = 240,
   className,
+  onSliceClick,
 }: DonutChartProps) {
   const generatedId = useId()
   const rootId = idProp ?? generatedId
@@ -63,6 +69,12 @@ export const DonutChart = React.memo(function DonutChart({
             innerRadius={innerRadius}
             outerRadius={outerRadius}
             dataKey="value"
+            cursor={onSliceClick ? 'pointer' : undefined}
+            onClick={
+              onSliceClick
+                ? (_data: unknown, index: number) => onSliceClick(index)
+                : undefined
+            }
           >
             {data.map((_, index) => (
               <Cell

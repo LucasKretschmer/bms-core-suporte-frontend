@@ -12,14 +12,22 @@ import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
 import { TicketDrillModal } from '../shared/components/TicketDrillModal'
+import { ApontamentoDrillModal } from '../shared/components/ApontamentoDrillModal'
+import { ProjectDrillModal } from '../shared/components/ProjectDrillModal'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
-import { useTicketDrill } from '../shared/hooks/useTicketDrill'
+import { useMetricDrill } from '../shared/hooks/useMetricDrill'
 import { useOnboardingMetrics } from './hooks/useOnboardingMetrics'
 import { OnboardingProjectSection } from './components/OnboardingProjectSection'
 import { OnboardingTicketSection } from './components/OnboardingTicketSection'
 import { OnboardingNpsCard } from './components/OnboardingNpsCard'
 import { PanelMode } from '../panel/PanelMode'
-import type { DrillSpec } from '../shared/types/metrics'
+import { metricFamily } from '../shared/types/metrics'
+import type {
+  DrillSpec,
+  ProjectRowDto,
+  TicketRowDto,
+  TimeEntryDrillRowDto,
+} from '../shared/types/metrics'
 
 export default function DashboardOnboardingPage() {
   const { isCoordenadorOuAcima } = usePermissions()
@@ -44,12 +52,23 @@ export default function DashboardOnboardingPage() {
   // SSE — mantém o indicador "ao vivo" coerente durante a apresentação.
   const stream = useMetricsStream('management:onboarding')
 
-  // Drill da família ticket no scope da gerência de onboarding.
-  const ticketDrill = useTicketDrill(activeDrill, {
-    scope: 'management:onboarding',
-    from,
-    to,
-  })
+  // Família do drill ativo — decide qual hook fica habilitado (os demais recebem null).
+  const drillFamily = activeDrill ? metricFamily(activeDrill.metric) : null
+
+  // Drill paramétrico (016): um hook por família, só o ativo dispara a query.
+  // Ticket/apontamento herdam o scope da gerência onboarding; projeto é fixo onboarding no BE.
+  const ticketDrill = useMetricDrill<TicketRowDto>(
+    drillFamily === 'ticket' ? activeDrill : null,
+    { scope: 'management:onboarding', from, to },
+  )
+  const apontamentoDrill = useMetricDrill<TimeEntryDrillRowDto>(
+    drillFamily === 'apontamento' ? activeDrill : null,
+    { scope: 'management:onboarding', from, to },
+  )
+  const projectDrill = useMetricDrill<ProjectRowDto>(
+    drillFamily === 'projeto' ? activeDrill : null,
+    { from, to },
+  )
 
   // Guarda de acesso — UX only (backend valida via 403)
   if (!isCoordenadorOuAcima) {
@@ -68,23 +87,23 @@ export default function DashboardOnboardingPage() {
 
   const dashboardContent = (
     <>
-      {/* Projetos */}
-      {/* TODO 016: drill de projetos (KPIs/donuts) depende da família projeto no /metrics/rows (onda B4). */}
+      {/* Projetos — KPIs/donuts clicáveis (016 B4, família projeto). R5: linha não navega. */}
       <OnboardingProjectSection
         data={data?.projetos}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
+        onProjectDrill={panelActive ? undefined : setActiveDrill}
       />
 
-      {/* Tickets — KPIs de ticket clicáveis (016). */}
-      {/* TODO 016: drill "por atendente" depende da família apontamento no /metrics/rows (onda B1). */}
+      {/* Tickets — KPIs de ticket clicáveis (016) + linha de atendente → apontamentos (B1). */}
       <OnboardingTicketSection
         data={data?.tickets}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
         onTicketDrill={panelActive ? undefined : setActiveDrill}
+        onAgentDrill={panelActive ? undefined : setActiveDrill}
       />
 
       {/* NPS — placeholder fixo */}
@@ -116,13 +135,37 @@ export default function DashboardOnboardingPage() {
       {/* Conteúdo normal (oculto pelo PanelMode quando ativo) */}
       {!panelActive && dashboardContent}
 
-      {/* Drill-down paramétrico da família ticket (016) — montado só com drill ativo (fora do painel) */}
-      {!panelActive && activeDrill && (
+      {/* Drill-down paramétrico (016) — o metric escolhe o modal/hook da família.
+          Montado só com drill ativo (fora do painel). Cada modal pausa o SSE (PRD §6). */}
+      {!panelActive && activeDrill && drillFamily === 'ticket' && (
         <TicketDrillModal
           activeDrill={activeDrill}
           onClose={() => setActiveDrill(null)}
           drill={ticketDrill}
           baseParams={{ scope: 'management:onboarding', from, to }}
+          onStreamPause={stream.pause}
+          onStreamResume={stream.resume}
+        />
+      )}
+
+      {!panelActive && activeDrill && drillFamily === 'apontamento' && (
+        <ApontamentoDrillModal
+          activeDrill={activeDrill}
+          onClose={() => setActiveDrill(null)}
+          drill={apontamentoDrill}
+          baseParams={{ scope: 'management:onboarding', from, to }}
+          onStreamPause={stream.pause}
+          onStreamResume={stream.resume}
+        />
+      )}
+
+      {/* Projeto (R5): a linha da tabela NÃO navega (sem tela de detalhe de projeto). */}
+      {!panelActive && activeDrill && drillFamily === 'projeto' && (
+        <ProjectDrillModal
+          activeDrill={activeDrill}
+          onClose={() => setActiveDrill(null)}
+          drill={projectDrill}
+          baseParams={{ from, to }}
           onStreamPause={stream.pause}
           onStreamResume={stream.resume}
         />
