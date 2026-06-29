@@ -227,6 +227,7 @@ export default function DashboardSuportePage() {
           onClose={() => setDrillDownOpen(false)}
           title="Detalhes de apontamentos"
           drillDown={drillDown}
+          baseParams={{ scope, from, to, clientId, supportPlanId: planId }}
           onStreamPause={stream.pause}
           onStreamResume={stream.resume}
         />

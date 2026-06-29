@@ -15,6 +15,8 @@ type ChartCardProps = {
   onRetry?: () => void
   /** Ícone de drill-down no canto superior direito — undefined = não clicável */
   onDrillDown?: () => void
+  /** Ação extra no header (ex.: ExportButtons) — renderizada à esquerda do ícone de drill. */
+  headerAction?: React.ReactNode
   height?: number
   children: React.ReactNode
   className?: string
@@ -33,6 +35,7 @@ export function ChartCard({
   emptyMessage,
   onRetry,
   onDrillDown,
+  headerAction,
   height = 240,
   children,
   className,
@@ -73,6 +76,8 @@ export function ChartCard({
         <h3 id={titleId} className="text-[16px] font-medium text-foreground">
           {title}
         </h3>
+        <div className="flex items-center gap-2">
+          {headerAction}
         {onDrillDown && (
           <button
             type="button"
@@ -101,6 +106,7 @@ export function ChartCard({
             </svg>
           </button>
         )}
+        </div>
       </div>
 
       {/* Conteúdo */}
