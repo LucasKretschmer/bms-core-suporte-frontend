@@ -32,3 +32,6 @@ dist-ssr
 
 # Vitest coverage
 coverage
+
+# Estado local de agentes/worktrees do Claude Code
+.claude/
