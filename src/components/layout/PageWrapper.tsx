@@ -1,14 +1,19 @@
 import { Breadcrumb, type BreadcrumbItem } from './Breadcrumb'
 
 type PageWrapperProps = {
-  title: string
+  /**
+   * Título h1 da página. Opcional: páginas que já exibem o título no próprio
+   * conteúdo (ex.: header de card com "#ID — assunto") podem omitir para não
+   * duplicar a informação abaixo do breadcrumb.
+   */
+  title?: string
   breadcrumbItems: BreadcrumbItem[]
   actions?: React.ReactNode
   children: React.ReactNode
 }
 
 /**
- * Casca de página: breadcrumb + título h1 + slot de ações + conteúdo.
+ * Casca de página: breadcrumb + título h1 (opcional) + slot de ações + conteúdo.
  * Usado em toda tela autenticada.
  */
 export function PageWrapper({ title, breadcrumbItems, actions, children }: PageWrapperProps) {
@@ -18,7 +23,7 @@ export function PageWrapper({ title, breadcrumbItems, actions, children }: PageW
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <Breadcrumb items={breadcrumbItems} />
-          <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
+          {title && <h1 className="text-2xl font-semibold text-foreground">{title}</h1>}
         </div>
         {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>

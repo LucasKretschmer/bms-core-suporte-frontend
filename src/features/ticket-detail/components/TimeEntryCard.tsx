@@ -9,6 +9,22 @@ type TimeEntryCardProps = {
   onEdit: (entry: TicketTimeEntryDto) => void
 }
 
+/**
+ * Rótulos legíveis em PT para o status do atendimento.
+ * Chaves normalizadas em UPPERCASE; cobre RUNNING|PAUSED|COMPLETED|CANCELLED.
+ */
+const STATUS_LABELS: Record<string, string> = {
+  RUNNING: 'Em andamento',
+  PAUSED: 'Pausado',
+  COMPLETED: 'Concluído',
+  CANCELLED: 'Cancelado',
+}
+
+/** Mapeia o status bruto do apontamento para o rótulo PT (fallback: valor original). */
+function statusLabel(status: string): string {
+  return STATUS_LABELS[status.toUpperCase()] ?? status
+}
+
 function EditIcon() {
   return (
     <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -39,12 +55,12 @@ export function TimeEntryCard({ entry, canEdit, onEdit }: TimeEntryCardProps) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-foreground">{entry.agenteNome}</span>
+            <span className="font-semibold text-foreground">
+              {entry.agenteNome?.trim() ? entry.agenteNome : 'Atendente não informado'}
+            </span>
+            {entry.status && <Badge value={statusLabel(entry.status)} />}
             {entry.categorizacaoNome && <Badge value={entry.categorizacaoNome} />}
             {entry.billableOutsidePlan && <Badge value="Faturável por fora" />}
-            {entry.status && entry.status.toUpperCase() === 'CANCELLED' && (
-              <Badge value="Cancelado" />
-            )}
           </div>
           <p className="mt-1 text-xs text-foreground/50">
             {metaTime} · {pauseLabel}

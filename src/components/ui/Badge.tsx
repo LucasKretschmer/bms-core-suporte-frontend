@@ -24,6 +24,11 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
   'Plano de Suporte': { bg: 'bg-badge-plano-bg', fg: 'text-badge-plano-fg' },
   'Faturado':         { bg: 'bg-badge-faturado-bg', fg: 'text-badge-faturado-fg' },
   'Não faturado':     { bg: 'bg-badge-nao-faturado-bg', fg: 'text-badge-nao-faturado-fg' },
+  // Status do atendimento (apontamento) — cores via tokens semânticos de alerta
+  'Em andamento':     { bg: 'bg-info-bg', fg: 'text-info-fg' },
+  'Pausado':          { bg: 'bg-warning-bg', fg: 'text-warning-fg' },
+  'Concluído':        { bg: 'bg-success-bg', fg: 'text-success-fg' },
+  'Cancelado':        { bg: 'bg-error-bg', fg: 'text-error-fg' },
 }
 
 const FALLBACK: BadgeStyle = { bg: 'bg-badge-neutro-bg', fg: 'text-badge-neutro-fg' }
