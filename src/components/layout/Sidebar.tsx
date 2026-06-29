@@ -115,6 +115,16 @@ const reportItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    label: 'Movimentação Diária',
+    href: '/relatorios/movimentacao-diaria',
+    requiresCoordenadorPlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 14l4-4 3 3 5-6" />
+      </svg>
+    ),
+  },
 ]
 
 /**

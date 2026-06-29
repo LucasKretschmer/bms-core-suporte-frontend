@@ -17,6 +17,7 @@ import { Route as AuthEquipesRouteImport } from './routes/_auth/equipes'
 import { Route as AuthConfiguracoesRouteImport } from './routes/_auth/configuracoes'
 import { Route as AuthCategoriasRouteImport } from './routes/_auth/categorias'
 import { Route as AuthRelatoriosProdutividadeRouteImport } from './routes/_auth/relatorios/produtividade'
+import { Route as AuthRelatoriosMovimentacaoDiariaRouteImport } from './routes/_auth/relatorios/movimentacao-diaria'
 import { Route as AuthRelatoriosConsumoPlanosRouteImport } from './routes/_auth/relatorios/consumo-planos'
 import { Route as AuthRelatoriosClienteRouteImport } from './routes/_auth/relatorios/cliente'
 import { Route as AuthRelatoriosApontamentosRouteImport } from './routes/_auth/relatorios/apontamentos'
@@ -63,6 +64,12 @@ const AuthRelatoriosProdutividadeRoute =
   AuthRelatoriosProdutividadeRouteImport.update({
     id: '/relatorios/produtividade',
     path: '/relatorios/produtividade',
+    getParentRoute: () => AuthRoute,
+  } as any)
+const AuthRelatoriosMovimentacaoDiariaRoute =
+  AuthRelatoriosMovimentacaoDiariaRouteImport.update({
+    id: '/relatorios/movimentacao-diaria',
+    path: '/relatorios/movimentacao-diaria',
     getParentRoute: () => AuthRoute,
   } as any)
 const AuthRelatoriosConsumoPlanosRoute =
@@ -118,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/apontamentos': typeof AuthRelatoriosApontamentosRoute
   '/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
+  '/relatorios/movimentacao-diaria': typeof AuthRelatoriosMovimentacaoDiariaRoute
   '/relatorios/produtividade': typeof AuthRelatoriosProdutividadeRoute
   '/relatorios/clientes/$clientId': typeof AuthRelatoriosClientesClientIdRoute
   '/relatorios/tickets/$ticketId': typeof AuthRelatoriosTicketsTicketIdRoute
@@ -134,6 +142,7 @@ export interface FileRoutesByTo {
   '/relatorios/apontamentos': typeof AuthRelatoriosApontamentosRoute
   '/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
+  '/relatorios/movimentacao-diaria': typeof AuthRelatoriosMovimentacaoDiariaRoute
   '/relatorios/produtividade': typeof AuthRelatoriosProdutividadeRoute
   '/relatorios/clientes/$clientId': typeof AuthRelatoriosClientesClientIdRoute
   '/relatorios/tickets/$ticketId': typeof AuthRelatoriosTicketsTicketIdRoute
@@ -152,6 +161,7 @@ export interface FileRoutesById {
   '/_auth/relatorios/apontamentos': typeof AuthRelatoriosApontamentosRoute
   '/_auth/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/_auth/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
+  '/_auth/relatorios/movimentacao-diaria': typeof AuthRelatoriosMovimentacaoDiariaRoute
   '/_auth/relatorios/produtividade': typeof AuthRelatoriosProdutividadeRoute
   '/_auth/relatorios/clientes/$clientId': typeof AuthRelatoriosClientesClientIdRoute
   '/_auth/relatorios/tickets/$ticketId': typeof AuthRelatoriosTicketsTicketIdRoute
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/relatorios/apontamentos'
     | '/relatorios/cliente'
     | '/relatorios/consumo-planos'
+    | '/relatorios/movimentacao-diaria'
     | '/relatorios/produtividade'
     | '/relatorios/clientes/$clientId'
     | '/relatorios/tickets/$ticketId'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/relatorios/apontamentos'
     | '/relatorios/cliente'
     | '/relatorios/consumo-planos'
+    | '/relatorios/movimentacao-diaria'
     | '/relatorios/produtividade'
     | '/relatorios/clientes/$clientId'
     | '/relatorios/tickets/$ticketId'
@@ -203,6 +215,7 @@ export interface FileRouteTypes {
     | '/_auth/relatorios/apontamentos'
     | '/_auth/relatorios/cliente'
     | '/_auth/relatorios/consumo-planos'
+    | '/_auth/relatorios/movimentacao-diaria'
     | '/_auth/relatorios/produtividade'
     | '/_auth/relatorios/clientes/$clientId'
     | '/_auth/relatorios/tickets/$ticketId'
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRelatoriosProdutividadeRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/relatorios/movimentacao-diaria': {
+      id: '/_auth/relatorios/movimentacao-diaria'
+      path: '/relatorios/movimentacao-diaria'
+      fullPath: '/relatorios/movimentacao-diaria'
+      preLoaderRoute: typeof AuthRelatoriosMovimentacaoDiariaRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/relatorios/consumo-planos': {
       id: '/_auth/relatorios/consumo-planos'
       path: '/relatorios/consumo-planos'
@@ -334,6 +354,7 @@ interface AuthRouteChildren {
   AuthRelatoriosApontamentosRoute: typeof AuthRelatoriosApontamentosRoute
   AuthRelatoriosClienteRoute: typeof AuthRelatoriosClienteRoute
   AuthRelatoriosConsumoPlanosRoute: typeof AuthRelatoriosConsumoPlanosRoute
+  AuthRelatoriosMovimentacaoDiariaRoute: typeof AuthRelatoriosMovimentacaoDiariaRoute
   AuthRelatoriosProdutividadeRoute: typeof AuthRelatoriosProdutividadeRoute
   AuthRelatoriosClientesClientIdRoute: typeof AuthRelatoriosClientesClientIdRoute
   AuthRelatoriosTicketsTicketIdRoute: typeof AuthRelatoriosTicketsTicketIdRoute
@@ -350,6 +371,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthRelatoriosApontamentosRoute: AuthRelatoriosApontamentosRoute,
   AuthRelatoriosClienteRoute: AuthRelatoriosClienteRoute,
   AuthRelatoriosConsumoPlanosRoute: AuthRelatoriosConsumoPlanosRoute,
+  AuthRelatoriosMovimentacaoDiariaRoute: AuthRelatoriosMovimentacaoDiariaRoute,
   AuthRelatoriosProdutividadeRoute: AuthRelatoriosProdutividadeRoute,
   AuthRelatoriosClientesClientIdRoute: AuthRelatoriosClientesClientIdRoute,
   AuthRelatoriosTicketsTicketIdRoute: AuthRelatoriosTicketsTicketIdRoute,
