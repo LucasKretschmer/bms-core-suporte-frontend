@@ -11,6 +11,7 @@ import { api } from '../../../../services/api'
 import {
   listTeams,
   getClientReport,
+  getTicketStatuses,
   listPlanConsumption,
   listTicketsReport,
   listProductivity,
@@ -263,6 +264,64 @@ describe('reportsService', () => {
           params: expect.objectContaining({ scope: 'mine' }),
         }),
       )
+    })
+
+    it('envia status como array de strings na query', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listTicketsReport({
+        status: ['Aberto', 'Fechado'],
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.status).toEqual(['Aberto', 'Fechado'])
+    })
+
+    it('envia teamId como array de números na query', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listTicketsReport({
+        teamId: [1, 3],
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.teamId).toEqual([1, 3])
+    })
+  })
+
+  // ── getTicketStatuses ─────────────────────────────────────────────────────────
+
+  describe('getTicketStatuses', () => {
+    it('desempacota data.data do envelope ApiResponse com {value,label}', async () => {
+      const options = [
+        { value: 'stage-1', label: 'Em atendimento (Relacionamento BR)' },
+        { value: 'stage-2', label: 'Fechado' },
+      ]
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: options } })
+
+      const result = await getTicketStatuses()
+
+      expect(result).toEqual(options)
+      expect(result[0].value).toBe('stage-1')
+      expect(result[0].label).toBe('Em atendimento (Relacionamento BR)')
+    })
+
+    it('chama o endpoint correto', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [] } })
+
+      await getTicketStatuses()
+
+      expect(api.get).toHaveBeenCalledWith('/api/v1/reports/tickets/statuses')
     })
   })
 

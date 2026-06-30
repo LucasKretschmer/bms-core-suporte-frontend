@@ -45,6 +45,7 @@ type TicketsReportParams = {
   scope?: 'mine' | 'team' | 'all'
   search?: string
   status?: string[]
+  teamId?: number[]
   from?: string | null
   to?: string | null
   sortBy?: string | null
@@ -61,6 +62,24 @@ export async function listTicketsReport(
     { params: cleanParams(params) },
   )
   return data
+}
+
+/** Opção legível de status: value = stageId (enviado em status[]); label = texto exibido. */
+export type TicketStatusOption = {
+  value: string
+  label: string
+}
+
+/**
+ * Opções de status (pipelineStage) para o filtro multi-select de Apontamentos.
+ * Distinct scope-aware do backend, já com label legível.
+ * Envelope ApiResponse<{ value; label }[]> (igual /teams).
+ */
+export async function getTicketStatuses(): Promise<TicketStatusOption[]> {
+  const { data } = await api.get<ApiResponse<TicketStatusOption[]>>(
+    '/api/v1/reports/tickets/statuses',
+  )
+  return data.data
 }
 
 // ── U5 — Relatório do Cliente ────────────────────────────────────────────────
