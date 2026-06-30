@@ -95,14 +95,15 @@ function renderPage() {
   )
 }
 
-describe('AppointmentsPage — largura dos filtros multi-select (067)', () => {
-  it('o filtro de Status usa min-w-[216px] (180 × 1.2)', () => {
+describe('AppointmentsPage — largura dos filtros multi-select (067/071)', () => {
+  it('o filtro de Status usa min-w-[281px] (216 × 1.3 — 071)', () => {
     renderPage()
     // O className do MultiSelectCombobox vai para o container que envolve o label.
     const statusLabel = screen.getByText('Status')
     const statusContainer = statusLabel.closest('div')
     expect(statusContainer).not.toBeNull()
-    expect(statusContainer).toHaveClass('min-w-[216px]')
+    expect(statusContainer).toHaveClass('min-w-[281px]')
+    expect(statusContainer).not.toHaveClass('min-w-[216px]')
     expect(statusContainer).not.toHaveClass('min-w-[180px]')
   })
 

@@ -76,14 +76,14 @@ export function useDrillDownRows(baseParams: MetricsBaseParams): UseDrillDownRow
   }
 
   function setSort(newSortBy: string) {
-    setSortBy((prev) => {
-      if (prev === newSortBy) {
-        setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
-        return newSortBy
-      }
+    if (sortBy === newSortBy) {
+      // Mesma coluna → inverte direção (asc ↔ desc)
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      // Outra coluna → começa decrescente por padrão
+      setSortBy(newSortBy)
       setSortDirection('desc')
-      return newSortBy
-    })
+    }
     setPageState(1)
   }
 

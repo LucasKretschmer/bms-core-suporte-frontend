@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, act } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { useServerTable } from './useServerTable'
 import type { PaginatedResponse } from '../../../../types/api'
@@ -27,6 +28,23 @@ function createWrapper() {
   })
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
+
+/**
+ * Wrapper com StrictMode — reproduz a dupla invocação de updaters do React.
+ * O bug da 071 (asc preso em desc) só aparecia em StrictMode, porque o
+ * setSortDirection era chamado DENTRO do updater de setSortBy (efeito colateral
+ * invocado duas vezes → toggle anulava a si mesmo).
+ */
+function createStrictWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </StrictMode>
   )
 }
 
@@ -109,6 +127,33 @@ describe('useServerTable', () => {
     expect(result.current.sortDirection).toBe('desc')
 
     // Clicar de novo → inverte de volta
+    act(() => result.current.setSort('nome'))
+    expect(result.current.sortDirection).toBe('asc')
+  })
+
+  it('setSort alterna asc↔desc mesmo sob StrictMode (regressão 071)', () => {
+    const queryFn = vi.fn().mockResolvedValue(emptyResponse)
+    const { result } = renderHook(
+      () =>
+        useServerTable({
+          queryKey: 'test',
+          queryFn,
+          initialFilters,
+          initialSortBy: 'nome',
+          initialSortDirection: 'desc',
+        }),
+      { wrapper: createStrictWrapper() },
+    )
+
+    expect(result.current.sortDirection).toBe('desc')
+
+    // Sob StrictMode, antes do fix isto ficava preso em 'desc'
+    act(() => result.current.setSort('nome'))
+    expect(result.current.sortDirection).toBe('asc')
+
+    act(() => result.current.setSort('nome'))
+    expect(result.current.sortDirection).toBe('desc')
+
     act(() => result.current.setSort('nome'))
     expect(result.current.sortDirection).toBe('asc')
   })
