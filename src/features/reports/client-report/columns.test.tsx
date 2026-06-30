@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { render } from '@testing-library/react'
 import { buildClientReportColumns } from './columns'
 import type { ClientReportItemDto } from '../shared/types/reports'
 
@@ -16,8 +17,12 @@ import type { ClientReportItemDto } from '../shared/types/reports'
 
 const BASE_ITEM: ClientReportItemDto = {
   timeEntryId: 1,
+  origem: 'ticket',
   ticketId: 1,
   hubspotTicketId: '12345',
+  projetoId: null,
+  projetoNome: null,
+  stage: null,
   assunto: 'Problema com login',
   equipeAtribuida: 'Suporte N1',
   solicitante: { nome: 'João Silva', email: 'joao@empresa.com' },
@@ -28,6 +33,26 @@ const BASE_ITEM: ClientReportItemDto = {
   aberturaDosChamado: '2024-03-01T10:00:00Z',
   dataApontamento: '2024-03-15T14:30:00Z',
   totalSegundos: 3723,
+}
+
+/** Linha de PROJETO (057): campos ticket-only nulos, campos de projeto preenchidos. */
+const PROJECT_ITEM: ClientReportItemDto = {
+  timeEntryId: 2,
+  origem: 'projeto',
+  ticketId: null,
+  hubspotTicketId: null,
+  projetoId: 45,
+  projetoNome: 'Onboarding ACME',
+  stage: 'Kickoff',
+  assunto: null,
+  equipeAtribuida: 'Onboarding BR',
+  solicitante: null,
+  atendente: 'Bruno',
+  categorizacaoAtendimento: 'Consultoria',
+  faturamento: 'Faturado',
+  aberturaDosChamado: null,
+  dataApontamento: '2024-03-20T09:00:00Z',
+  totalSegundos: 1800,
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -88,14 +113,22 @@ describe('buildClientReportColumns — privacidade (categoria HubSpot nunca expo
 // ── Testes de mapeamento de colunas ──────────────────────────────────────────
 
 describe('buildClientReportColumns — mapeamento do DTO', () => {
-  it('retorna 12 colunas', () => {
+  it('retorna 13 colunas (incluindo Origem, 057)', () => {
     const cols = buildClientReportColumns()
-    expect(cols).toHaveLength(12)
+    expect(cols).toHaveLength(13)
   })
 
-  it('a primeira coluna é "Ticket" com sortKey hubspotticketid', () => {
+  it('a primeira coluna é "Origem" (057), sortável por origem', () => {
+    const cols = buildClientReportColumns()
+    expect(cols[0].key).toBe('origem')
+    expect(cols[0].header).toBe('Origem')
+    expect(cols[0].sortKey).toBe('origem')
+    expect(cols[0].sortable).toBe(true)
+  })
+
+  it('a coluna "Ticket / Projeto" tem sortKey hubspotticketid', () => {
     const col = getColumn('ticket')
-    expect(col.header).toBe('Ticket')
+    expect(col.header).toBe('Ticket / Projeto')
     expect(col.sortKey).toBe('hubspotticketid')
     expect(col.sortable).toBe(true)
   })
@@ -180,8 +213,8 @@ describe('buildClientReportColumns — formatação de data e tempo', () => {
 
 describe('buildClientReportColumns — sortKeys (whitelist backend)', () => {
   it('sortKeys estão dentro da whitelist do backend', () => {
-    // GET /reports/client (format=rows): inicioem | totalsegundos | hubspotticketid | assunto (056).
-    const ALLOWED_SORT_KEYS = ['inicioem', 'totalsegundos', 'hubspotticketid', 'assunto']
+    // GET /reports/client (format=rows): inicioem | totalsegundos | hubspotticketid | assunto | origem (057).
+    const ALLOWED_SORT_KEYS = ['inicioem', 'totalsegundos', 'hubspotticketid', 'assunto', 'origem']
     const cols = buildClientReportColumns()
     cols.forEach((col) => {
       if (col.sortKey) {
@@ -194,5 +227,65 @@ describe('buildClientReportColumns — sortKeys (whitelist backend)', () => {
     const col = getColumn('assunto')
     expect(col.sortable).toBe(true)
     expect(col.sortKey).toBe('assunto')
+  })
+})
+
+// ── Visão combinada (057) — Origem azul/laranja + null-safety ─────────────────
+
+describe('buildClientReportColumns — coluna Origem (057)', () => {
+  it('linha de ticket exibe badge "Ticket" com token laranja (origem-ticket)', () => {
+    const col = getColumn('origem')
+    const { getByText } = render(<>{col.accessor(BASE_ITEM)}</>)
+    const badge = getByText('Ticket')
+    expect(badge.className).toContain('bg-badge-origem-ticket-bg')
+    expect(badge.className).toContain('text-badge-origem-ticket-fg')
+  })
+
+  it('linha de projeto exibe badge "Projeto" com token azul (origem-projeto)', () => {
+    const col = getColumn('origem')
+    const { getByText } = render(<>{col.accessor(PROJECT_ITEM)}</>)
+    const badge = getByText('Projeto')
+    expect(badge.className).toContain('bg-badge-origem-projeto-bg')
+    expect(badge.className).toContain('text-badge-origem-projeto-fg')
+  })
+})
+
+describe('buildClientReportColumns — null-safety dos campos ticket-only (057)', () => {
+  it('coluna Ticket/Projeto mostra #hubspotTicketId em linha de ticket', () => {
+    const col = getColumn('ticket')
+    const { container } = render(<>{col.accessor(BASE_ITEM)}</>)
+    expect(container.textContent).toBe('#12345')
+  })
+
+  it('coluna Ticket/Projeto mostra o nome do projeto em linha de projeto', () => {
+    const col = getColumn('ticket')
+    const { container } = render(<>{col.accessor(PROJECT_ITEM)}</>)
+    expect(container.textContent).toBe('Onboarding ACME')
+  })
+
+  it('coluna Ticket/Projeto mostra "—" quando ticket sem hubspotTicketId', () => {
+    const col = getColumn('ticket')
+    const { container } = render(
+      <>{col.accessor({ ...BASE_ITEM, hubspotTicketId: null })}</>,
+    )
+    expect(container.textContent).toBe('—')
+  })
+
+  it('coluna "Nome do ticket" mostra o stage do projeto em linha de projeto', () => {
+    const col = getColumn('assunto')
+    const result = col.accessor(PROJECT_ITEM)
+    expect(result).toBe('Kickoff')
+  })
+
+  it('coluna "Abertura do chamado" mostra "—" para linha de projeto (sem abertura)', () => {
+    const col = getColumn('aberturaChamado')
+    const result = col.accessor(PROJECT_ITEM)
+    expect(result).toBe('—')
+  })
+
+  it('coluna "Abertura do chamado" formata a data para linha de ticket', () => {
+    const col = getColumn('aberturaChamado')
+    const result = col.accessor(BASE_ITEM)
+    expect(result as string).toMatch(/\d{2}\/\d{2}\/\d{4}/)
   })
 })

@@ -13,6 +13,7 @@ import {
   getClientReport,
   getTicketStatuses,
   listPlanConsumption,
+  listProjectAppointments,
   listTicketsReport,
   listProductivity,
 } from './reportsService'
@@ -21,6 +22,7 @@ import type {
   TeamDto,
   ClientReportDto,
   PlanConsumptionItemDto,
+  ProjectAppointmentReportItemDto,
   TicketReportItemDto,
   AgentMetricDto,
   ClientDetailDto,
@@ -129,6 +131,103 @@ describe('reportsService', () => {
           params: expect.objectContaining({ clientId: 'client-abc', month: '2024-06' }),
         }),
       )
+    })
+
+    it('propaga o filtro origem na query (057 — visão combinada)', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: {} })
+
+      await getClientReport({
+        clientId: 'client-1',
+        month: '2024-06',
+        origem: 'projeto',
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.origem).toBe('projeto')
+    })
+  })
+
+  // ── listProjectAppointments (057) ─────────────────────────────────────────────
+
+  describe('listProjectAppointments', () => {
+    it('retorna PaginatedResponse direto (sem envelope data)', async () => {
+      const item: ProjectAppointmentReportItemDto = {
+        timeEntryId: 1,
+        projetoId: 45,
+        projetoNome: 'Onboarding ACME',
+        stage: 'Kickoff',
+        clienteNome: 'ACME',
+        equipeAtribuida: 'Onboarding BR',
+        atendente: 'Ana',
+        categorizacaoAtendimento: 'Consultoria',
+        faturamento: 'Faturado',
+        dataApontamento: '2024-03-15T14:00:00Z',
+        totalSegundos: 1800,
+      }
+      const mockResponse: PaginatedResponse<ProjectAppointmentReportItemDto> = {
+        items: [item],
+        totalCount: 1,
+        page: 1,
+        pageSize: 25,
+        totalPages: 1,
+      }
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockResponse })
+
+      const result = await listProjectAppointments({ page: 1, pageSize: 25 })
+
+      expect(result.items[0].projetoNome).toBe('Onboarding ACME')
+      expect(result.items[0].faturamento).toBe('Faturado')
+      expect(result.totalCount).toBe(1)
+    })
+
+    it('chama o endpoint correto', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listProjectAppointments({ scope: 'mine', page: 1, pageSize: 25 })
+
+      expect(api.get).toHaveBeenCalledWith(
+        '/api/v1/reports/project-appointments',
+        expect.objectContaining({ params: expect.objectContaining({ scope: 'mine' }) }),
+      )
+    })
+
+    it('envia teamId como array de números e clientId na query', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listProjectAppointments({ teamId: [1, 3], clientId: '45', page: 1, pageSize: 25 })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.teamId).toEqual([1, 3])
+      expect(params.clientId).toBe('45')
+    })
+
+    it('remove parâmetros null/undefined/string-vazia antes de enviar', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listProjectAppointments({
+        search: '',
+        clientId: null,
+        from: undefined,
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params).not.toHaveProperty('search')
+      expect(params).not.toHaveProperty('clientId')
+      expect(params).not.toHaveProperty('from')
+      expect(params).toHaveProperty('page', 1)
     })
   })
 

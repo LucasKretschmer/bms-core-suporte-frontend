@@ -12,13 +12,15 @@
 import { format } from 'date-fns'
 import { useServerTable } from '../../shared/hooks/useServerTable'
 import { getClientReport } from '../../shared/services/reportsService'
-import type { ClientReportDto } from '../../shared/types/reports'
+import type { ClientReportDto, OrigemFiltro } from '../../shared/types/reports'
 import type { TableParams } from '../../shared/hooks/useServerTable'
 import { useQuery } from '@tanstack/react-query'
 
 export type ClientReportFilters = {
   clientId: string | null
   month: string | null  // YYYY-MM
+  /** 057: filtra a fonte das linhas — all (default) | ticket | projeto */
+  origem: OrigemFiltro
 }
 
 /**
@@ -48,6 +50,7 @@ export function useClientReport() {
       const report = await getClientReport({
         clientId: filters.clientId,
         month: filters.month,
+        origem: filters.origem,
         page,
         pageSize,
         sortBy: sortBy ?? undefined,
@@ -61,7 +64,7 @@ export function useClientReport() {
         totalPages: Math.max(1, Math.ceil(report.totalApontamentos / pageSize)),
       }
     },
-    initialFilters: { clientId: null, month: defaultCurrentMonth() },
+    initialFilters: { clientId: null, month: defaultCurrentMonth(), origem: 'all' },
     initialSortBy: null,
     initialSortDirection: 'desc',
     enabled: false, // começa desativado; activado abaixo quando há filtros
@@ -83,6 +86,7 @@ export function useClientReport() {
       'client-report-full',
       table.filters.clientId,
       table.filters.month,
+      table.filters.origem,
       table.page,
       table.pageSize,
       table.sortBy,
@@ -95,6 +99,7 @@ export function useClientReport() {
       return getClientReport({
         clientId: table.filters.clientId,
         month: table.filters.month,
+        origem: table.filters.origem,
         page: table.page,
         pageSize: table.pageSize,
         sortBy: table.sortBy ?? undefined,

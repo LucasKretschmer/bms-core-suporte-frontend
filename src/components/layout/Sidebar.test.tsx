@@ -53,3 +53,20 @@ describe('Sidebar — grupo Administração', () => {
     expect(screen.queryByText('Sincronizador')).not.toBeInTheDocument()
   })
 })
+
+describe('Sidebar — Apontamentos por Projeto (057)', () => {
+  afterEach(() => vi.clearAllMocks())
+
+  it('mostra "Apontamentos por Projeto" para ATENDENTE (não exige CoordenadorPlus)', () => {
+    setRole({ isCoordenadorOuAcima: false, isGerentePlus: false })
+    render(<Sidebar isCollapsed={false} />)
+    const link = screen.getByText('Apontamentos por Projeto').closest('a')
+    expect(link).toHaveAttribute('href', '/relatorios/apontamentos-projeto')
+  })
+
+  it('mostra "Apontamentos por Projeto" para COORDENADOR+', () => {
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: false })
+    render(<Sidebar isCollapsed={false} />)
+    expect(screen.getByText('Apontamentos por Projeto')).toBeInTheDocument()
+  })
+})
