@@ -176,16 +176,19 @@ describe('PanelMode', () => {
     expect(onExit).toHaveBeenCalledTimes(1)
   })
 
-  it('sair do fullscreen (fullscreenchange sem fullscreenElement) encerra o painel — BUG 014-g', () => {
+  it('fullscreenchange SEM ter entrado em fullscreen NÃO encerra o painel — BUG 051 (iframe)', () => {
+    // No iframe do BMS Core o requestFullscreen é negado: nunca entramos em fullscreen.
+    // O mock de useFullscreen resolve enter() sem setar fullscreenElement (segue null no
+    // beforeEach). Um fullscreenchange espúrio (ex.: o pai sai do fullscreen) NÃO pode
+    // derrubar o painel — esse era o "clico e nada acontece".
     const onExit = vi.fn()
     render(
       <PanelMode {...defaultProps} onExit={onExit}>
         <div>Conteúdo</div>
       </PanelMode>,
     )
-    // fullscreenElement já é null no beforeEach → simula saída do fullscreen.
     fireEvent(document, new Event('fullscreenchange'))
-    expect(onExit).toHaveBeenCalledTimes(1)
+    expect(onExit).not.toHaveBeenCalled()
   })
 
   it('fullscreenchange COM fullscreenElement (entrou) NÃO encerra o painel', () => {
