@@ -10,9 +10,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import React from 'react'
 import { useClientReport } from './useClientReport'
 import type { ClientReportDto } from '../../shared/types/reports'
+
+/** Mês corrente no formato YYYY-MM (default da competência — 053). */
+const currentMonth = format(new Date(), 'yyyy-MM')
 
 // ── Mock do serviço ───────────────────────────────────────────────────────────
 
@@ -85,18 +89,27 @@ describe('useClientReport', () => {
     vi.clearAllMocks()
   })
 
-  it('inicia com hasRequiredFilters=false quando clientId e month são null', () => {
+  it('inicia com hasRequiredFilters=false quando não há cliente (competência sozinha não basta)', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
+    // month default = mês corrente, mas clientId null → ainda falta filtro obrigatório.
     expect(result.current.hasRequiredFilters).toBe(false)
   })
 
-  it('inicia com filters padrão: clientId=null, month=null', () => {
+  it('inicia com filters padrão: clientId=null, month=mês corrente (clearable)', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
     expect(result.current.filters.clientId).toBeNull()
+    expect(result.current.filters.month).toBe(currentMonth)
+  })
+
+  it('competência é clearable (usuário pode limpar month para null)', () => {
+    const { result } = renderHook(() => useClientReport(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setFilters({ month: null }))
     expect(result.current.filters.month).toBeNull()
   })
 
@@ -188,7 +201,8 @@ describe('useClientReport', () => {
     result.current.resetFilters()
 
     expect(result.current.filters.clientId).toBeNull()
-    expect(result.current.filters.month).toBeNull()
+    // resetFilters volta aos initialFilters → competência = mês corrente.
+    expect(result.current.filters.month).toBe(currentMonth)
     expect(result.current.hasRequiredFilters).toBe(false)
   })
 

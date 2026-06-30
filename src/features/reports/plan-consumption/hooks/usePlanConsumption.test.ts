@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { format, startOfMonth } from 'date-fns'
 import { usePlanConsumption } from './usePlanConsumption'
 import * as reportsService from '../../shared/services/reportsService'
 import type { PaginatedResponse } from '../../../../types/api'
@@ -34,10 +35,18 @@ describe('usePlanConsumption', () => {
     expect(result.current.pageSize).toBe(25)
   })
 
-  it('inicia com filtros vazios', () => {
+  it('inicia com search/planId vazios e período = mês corrente (clearable)', () => {
+    const today = new Date()
     const { result } = renderHook(() => usePlanConsumption(), { wrapper: createWrapper() })
     expect(result.current.filters.search).toBe('')
     expect(result.current.filters.planId).toBeNull()
+    expect(result.current.filters.from).toBe(format(startOfMonth(today), 'yyyy-MM-dd'))
+    expect(result.current.filters.to).toBe(format(today, 'yyyy-MM-dd'))
+  })
+
+  it('período é clearable (usuário pode limpar from/to para null)', () => {
+    const { result } = renderHook(() => usePlanConsumption(), { wrapper: createWrapper() })
+    act(() => result.current.setFilters({ from: null, to: null }))
     expect(result.current.filters.from).toBeNull()
     expect(result.current.filters.to).toBeNull()
   })

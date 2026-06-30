@@ -25,9 +25,10 @@ describe('productivityColumns — estrutura', () => {
     ])
   })
 
-  it('todas as colunas são sortáveis', () => {
+  it('nenhuma coluna é sortável (backend não aceita sortBy neste endpoint — gap 053)', () => {
     productivityColumns.forEach((col) => {
-      expect(col.sortable).toBe(true)
+      expect(col.sortable).toBe(false)
+      expect(col.sortKey).toBeUndefined()
     })
   })
 
@@ -47,19 +48,6 @@ describe('productivityColumns — estrutura', () => {
     })
   })
 
-  it('sortKeys casam com a whitelist do backend', () => {
-    const expectedSortKeys: Record<string, string> = {
-      nome: 'nome',
-      equipe: 'equipe',
-      nAtendimentos: 'natendimentos',
-      totalSegundos: 'totalsegundos',
-      ahtSegundos: 'ahtsegundos',
-      mediaPausas: 'mediapausas',
-    }
-    productivityColumns.forEach((col) => {
-      expect(col.sortKey).toBe(expectedSortKeys[col.key])
-    })
-  })
 })
 
 describe('productivityColumns — accessors', () => {

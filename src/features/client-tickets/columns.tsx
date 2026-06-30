@@ -6,7 +6,7 @@
  * Esta é a visão interna de drill-down (R5): mostrar dados internos do ticket é OK.
  *
  * Whitelist de sortBy (backend, mesma de /reports/tickets):
- *   hubspotticketid, assunto, cliente, owner, status, tempo, apontamentos
+ *   hubspotticketid, assunto, cliente, equipe, owner, status, tempo, apontamentos
  *
  * Coluna "Ticket": link HubSpot com rel="noopener noreferrer" + stopPropagation.
  */
@@ -74,7 +74,9 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
     {
       key: 'equipe',
       header: 'Equipe',
-      sortable: false,
+      // 053: /reports/tickets aceita sortBy=equipe (ordena pela equipe primária do owner).
+      sortable: true,
+      sortKey: 'equipe',
       align: 'left',
       accessor: (row) => row.equipe ?? '—',
     },

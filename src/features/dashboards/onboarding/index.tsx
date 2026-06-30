@@ -7,7 +7,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { startOfMonth } from 'date-fns'
+import { defaultCurrentMonthPeriod } from '../../reports/shared/utils/defaultPeriod'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
@@ -32,11 +32,13 @@ import type {
 export default function DashboardOnboardingPage() {
   const { isCoordenadorOuAcima } = usePermissions()
 
+  // Período default = mês corrente (clearable), via helper compartilhado (053).
+  // Usa format() local — corrige o off-by-one de fuso do toISOString anterior.
   const [from, setFrom] = useState<string | null>(
-    startOfMonth(new Date()).toISOString().slice(0, 10),
+    () => defaultCurrentMonthPeriod().from,
   )
   const [to, setTo] = useState<string | null>(
-    new Date().toISOString().slice(0, 10),
+    () => defaultCurrentMonthPeriod().to,
   )
   const [panelActive, setPanelActive] = useState(false)
   // Tempo por tela no Modo Painel (segundos, clamp 4–180, default 12).

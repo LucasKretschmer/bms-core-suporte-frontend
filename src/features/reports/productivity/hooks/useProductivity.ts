@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import { format, startOfMonth } from 'date-fns'
 import { useServerTable } from '../../shared/hooks/useServerTable'
 import { listProductivity } from '../../shared/services/reportsService'
+import { defaultCurrentMonthPeriod } from '../../shared/utils/defaultPeriod'
 import type { AgentMetricDto } from '../../shared/types/reports'
 import type { TableParams } from '../../shared/hooks/useServerTable'
 
@@ -12,15 +12,14 @@ type ProductivityFilters = {
 }
 
 /**
- * Período padrão = mês corrente (1º dia do mês → hoje).
- * Calculado no momento da montagem do hook (1º acesso) — reflete o relógio atual.
- * format(date, 'yyyy-MM-dd') usa o fuso local — nunca toISOString (evita off-by-one).
+ * Período padrão = mês corrente (1º dia do mês → hoje), via helper compartilhado (053).
+ * Clearable: o usuário pode limpar from/to para null. Calculado na montagem do hook.
  */
 function buildInitialFilters(): ProductivityFilters {
-  const now = new Date()
+  const period = defaultCurrentMonthPeriod()
   return {
-    from: format(startOfMonth(now), 'yyyy-MM-dd'),
-    to: format(now, 'yyyy-MM-dd'),
+    from: period.from,
+    to: period.to,
     teamId: null,
   }
 }
