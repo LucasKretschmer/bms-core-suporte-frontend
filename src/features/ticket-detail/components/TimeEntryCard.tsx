@@ -7,6 +7,10 @@ type TimeEntryCardProps = {
   entry: TicketTimeEntryDto
   canEdit: boolean
   onEdit: (entry: TicketTimeEntryDto) => void
+  /** Pode excluir o lançamento (gestor — 047). Quando true, exibe a ação "excluir". */
+  canDelete?: boolean
+  /** Dispara o fluxo de exclusão com motivo para este apontamento (047). */
+  onDelete?: (entry: TicketTimeEntryDto) => void
 }
 
 /**
@@ -33,13 +37,27 @@ function EditIcon() {
   )
 }
 
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  )
+}
+
 /**
  * Card de um apontamento (NOVO — referência protótipo L543-552).
  * Header: agente + categorização + (badge "Faturável por fora").
  * Meta: data/hora início→fim + nº de pausas. Direita: tempo + link editar (canEdit).
  * Timeline proporcional + lista de segmentos detalhada + observação.
  */
-export function TimeEntryCard({ entry, canEdit, onEdit }: TimeEntryCardProps) {
+export function TimeEntryCard({
+  entry,
+  canEdit,
+  onEdit,
+  canDelete = false,
+  onDelete,
+}: TimeEntryCardProps) {
   const pauseCount = entry.segments.filter((s) => s.type === 'PAUSE').length
   const end = entry.endTime
   const crossesDay = end ? formatDate(entry.startTime) !== formatDate(end) : false
@@ -71,16 +89,29 @@ export function TimeEntryCard({ entry, canEdit, onEdit }: TimeEntryCardProps) {
           <div className="text-lg font-semibold text-foreground">
             {formatSeconds(entry.totalSeconds)}
           </div>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(entry)}
-              className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary hover:underline rounded focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <EditIcon />
-              editar
-            </button>
-          )}
+          <div className="mt-0.5 flex items-center justify-end gap-3">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(entry)}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline rounded focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <EditIcon />
+                editar
+              </button>
+            )}
+            {canDelete && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(entry)}
+                aria-label="Excluir lançamento"
+                className="inline-flex items-center gap-1 text-xs text-error-fg hover:underline rounded focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <TrashIcon />
+                excluir
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

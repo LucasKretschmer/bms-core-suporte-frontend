@@ -5,7 +5,6 @@ import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { Combobox, type ComboboxOption } from '../../../components/ui/Combobox'
 import { Switch } from '../../../components/ui/Switch'
-import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { useToast } from '../../../components/ui/Toast'
 import { handleApiError } from '../../../utils/handleApiError'
 import { timeEntrySchema, type TimeEntryFormValues } from '../types/timeEntrySchema'
@@ -26,9 +25,11 @@ type TimeEntryModalProps = {
   canChangeAgent: boolean
   /** userId do usuário logado — default do atendente em modo create */
   currentUserId: number
-  /** Pode excluir o apontamento (ownership/role) */
+  /** Pode excluir o apontamento (gestor — 047) */
   canDelete: boolean
   onClose: () => void
+  /** Solicita ao pai abrir o diálogo de exclusão com motivo obrigatório (047). */
+  onRequestDelete: (entry: TicketTimeEntryDto) => void
   onSubmitted: () => void
 }
 
@@ -96,12 +97,12 @@ export function TimeEntryModal({
   currentUserId,
   canDelete,
   onClose,
+  onRequestDelete,
   onSubmitted,
 }: TimeEntryModalProps) {
   const toast = useToast()
-  const { create, update, remove } = useTimeEntryMutations(ticketId)
+  const { create, update } = useTimeEntryMutations(ticketId)
   const [apiError, setApiError] = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const {
     control,
@@ -157,34 +158,17 @@ export function TimeEntryModal({
     }
   }
 
-  async function handleDelete() {
-    if (!entry) return
-    try {
-      await remove.mutateAsync(entry.id)
-      toast.success('Apontamento removido.')
-      setConfirmDelete(false)
-      onSubmitted()
-      onClose()
-    } catch (err) {
-      const msg = handleApiError(err)
-      setApiError(msg)
-      toast.error(msg)
-      setConfirmDelete(false)
-    }
-  }
-
   if (!isOpen) return null
 
   const worksError = typeof errors.works?.message === 'string' ? errors.works.message : null
 
   return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        size="lg"
-        title={mode === 'create' ? 'Adicionar apontamento' : 'Editar lançamento'}
-      >
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="lg"
+      title={mode === 'create' ? 'Adicionar apontamento' : 'Editar lançamento'}
+    >
         <p className="-mt-2 mb-4 text-sm text-foreground/50">{ticketLabel}</p>
 
         <form onSubmit={handleSubmit(onValid)} className="flex flex-col gap-5">
@@ -333,10 +317,10 @@ export function TimeEntryModal({
           {/* Rodapé */}
           <div className="flex items-center justify-between gap-3 pt-1">
             <div>
-              {mode === 'edit' && canDelete && (
+              {mode === 'edit' && canDelete && entry && (
                 <Button
                   variant="ghost"
-                  onClick={() => setConfirmDelete(true)}
+                  onClick={() => onRequestDelete(entry)}
                   className="text-error-fg"
                   icon={<TrashIcon />}
                 >
@@ -354,19 +338,6 @@ export function TimeEntryModal({
             </div>
           </div>
         </form>
-      </Modal>
-
-      <ConfirmDialog
-        isOpen={confirmDelete}
-        title="Excluir apontamento"
-        description="Excluir este apontamento? Esta ação não pode ser desfeita."
-        confirmLabel="Excluir"
-        cancelLabel="Cancelar"
-        variant="danger"
-        isLoading={remove.isPending}
-        onConfirm={() => void handleDelete()}
-        onClose={() => setConfirmDelete(false)}
-      />
-    </>
+    </Modal>
   )
 }

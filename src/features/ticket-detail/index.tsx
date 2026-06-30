@@ -13,13 +13,18 @@ import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useAuth } from '../../hooks/useAuth'
+import { useToast } from '../../components/ui/Toast'
+import { handleApiError } from '../../utils/handleApiError'
 import { TicketDetailHeader } from './components/TicketDetailHeader'
 import { TicketKpiSummary } from './components/TicketKpiSummary'
 import { TimeEntryCard } from './components/TimeEntryCard'
 import { TimeEntryModal } from './components/TimeEntryModal'
+import { DeleteTimeEntryDialog } from './components/DeleteTimeEntryDialog'
 import { useTicketDetail } from './hooks/useTicketDetail'
 import { useTicketTimeEntries } from './hooks/useTicketTimeEntries'
+import { useTimeEntryMutations } from './hooks/useTimeEntryMutations'
 import { useModalOptions } from './hooks/useModalOptions'
+import { formatTime } from '../reports/shared/utils/formatters'
 import { buildTicketBreadcrumb, type TicketDetailOrigin } from './utils/buildBreadcrumb'
 import type { TicketTimeEntryDto } from './types/ticketDetail'
 
@@ -35,14 +40,18 @@ type ModalState =
   | { open: true; mode: 'edit'; entry: TicketTimeEntryDto }
 
 export default function TicketDetailPage({ ticketId, from, clientId }: TicketDetailPageProps) {
-  const { isCoordenadorOuAcima } = usePermissions()
+  const { isCoordenadorOuAcima, isGerentePlus } = usePermissions()
   const { user } = useAuth()
+  const toast = useToast()
   const currentUserId = user?.id ?? 0
 
   const headerQuery = useTicketDetail(ticketId)
   const entriesQuery = useTicketTimeEntries(ticketId)
+  const { remove } = useTimeEntryMutations(ticketId)
 
   const [modal, setModal] = useState<ModalState>({ open: false })
+  const [deleteTarget, setDeleteTarget] = useState<TicketTimeEntryDto | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const { agentOptions, categoryOptions, isLoading: optionsLoading } = useModalOptions(modal.open)
 
   const ticket = headerQuery.data
@@ -65,6 +74,39 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
   /** Atendente edita só o próprio; Coordenador+ qualquer um. */
   function canEditEntry(entry: TicketTimeEntryDto): boolean {
     return isCoordenadorOuAcima || entry.userId === currentUserId
+  }
+
+  /** Exclusão com motivo é restrita a gestor (Gerente/Admin) — 047. */
+  const canDeleteEntries = isGerentePlus
+
+  /** Rótulo curto do apontamento para contextualizar o diálogo de exclusão. */
+  function entryLabel(entry: TicketTimeEntryDto): string {
+    const agente = entry.agenteNome?.trim() || 'Atendente'
+    return `${agente} · ${formatTime(entry.startTime)}`
+  }
+
+  function openDelete(entry: TicketTimeEntryDto) {
+    setDeleteError(null)
+    setDeleteTarget(entry)
+  }
+
+  function handleConfirmDelete(reason: string) {
+    if (!deleteTarget) return
+    setDeleteError(null)
+    remove.mutate(
+      { id: deleteTarget.id, reason },
+      {
+        onSuccess: () => {
+          toast.success('Apontamento excluído.')
+          setDeleteTarget(null)
+        },
+        onError: (err) => {
+          const msg = handleApiError(err)
+          setDeleteError(msg)
+          toast.error(msg)
+        },
+      },
+    )
   }
 
   const entries = entriesQuery.data ?? []
@@ -123,6 +165,8 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
                 entry={entry}
                 canEdit={canEditEntry(entry)}
                 onEdit={(e) => setModal({ open: true, mode: 'edit', entry: e })}
+                canDelete={canDeleteEntries}
+                onDelete={openDelete}
               />
             ))}
         </section>
@@ -140,15 +184,30 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
           optionsLoading={optionsLoading}
           canChangeAgent={isCoordenadorOuAcima}
           currentUserId={currentUserId}
-          canDelete={
-            modal.mode === 'edit' ? canEditEntry(modal.entry) : false
-          }
+          canDelete={modal.mode === 'edit' && canDeleteEntries}
           onClose={() => setModal({ open: false })}
+          onRequestDelete={(e) => {
+            setModal({ open: false })
+            openDelete(e)
+          }}
           onSubmitted={() => {
             void entriesQuery.refetch()
           }}
         />
       )}
+
+      <DeleteTimeEntryDialog
+        isOpen={deleteTarget !== null}
+        entryLabel={deleteTarget ? entryLabel(deleteTarget) : undefined}
+        isSubmitting={remove.isPending}
+        apiError={deleteError}
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (remove.isPending) return
+          setDeleteTarget(null)
+          setDeleteError(null)
+        }}
+      />
     </PageWrapper>
   )
 }

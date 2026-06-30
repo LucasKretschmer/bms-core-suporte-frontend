@@ -59,7 +59,8 @@ export function useTimeEntryMutations(ticketId: number) {
   })
 
   const remove = useMutation({
-    mutationFn: (id: number) => deleteTimeEntry(id),
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      deleteTimeEntry(id, reason.trim()),
     onSuccess: invalidateDetail,
   })
 

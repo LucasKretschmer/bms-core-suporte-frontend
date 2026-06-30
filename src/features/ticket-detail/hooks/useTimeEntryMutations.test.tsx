@@ -98,14 +98,30 @@ describe('useTimeEntryMutations', () => {
     expect(payload).not.toHaveProperty('userId')
   })
 
-  it('remove chama deleteTimeEntry com o id', async () => {
+  it('remove chama deleteTimeEntry com o id e o motivo (trim)', async () => {
     vi.mocked(service.deleteTimeEntry).mockResolvedValue()
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const { result } = renderHook(() => useTimeEntryMutations(10), {
       wrapper: wrapper(client),
     })
 
-    await result.current.remove.mutateAsync(1)
-    expect(service.deleteTimeEntry).toHaveBeenCalledWith(1)
+    await result.current.remove.mutateAsync({ id: 1, reason: '  motivo válido  ' })
+    expect(service.deleteTimeEntry).toHaveBeenCalledWith(1, 'motivo válido')
+  })
+
+  it('remove invalida as queries do detalhe no sucesso', async () => {
+    vi.mocked(service.deleteTimeEntry).mockResolvedValue()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useTimeEntryMutations(10), {
+      wrapper: wrapper(client),
+    })
+
+    await result.current.remove.mutateAsync({ id: 1, reason: 'motivo válido' })
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['ticket-time-entries', 10] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['ticket-detail', 10] })
+    })
   })
 })

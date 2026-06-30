@@ -6,7 +6,7 @@ import type { ApiResponse } from '../../../types/api'
  *
  * - POST  /api/v1/time-entries/manual        (Idempotency-Key por submit — R7)
  * - PUT   /api/v1/time-entries/manual/{id}
- * - DELETE /api/v1/time-entries/{id}          (soft delete, 204)
+ * - DELETE /api/v1/time-entries/{id}          (soft delete + auditoria, body { reason }, 204 — 047)
  *
  * O backend é a fonte de verdade: monta os segmentos PAUSE (gap entre blocos),
  * calcula o total e valida sobreposição. O cliente envia apenas blocos WORK
@@ -61,6 +61,11 @@ export async function updateManualTimeEntry(
   return data.data
 }
 
-export async function deleteTimeEntry(id: number): Promise<void> {
-  await api.delete(`/api/v1/time-entries/${id}`)
+/**
+ * Exclui (soft-delete) um apontamento informando o motivo (auditado — 047).
+ * O motivo é obrigatório e validado no backend (422 se vazio/curto).
+ * Envia o motivo no body do DELETE via `config.data` do Axios.
+ */
+export async function deleteTimeEntry(id: number, reason: string): Promise<void> {
+  await api.delete(`/api/v1/time-entries/${id}`, { data: { reason } })
 }
