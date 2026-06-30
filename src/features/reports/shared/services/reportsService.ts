@@ -119,7 +119,8 @@ export async function listProjectAppointments(
 
 type ClientReportParams = {
   clientId: string
-  month: string           // YYYY-MM
+  from: string            // YYYY-MM-DD (1º dia do intervalo)
+  to: string              // YYYY-MM-DD (último dia do intervalo)
   format?: 'rows' | 'summary'
   /** 057: filtra a fonte das linhas — all (default) | ticket | projeto */
   origem?: OrigemFiltro

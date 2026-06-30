@@ -1,22 +1,28 @@
 /**
  * Testes de U5 — Hook useClientReport.
  *
- * Cobertura obrigatória conforme analise-frontend.md:
- *   - enabled=false quando clientId ou month são null.
- *   - Ativa query quando ambos os filtros estão preenchidos.
- *   - hasRequiredFilters reflete corretamente o estado dos filtros.
+ * Cobertura obrigatória:
+ *   - Default ao abrir (068): from = 1º dia do mês atual (startOfMonth),
+ *     to = último dia do mês atual (endOfMonth) — YYYY-MM-DD.
+ *   - enabled=false quando clientId, from ou to são null.
+ *   - Ativa query quando os filtros obrigatórios estão preenchidos.
+ *   - Envia from/to ao getClientReport (não mais month).
+ *   - Visão combinada/origem (057) preservada.
+ *   - Privacidade: nenhum vazamento de categoria do HubSpot.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import React from 'react'
 import { useClientReport } from './useClientReport'
 import type { ClientReportDto } from '../../shared/types/reports'
 
-/** Mês corrente no formato YYYY-MM (default da competência — 053). */
-const currentMonth = format(new Date(), 'yyyy-MM')
+/** Intervalo default do mês atual (068): 1º dia → último dia. */
+const today = new Date()
+const defaultFrom = format(startOfMonth(today), 'yyyy-MM-dd')
+const defaultTo = format(endOfMonth(today), 'yyyy-MM-dd')
 
 // ── Mock do serviço ───────────────────────────────────────────────────────────
 
@@ -93,28 +99,38 @@ describe('useClientReport', () => {
     vi.clearAllMocks()
   })
 
-  it('inicia com hasRequiredFilters=false quando não há cliente (competência sozinha não basta)', () => {
+  it('default ao abrir (068): from = 1º dia e to = último dia do mês atual (YYYY-MM-DD)', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
-    // month default = mês corrente, mas clientId null → ainda falta filtro obrigatório.
+    expect(result.current.filters.from).toBe(defaultFrom)
+    expect(result.current.filters.to).toBe(defaultTo)
+  })
+
+  it('inicia com hasRequiredFilters=false quando não há cliente (intervalo sozinho não basta)', () => {
+    const { result } = renderHook(() => useClientReport(), {
+      wrapper: createWrapper(),
+    })
+    // intervalo default preenchido, mas clientId null → ainda falta filtro obrigatório.
     expect(result.current.hasRequiredFilters).toBe(false)
   })
 
-  it('inicia com filters padrão: clientId=null, month=mês corrente (clearable)', () => {
+  it('inicia com clientId=null e intervalo = mês atual (clearable)', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
     expect(result.current.filters.clientId).toBeNull()
-    expect(result.current.filters.month).toBe(currentMonth)
+    expect(result.current.filters.from).toBe(defaultFrom)
+    expect(result.current.filters.to).toBe(defaultTo)
   })
 
-  it('competência é clearable (usuário pode limpar month para null)', () => {
+  it('intervalo é clearable (usuário pode limpar from/to para null)', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
-    act(() => result.current.setFilters({ month: null }))
-    expect(result.current.filters.month).toBeNull()
+    act(() => result.current.setFilters({ from: null, to: null }))
+    expect(result.current.filters.from).toBeNull()
+    expect(result.current.filters.to).toBeNull()
   })
 
   it('não chama getClientReport quando clientId é null', () => {
@@ -124,46 +140,69 @@ describe('useClientReport', () => {
     expect(mockGetClientReport).not.toHaveBeenCalled()
   })
 
-  it('não chama getClientReport quando month é null', () => {
+  it('não chama getClientReport quando from é null', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
-    // Define clientId mas não month
-    result.current.setFilters({ clientId: 'client-1' })
+    act(() => result.current.setFilters({ clientId: 'client-1', from: null }))
     expect(mockGetClientReport).not.toHaveBeenCalled()
   })
 
-  it('hasRequiredFilters=true quando ambos os filtros estão preenchidos', async () => {
+  it('não chama getClientReport quando to é null', () => {
+    const { result } = renderHook(() => useClientReport(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setFilters({ clientId: 'client-1', to: null }))
+    expect(mockGetClientReport).not.toHaveBeenCalled()
+  })
+
+  it('hasRequiredFilters=true quando cliente + intervalo preenchidos', async () => {
     mockGetClientReport.mockResolvedValue(MOCK_REPORT)
 
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
 
     await waitFor(() => {
       expect(result.current.hasRequiredFilters).toBe(true)
     })
   })
 
-  it('chama getClientReport com os parâmetros corretos quando filtros preenchidos', async () => {
+  it('envia from/to (não month) ao getClientReport quando filtros preenchidos', async () => {
     mockGetClientReport.mockResolvedValue(MOCK_REPORT)
 
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
 
     await waitFor(() => {
       expect(mockGetClientReport).toHaveBeenCalledWith(
         expect.objectContaining({
           clientId: 'client-1',
-          month: '2024-03',
+          from: '2024-03-01',
+          to: '2024-03-31',
         }),
       )
     })
+    // Garante que o param legado `month` não é mais enviado.
+    const callArg = mockGetClientReport.mock.calls[0][0]
+    expect(callArg).not.toHaveProperty('month')
   })
 
   it('retorna reportData após query bem-sucedida', async () => {
@@ -173,7 +212,13 @@ describe('useClientReport', () => {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
 
     await waitFor(() => {
       expect(result.current.reportData).toEqual(MOCK_REPORT)
@@ -187,7 +232,13 @@ describe('useClientReport', () => {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
 
     await waitFor(() => {
       expect(result.current.paginatedData?.totalCount).toBe(
@@ -196,17 +247,23 @@ describe('useClientReport', () => {
     })
   })
 
-  it('resetFilters restaura filtros iniciais', async () => {
+  it('resetFilters restaura filtros iniciais (intervalo = mês atual)', () => {
     const { result } = renderHook(() => useClientReport(), {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
-    result.current.resetFilters()
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
+    act(() => result.current.resetFilters())
 
     expect(result.current.filters.clientId).toBeNull()
-    // resetFilters volta aos initialFilters → competência = mês corrente.
-    expect(result.current.filters.month).toBe(currentMonth)
+    expect(result.current.filters.from).toBe(defaultFrom)
+    expect(result.current.filters.to).toBe(defaultTo)
     expect(result.current.hasRequiredFilters).toBe(false)
   })
 
@@ -221,20 +278,22 @@ describe('useClientReport', () => {
     })
 
     act(() => {
-      result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      })
     })
 
     await waitFor(() => expect(result.current.hasRequiredFilters).toBe(true))
 
-    // Muda de página
     act(() => {
       result.current.setPage(3)
     })
     expect(result.current.page).toBe(3)
 
-    // Mudar filtro deve resetar para página 1
     act(() => {
-      result.current.setFilters({ month: '2024-04' })
+      result.current.setFilters({ from: '2024-04-01', to: '2024-04-30' })
     })
     expect(result.current.page).toBe(1)
   })
@@ -260,14 +319,20 @@ describe('useClientReport — origem (057)', () => {
     })
 
     act(() => {
-      result.current.setFilters({ clientId: 'client-1', month: '2024-03', origem: 'projeto' })
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+        origem: 'projeto',
+      })
     })
 
     await waitFor(() => {
       expect(mockGetClientReport).toHaveBeenCalledWith(
         expect.objectContaining({
           clientId: 'client-1',
-          month: '2024-03',
+          from: '2024-03-01',
+          to: '2024-03-31',
           origem: 'projeto',
         }),
       )
@@ -282,7 +347,11 @@ describe('useClientReport — origem (057)', () => {
     })
 
     act(() => {
-      result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      })
     })
     await waitFor(() => expect(result.current.hasRequiredFilters).toBe(true))
 
@@ -304,13 +373,18 @@ describe('useClientReport — privacidade', () => {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
 
     await waitFor(() => {
       expect(result.current.reportData).toBeDefined()
     })
 
-    // O ClientReportItemDto não deve ter campo "categoria"
     const items = result.current.reportData?.items ?? []
     items.forEach((item) => {
       expect(Object.keys(item)).not.toContain('categoria')
@@ -333,10 +407,8 @@ describe('useClientReport — privacidade', () => {
           equipeAtribuida: 'N1',
           solicitante: null,
           atendente: 'Ana',
-          // PRIVACIDADE: categorizacaoAtendimento deve ser ServiceCategory interna
-          // nunca "Problema - Invoicy"
           categorizacaoAtendimento: 'Consultoria',
-          faturamento: 'Não faturado', // abstrai "Problema - Invoicy"
+          faturamento: 'Não faturado',
           aberturaDosChamado: '2024-03-01T10:00:00Z',
           dataApontamento: '2024-03-15T14:00:00Z',
           totalSegundos: 3600,
@@ -350,7 +422,13 @@ describe('useClientReport — privacidade', () => {
       wrapper: createWrapper(),
     })
 
-    result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    act(() =>
+      result.current.setFilters({
+        clientId: 'client-1',
+        from: '2024-03-01',
+        to: '2024-03-31',
+      }),
+    )
 
     await waitFor(() => {
       expect(result.current.reportData?.items).toBeDefined()
@@ -358,9 +436,7 @@ describe('useClientReport — privacidade', () => {
 
     const items = result.current.reportData?.items ?? []
     items.forEach((item) => {
-      // faturamento nunca deve conter "Invoicy"
       expect(item.faturamento).not.toContain('Invoicy')
-      // categorizacaoAtendimento nunca deve ser "Problema - Invoicy"
       if (item.categorizacaoAtendimento) {
         expect(item.categorizacaoAtendimento).not.toBe('Problema - Invoicy')
       }
