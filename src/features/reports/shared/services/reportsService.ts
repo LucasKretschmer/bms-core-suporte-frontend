@@ -64,12 +64,21 @@ export async function listTicketsReport(
   return data
 }
 
+/** Opção legível de status: value = stageId (enviado em status[]); label = texto exibido. */
+export type TicketStatusOption = {
+  value: string
+  label: string
+}
+
 /**
  * Opções de status (pipelineStage) para o filtro multi-select de Apontamentos.
- * Distinct scope-aware do backend. Envelope ApiResponse<string[]> (igual /teams).
+ * Distinct scope-aware do backend, já com label legível.
+ * Envelope ApiResponse<{ value; label }[]> (igual /teams).
  */
-export async function getTicketStatuses(): Promise<string[]> {
-  const { data } = await api.get<ApiResponse<string[]>>('/api/v1/reports/tickets/statuses')
+export async function getTicketStatuses(): Promise<TicketStatusOption[]> {
+  const { data } = await api.get<ApiResponse<TicketStatusOption[]>>(
+    '/api/v1/reports/tickets/statuses',
+  )
   return data.data
 }
 

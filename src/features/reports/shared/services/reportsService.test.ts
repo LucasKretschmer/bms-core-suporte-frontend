@@ -302,14 +302,18 @@ describe('reportsService', () => {
   // ── getTicketStatuses ─────────────────────────────────────────────────────────
 
   describe('getTicketStatuses', () => {
-    it('desempacota data.data do envelope ApiResponse', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { data: ['Aberto', 'Em andamento', 'Fechado'] },
-      })
+    it('desempacota data.data do envelope ApiResponse com {value,label}', async () => {
+      const options = [
+        { value: 'stage-1', label: 'Em atendimento (Relacionamento BR)' },
+        { value: 'stage-2', label: 'Fechado' },
+      ]
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: options } })
 
       const result = await getTicketStatuses()
 
-      expect(result).toEqual(['Aberto', 'Em andamento', 'Fechado'])
+      expect(result).toEqual(options)
+      expect(result[0].value).toBe('stage-1')
+      expect(result[0].label).toBe('Em atendimento (Relacionamento BR)')
     })
 
     it('chama o endpoint correto', async () => {

@@ -108,7 +108,7 @@ export default function AppointmentsPage() {
   })
 
   const statusOptions = useMemo<MultiSelectOption<string>[]>(
-    () => (statusesQuery.data ?? []).map((s) => ({ value: s, label: s })),
+    () => (statusesQuery.data ?? []).map((s) => ({ value: s.value, label: s.label })),
     [statusesQuery.data],
   )
   const teamOptions = useMemo<MultiSelectOption<number>[]>(
