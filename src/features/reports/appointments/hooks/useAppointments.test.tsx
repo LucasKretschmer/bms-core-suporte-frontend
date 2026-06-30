@@ -11,7 +11,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { useAppointments } from './useAppointments'
+import { format, startOfMonth } from 'date-fns'
+import { useAppointments, defaultAppointmentsPeriod } from './useAppointments'
 import { usePermissions } from '../../../../hooks/usePermissions'
 import type { PaginatedResponse } from '../../../../types/api'
 import type { TicketReportItemDto } from '../../shared/types/reports'
@@ -136,11 +137,54 @@ describe('useAppointments', () => {
     expect(result.current.sortDirection).toBe('desc')
   })
 
-  it('from e to iniciam como null', () => {
+  it('período default = mês atual: from = 1º dia do mês, to = hoje', () => {
+    const today = new Date()
+    const expectedFrom = format(startOfMonth(today), 'yyyy-MM-dd')
+    const expectedTo = format(today, 'yyyy-MM-dd')
+
     const { result } = renderHook(() => useAppointments(), {
       wrapper: createWrapper(),
     })
+    expect(result.current.filters.from).toBe(expectedFrom)
+    expect(result.current.filters.to).toBe(expectedTo)
+  })
+
+  it('período é clearable (usuário pode limpar from/to para null)', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.setFilters({ from: null, to: null }))
     expect(result.current.filters.from).toBeNull()
     expect(result.current.filters.to).toBeNull()
+  })
+
+  it('teamId inicia como array vazio e aceita múltiplos IDs', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+    expect(result.current.filters.teamId).toEqual([])
+
+    act(() => result.current.setFilters({ teamId: [1, 2] }))
+    expect(result.current.filters.teamId).toEqual([1, 2])
+  })
+
+  it('ao mudar filtro de equipe, reseta para página 1', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.setPage(4))
+    act(() => result.current.setFilters({ teamId: [3] }))
+    expect(result.current.page).toBe(1)
+  })
+})
+
+describe('defaultAppointmentsPeriod', () => {
+  it('retorna 1º dia do mês como from e a data de referência como to', () => {
+    const ref = new Date(2026, 5, 30) // 30/06/2026
+    const period = defaultAppointmentsPeriod(ref)
+    expect(period.from).toBe('2026-06-01')
+    expect(period.to).toBe('2026-06-30')
   })
 })

@@ -11,6 +11,7 @@ import { api } from '../../../../services/api'
 import {
   listTeams,
   getClientReport,
+  getTicketStatuses,
   listPlanConsumption,
   listTicketsReport,
   listProductivity,
@@ -263,6 +264,60 @@ describe('reportsService', () => {
           params: expect.objectContaining({ scope: 'mine' }),
         }),
       )
+    })
+
+    it('envia status como array de strings na query', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listTicketsReport({
+        status: ['Aberto', 'Fechado'],
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.status).toEqual(['Aberto', 'Fechado'])
+    })
+
+    it('envia teamId como array de números na query', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listTicketsReport({
+        teamId: [1, 3],
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.teamId).toEqual([1, 3])
+    })
+  })
+
+  // ── getTicketStatuses ─────────────────────────────────────────────────────────
+
+  describe('getTicketStatuses', () => {
+    it('desempacota data.data do envelope ApiResponse', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { data: ['Aberto', 'Em andamento', 'Fechado'] },
+      })
+
+      const result = await getTicketStatuses()
+
+      expect(result).toEqual(['Aberto', 'Em andamento', 'Fechado'])
+    })
+
+    it('chama o endpoint correto', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [] } })
+
+      await getTicketStatuses()
+
+      expect(api.get).toHaveBeenCalledWith('/api/v1/reports/tickets/statuses')
     })
   })
 

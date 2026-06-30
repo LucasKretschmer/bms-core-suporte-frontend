@@ -1,7 +1,7 @@
 /**
  * Colunas da tabela U4 — Apontamentos por Ticket.
  *
- * Whitelist de sortBy (backend): hubspotticketid, assunto, cliente, owner, status, tempo, apontamentos
+ * Whitelist de sortBy (backend): hubspotticketid, assunto, cliente, equipe, owner, status, tempo, apontamentos
  *
  * Coluna "Ticket": exibe o hubspotTicketId. Links HubSpot com rel="noopener noreferrer".
  * Tempo zero: exibido como "0h 0m" — tickets sem apontamento aparecem normalmente.
@@ -74,14 +74,16 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
     {
       key: 'cliente',
       header: 'Cliente',
-      sortable: false,
+      sortable: true,
+      sortKey: 'cliente',
       align: 'left',
       accessor: (row) => row.clienteNome ?? '—',
     },
     {
       key: 'equipe',
       header: 'Equipe',
-      sortable: false,
+      sortable: true,
+      sortKey: 'equipe',
       align: 'left',
       accessor: (row) => row.equipe ?? '—',
     },

@@ -58,3 +58,24 @@ describe('buildAppointmentsColumns — coluna Status', () => {
     expect(statusCol.width).toBe('160px')
   })
 })
+
+describe('buildAppointmentsColumns — ordenação (052)', () => {
+  it('todas as colunas são ordenáveis', () => {
+    const cols = buildAppointmentsColumns()
+    expect(cols.every((c) => c.sortable === true)).toBe(true)
+  })
+
+  it('coluna Cliente é ordenável com sortKey "cliente"', () => {
+    const cols = buildAppointmentsColumns()
+    const col = cols.find((c) => c.key === 'cliente')!
+    expect(col.sortable).toBe(true)
+    expect(col.sortKey).toBe('cliente')
+  })
+
+  it('coluna Equipe é ordenável com sortKey "equipe"', () => {
+    const cols = buildAppointmentsColumns()
+    const col = cols.find((c) => c.key === 'equipe')!
+    expect(col.sortable).toBe(true)
+    expect(col.sortKey).toBe('equipe')
+  })
+})

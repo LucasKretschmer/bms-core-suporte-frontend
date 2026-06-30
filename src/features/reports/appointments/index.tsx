@@ -12,16 +12,19 @@
  */
 
 import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../components/ui/Pagination'
 import { Input } from '../../../components/ui/Input'
 import { Combobox } from '../../../components/ui/Combobox'
+import { MultiSelectCombobox } from '../../../components/ui/MultiSelectCombobox'
+import type { MultiSelectOption } from '../../../components/ui/MultiSelectCombobox'
 import { useToast } from '../../../components/ui/Toast'
 import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
-import { listTicketsReport } from '../shared/services/reportsService'
+import { getTicketStatuses, listTeams, listTicketsReport } from '../shared/services/reportsService'
 import { formatSeconds } from '../shared/utils/formatters'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
@@ -91,6 +94,28 @@ export default function AppointmentsPage() {
     setFilters,
   } = useAppointments()
 
+  // Opções dos filtros multi-select (Status e Equipes).
+  // Loading/erro do fetch não quebram a tela — o controle apenas fica vazio/desabilitado.
+  const statusesQuery = useQuery({
+    queryKey: ['ticket-statuses'],
+    queryFn: getTicketStatuses,
+    staleTime: 5 * 60 * 1000,
+  })
+  const teamsQuery = useQuery({
+    queryKey: ['teams'],
+    queryFn: listTeams,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const statusOptions = useMemo<MultiSelectOption<string>[]>(
+    () => (statusesQuery.data ?? []).map((s) => ({ value: s, label: s })),
+    [statusesQuery.data],
+  )
+  const teamOptions = useMemo<MultiSelectOption<number>[]>(
+    () => (teamsQuery.data ?? []).map((t) => ({ value: t.id, label: t.nome })),
+    [teamsQuery.data],
+  )
+
   // Busca textual com debounce via useDeferredValue
   const [searchInput, setSearchInput] = useState(filters.search)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -132,6 +157,7 @@ export default function AppointmentsPage() {
         scope: filters.scope,
         search: filters.search || undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
+        teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
         from: filters.from ?? undefined,
         to: filters.to ?? undefined,
         sortBy: sortBy ?? undefined,
@@ -203,6 +229,36 @@ export default function AppointmentsPage() {
           className="min-w-[160px]"
         />
       )}
+
+      {/* Filtro de Status (multi-select com checkboxes) */}
+      <MultiSelectCombobox<string>
+        id="appointments-status"
+        label="Status"
+        summaryLabel="Status"
+        value={filters.status}
+        options={statusOptions}
+        onChange={(status) => setFilters({ status })}
+        placeholder="Todos"
+        searchable
+        isLoading={statusesQuery.isLoading}
+        error={statusesQuery.isError ? 'Falha ao carregar status.' : undefined}
+        className="min-w-[180px]"
+      />
+
+      {/* Filtro de Equipes (multi-select com checkboxes) */}
+      <MultiSelectCombobox<number>
+        id="appointments-teams"
+        label="Equipes"
+        summaryLabel="Equipes"
+        value={filters.teamId}
+        options={teamOptions}
+        onChange={(teamId) => setFilters({ teamId })}
+        placeholder="Todas"
+        searchable
+        isLoading={teamsQuery.isLoading}
+        error={teamsQuery.isError ? 'Falha ao carregar equipes.' : undefined}
+        className="min-w-[180px]"
+      />
 
       {/* Período */}
       <PeriodFilter
