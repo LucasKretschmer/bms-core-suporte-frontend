@@ -50,8 +50,12 @@ const MOCK_REPORT: ClientReportDto = {
   items: [
     {
       timeEntryId: 1,
+      origem: 'ticket',
       ticketId: 1,
       hubspotTicketId: '1001',
+      projetoId: null,
+      projetoNome: null,
+      stage: null,
       assunto: 'Ticket de teste',
       equipeAtribuida: 'N1',
       solicitante: { nome: 'João', email: 'joao@empresa.com' },
@@ -236,6 +240,60 @@ describe('useClientReport', () => {
   })
 })
 
+// ── Testes da visão combinada (057 — filtro de origem) ───────────────────────
+
+describe('useClientReport — origem (057)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('inicia com origem = "all" (todos: ticket + projeto)', () => {
+    const { result } = renderHook(() => useClientReport(), {
+      wrapper: createWrapper(),
+    })
+    expect(result.current.filters.origem).toBe('all')
+  })
+
+  it('propaga origem ao getClientReport quando filtros preenchidos', async () => {
+    mockGetClientReport.mockResolvedValue(MOCK_REPORT)
+
+    const { result } = renderHook(() => useClientReport(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setFilters({ clientId: 'client-1', month: '2024-03', origem: 'projeto' })
+    })
+
+    await waitFor(() => {
+      expect(mockGetClientReport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: 'client-1',
+          month: '2024-03',
+          origem: 'projeto',
+        }),
+      )
+    })
+  })
+
+  it('ao mudar origem, reseta para página 1', async () => {
+    mockGetClientReport.mockResolvedValue({ ...MOCK_REPORT, totalApontamentos: 100 })
+
+    const { result } = renderHook(() => useClientReport(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setFilters({ clientId: 'client-1', month: '2024-03' })
+    })
+    await waitFor(() => expect(result.current.hasRequiredFilters).toBe(true))
+
+    act(() => result.current.setPage(2))
+    expect(result.current.page).toBe(2)
+
+    act(() => result.current.setFilters({ origem: 'ticket' }))
+    expect(result.current.page).toBe(1)
+  })
+})
+
 // ── Testes de privacidade do hook ────────────────────────────────────────────
 
 describe('useClientReport — privacidade', () => {
@@ -265,8 +323,12 @@ describe('useClientReport — privacidade', () => {
       items: [
         {
           timeEntryId: 1,
+          origem: 'ticket',
           ticketId: 1,
           hubspotTicketId: '1001',
+          projetoId: null,
+          projetoNome: null,
+          stage: null,
           assunto: 'Ticket normal',
           equipeAtribuida: 'N1',
           solicitante: null,

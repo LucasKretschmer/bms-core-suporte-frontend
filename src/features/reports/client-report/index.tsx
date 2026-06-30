@@ -27,10 +27,11 @@ import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
 import { ClientCombobox } from '../shared/components/ClientCombobox'
 import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
+import { Combobox } from '../../../components/ui/Combobox'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn } from '../shared/utils/exportTable'
 import { getClientReport } from '../shared/services/reportsService'
-import type { ClientReportItemDto } from '../shared/types/reports'
+import type { ClientReportItemDto, OrigemFiltro } from '../shared/types/reports'
 import {
   formatDate,
   formatDateTime,
@@ -44,6 +45,13 @@ import { useClientReport } from './hooks/useClientReport'
 /** Chave única para persistência da ordem das colunas */
 const TABLE_ID = 'client-report'
 
+/** Opções do filtro de Origem (057) — visão por cliente combinada */
+const ORIGEM_OPTIONS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'ticket', label: 'Ticket' },
+  { value: 'projeto', label: 'Projeto' },
+]
+
 /**
  * Colunas do export CSV/Excel — explícitas para garantir que
  * a categoria do HubSpot NUNCA apareça no arquivo exportado.
@@ -52,7 +60,8 @@ const TABLE_ID = 'client-report'
  * Nunca adicionar campos de categoria interna do HubSpot aqui.
  */
 const EXPORT_COLUMNS: ExportColumn[] = [
-  { header: 'Ticket', key: 'ticket' },
+  { header: 'Origem', key: 'origem' },
+  { header: 'Ticket / Projeto', key: 'ticket' },
   { header: 'Nome do ticket', key: 'assunto' },
   { header: 'Equipe', key: 'equipe' },
   // Serviço mapeado para categorizacaoAtendimento (campo disponível)
@@ -76,9 +85,14 @@ const EXPORT_COLUMNS: ExportColumn[] = [
  * A ausência do campo de categoria do HubSpot é garantida pelo próprio tipo do DTO.
  */
 function itemToExportRow(item: ClientReportItemDto): Record<string, string | number | null> {
+  const isProjeto = item.origem === 'projeto'
   return {
-    ticket: `#${item.hubspotTicketId}`,
-    assunto: item.assunto ?? '—',
+    // Origem (057): rótulo legível — Ticket / Projeto
+    origem: isProjeto ? 'Projeto' : 'Ticket',
+    // Ticket-only: #hubspotTicketId; Projeto: nome do projeto (null-safe)
+    ticket: isProjeto ? (item.projetoNome ?? '—') : item.hubspotTicketId ? `#${item.hubspotTicketId}` : '—',
+    // Nome do ticket (ticket) ou stage (projeto)
+    assunto: isProjeto ? (item.stage ?? '—') : (item.assunto ?? '—'),
     equipe: item.equipeAtribuida ?? '—',
     // Serviço mapeado para categorizacaoAtendimento — ver TODO acima
     servico: item.categorizacaoAtendimento ?? '—',
@@ -90,7 +104,8 @@ function itemToExportRow(item: ClientReportItemDto): Record<string, string | num
     categorizacaoAtendimento: item.categorizacaoAtendimento ?? '—',
     // faturamento = 3 status abstratos — nunca vaza categoria do HubSpot
     faturamento: item.faturamento,
-    aberturaChamado: formatDate(item.aberturaDosChamado),
+    // Linhas de projeto não têm abertura de chamado
+    aberturaChamado: item.aberturaDosChamado ? formatDate(item.aberturaDosChamado) : '—',
     dataApontamento: formatDateTime(item.dataApontamento),
     tempo: formatSeconds(item.totalSegundos),
   }
@@ -134,6 +149,7 @@ export default function ClientReportPage() {
       const result = await getClientReport({
         clientId: filters.clientId,
         month: filters.month,
+        origem: filters.origem,
         page: currentPage,
         pageSize: PAGE_SIZE,
         sortBy: sortBy ?? undefined,
@@ -150,7 +166,7 @@ export default function ClientReportPage() {
     } while (currentPage <= totalPages)
 
     return allItems
-  }, [filters.clientId, filters.month, sortBy, sortDirection])
+  }, [filters.clientId, filters.month, filters.origem, sortBy, sortDirection])
 
   async function handleExportCsv() {
     setIsExporting(true)
@@ -190,9 +206,13 @@ export default function ClientReportPage() {
     }
   }
 
-  /** Ao clicar numa linha, navega para o detalhe interno do ticket (por id interno). */
+  /**
+   * Ao clicar numa linha de TICKET, navega para o detalhe interno do ticket.
+   * Linhas de PROJETO não têm detalhe de ticket (057) — clique é ignorado.
+   */
   const handleRowClick = useCallback(
     (row: ClientReportItemDto) => {
+      if (row.origem !== 'ticket' || row.ticketId == null) return
       void navigate({
         to: '/relatorios/tickets/$ticketId',
         params: { ticketId: String(row.ticketId) },
@@ -246,6 +266,15 @@ export default function ClientReportPage() {
             onChange={(month) => setFilters({ month: month ?? null })}
             mode="month"
             labelFrom="Competência *"
+          />
+          <Combobox
+            label="Origem"
+            id="client-report-origem"
+            value={filters.origem}
+            options={ORIGEM_OPTIONS}
+            onChange={(v) => setFilters({ origem: (v || 'all') as OrigemFiltro })}
+            placeholder="Todos"
+            className="min-w-[140px]"
           />
         </div>
       }

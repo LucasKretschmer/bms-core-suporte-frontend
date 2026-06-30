@@ -58,6 +58,14 @@
   --color-badge-nao-faturado-fg: #374151;
   --color-badge-neutro-bg: #F3F4F6;
   --color-badge-neutro-fg: #374151;
+
+  /* ── Badge de origem (057 — visão por cliente combinada) ── */
+  /* Projeto = azul (deriva da paleta do badge-plano já existente) */
+  --color-badge-origem-projeto-bg: #DBEAFE;
+  --color-badge-origem-projeto-fg: #1E40AF;
+  /* Ticket = laranja (token novo — não existia laranja no tema) */
+  --color-badge-origem-ticket-bg: #FFEDD5;
+  --color-badge-origem-ticket-fg: #9A3412;
 }
 
 /* ── Reset global ── */

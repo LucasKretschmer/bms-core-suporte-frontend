@@ -95,7 +95,8 @@ export async function generateClientReportPdf(report: ClientReportDto): Promise<
   ]
 
   const headers = [
-    'Ticket',
+    'Origem',
+    'Ticket / Projeto',
     'Atendente',
     'Categorização',
     'Faturamento',
@@ -135,18 +136,30 @@ export async function generateClientReportPdf(report: ClientReportDto): Promise<
           ))}
         </View>
 
-        {/* Linhas da tabela */}
-        {items.map((item) => (
-          <View key={item.timeEntryId} style={styles.tableRow}>
-            <Text style={styles.tableCell}>{item.hubspotTicketId}</Text>
-            <Text style={styles.tableCell}>{item.atendente}</Text>
-            <Text style={styles.tableCell}>{item.categorizacaoAtendimento ?? '—'}</Text>
-            <Text style={styles.tableCell}>{item.faturamento}</Text>
-            <Text style={styles.tableCell}>{formatDate(item.aberturaDosChamado)}</Text>
-            <Text style={styles.tableCell}>{formatDate(item.dataApontamento)}</Text>
-            <Text style={styles.tableCell}>{formatSeconds(item.totalSegundos)}</Text>
-          </View>
-        ))}
+        {/* Linhas da tabela (visão combinada ticket + projeto, 057) */}
+        {items.map((item) => {
+          const isProjeto = item.origem === 'projeto'
+          return (
+            <View key={item.timeEntryId} style={styles.tableRow}>
+              <Text style={styles.tableCell}>{isProjeto ? 'Projeto' : 'Ticket'}</Text>
+              <Text style={styles.tableCell}>
+                {isProjeto
+                  ? (item.projetoNome ?? '—')
+                  : item.hubspotTicketId
+                    ? `#${item.hubspotTicketId}`
+                    : '—'}
+              </Text>
+              <Text style={styles.tableCell}>{item.atendente}</Text>
+              <Text style={styles.tableCell}>{item.categorizacaoAtendimento ?? '—'}</Text>
+              <Text style={styles.tableCell}>{item.faturamento}</Text>
+              <Text style={styles.tableCell}>
+                {item.aberturaDosChamado ? formatDate(item.aberturaDosChamado) : '—'}
+              </Text>
+              <Text style={styles.tableCell}>{formatDate(item.dataApontamento)}</Text>
+              <Text style={styles.tableCell}>{formatSeconds(item.totalSegundos)}</Text>
+            </View>
+          )
+        })}
       </Page>
     </Document>
   )

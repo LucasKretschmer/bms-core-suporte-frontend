@@ -29,6 +29,9 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
   'Pausado':          { bg: 'bg-warning-bg', fg: 'text-warning-fg' },
   'Concluído':        { bg: 'bg-success-bg', fg: 'text-success-fg' },
   'Cancelado':        { bg: 'bg-error-bg', fg: 'text-error-fg' },
+  // Origem do apontamento (057, visão por cliente combinada) — tokens dedicados
+  'Projeto':          { bg: 'bg-badge-origem-projeto-bg', fg: 'text-badge-origem-projeto-fg' },
+  'Ticket':           { bg: 'bg-badge-origem-ticket-bg', fg: 'text-badge-origem-ticket-fg' },
 }
 
 const FALLBACK: BadgeStyle = { bg: 'bg-badge-neutro-bg', fg: 'text-badge-neutro-fg' }

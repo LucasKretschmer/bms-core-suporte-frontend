@@ -4,7 +4,9 @@ import type {
   AgentMetricDto,
   ClientListItemDto,
   ClientReportDto,
+  OrigemFiltro,
   PlanConsumptionItemDto,
+  ProjectAppointmentReportItemDto,
   SupportPlanDto,
   TeamDto,
   TicketReportItemDto,
@@ -82,12 +84,45 @@ export async function getTicketStatuses(): Promise<TicketStatusOption[]> {
   return data.data
 }
 
-// ── U5 — Relatório do Cliente ────────────────────────────────────────────────
+// ── 057 — Apontamentos por Projeto ────────────────────────────────────────────
+
+type ProjectAppointmentsParams = {
+  scope?: 'mine' | 'team' | 'all'
+  search?: string
+  teamId?: number[]
+  projectId?: string | number | null
+  clientId?: string | number | null
+  from?: string | null
+  to?: string | null
+  sortBy?: string | null
+  sortDirection?: 'asc' | 'desc'
+  page: number
+  pageSize: number
+}
+
+/**
+ * Relatório de Apontamentos por Projeto (057).
+ * Espelha o de tickets, mas project-centric. Envelope: PaginatedResponse direto
+ * (sem `data`), igual a /reports/appointments e /reports/tickets.
+ */
+export async function listProjectAppointments(
+  params: ProjectAppointmentsParams,
+): Promise<PaginatedResponse<ProjectAppointmentReportItemDto>> {
+  const { data } = await api.get<PaginatedResponse<ProjectAppointmentReportItemDto>>(
+    '/api/v1/reports/project-appointments',
+    { params: cleanParams(params) },
+  )
+  return data
+}
+
+// ── U5 — Relatório do Cliente (visão combinada ticket + projeto, 057) ─────────
 
 type ClientReportParams = {
   clientId: string
   month: string           // YYYY-MM
   format?: 'rows' | 'summary'
+  /** 057: filtra a fonte das linhas — all (default) | ticket | projeto */
+  origem?: OrigemFiltro
   sortBy?: string | null
   sortDirection?: 'asc' | 'desc'
   page: number

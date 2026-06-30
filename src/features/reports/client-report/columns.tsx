@@ -14,8 +14,13 @@
  *     adicionar as colunas aqui. Por ora, exibimos um placeholder "—" comentado.
  *
  * Whitelist de sortBy (backend, GET /reports/client format=rows): inicioem, totalsegundos,
- * hubspotticketid, assunto (este último adicionado na 056).
+ * hubspotticketid, assunto, origem (057).
  * Colunas fora dessa whitelist ficam sortable:false (não forjamos sort client-side — 053).
+ *
+ * VISÃO COMBINADA (057): cada linha é um apontamento de TICKET ou PROJETO, discriminado
+ * por `origem`. A coluna "Origem" usa Badge com tokens dedicados (Projeto = azul, Ticket =
+ * laranja). Campos ticket-only (hubspotTicketId/assunto/aberturaDosChamado) são null em
+ * linhas de projeto — tratados com fallback ("—" ou o equivalente de projeto).
  */
 
 import { Badge } from '../../../components/ui/Badge'
@@ -56,15 +61,41 @@ export function buildClientReportColumns(
   opts: BuildColumnsOptions = {},
 ): ColumnDef<ClientReportItemDto>[] {
   return [
-    // ── Coluna 1: Ticket ──────────────────────────────────────────────────────
+    // ── Coluna 1: Origem (057) ────────────────────────────────────────────────
+    // Badge com tokens dedicados: Projeto = azul, Ticket = laranja.
+    // Ordenável pela whitelist 'origem' (adicionada no backend para a 057).
+    {
+      key: 'origem',
+      header: 'Origem',
+      sortable: true,
+      sortKey: 'origem',
+      align: 'center',
+      width: '100px',
+      accessor: (row) => {
+        const label = row.origem === 'projeto' ? 'Projeto' : 'Ticket'
+        return (
+          <div className="flex justify-center">
+            <Badge value={label} aria-label={`Origem: ${label}`} />
+          </div>
+        )
+      },
+    },
+
+    // ── Coluna 2: Ticket / Projeto ────────────────────────────────────────────
+    // Linha de ticket: exibe #hubspotTicketId (com link HubSpot quando disponível).
+    // Linha de projeto: exibe o nome do projeto (sem link). Null-safe nos dois casos.
     {
       key: 'ticket',
-      header: 'Ticket',
+      header: 'Ticket / Projeto',
       sortable: true,
       sortKey: 'hubspotticketid',
       align: 'left',
-      width: '100px',
+      width: '140px',
       accessor: (row) => {
+        if (row.origem === 'projeto') {
+          return <span>{row.projetoNome ?? '—'}</span>
+        }
+        if (!row.hubspotTicketId) return <span>—</span>
         const url = opts.getHubspotUrl?.(row) ?? null
         if (url && !opts.rowIsClickable) {
           return (
@@ -85,17 +116,17 @@ export function buildClientReportColumns(
       },
     },
 
-    // ── Coluna 2: Nome do ticket ──────────────────────────────────────────────
-    // 056: backend (GET /reports/client, format=rows) passou a aceitar 'assunto'
-    // na whitelist de sortBy (follow-up da 053). Coluna religada ordena pelo
-    // assunto do ticket.
+    // ── Coluna 3: Nome do ticket / Stage do projeto ───────────────────────────
+    // 056: backend aceita 'assunto' na whitelist de sortBy. Para linhas de projeto,
+    // exibe o stage do projeto (campo equivalente) — null-safe.
     {
       key: 'assunto',
       header: 'Nome do ticket',
       sortable: true,
       sortKey: 'assunto',
       align: 'left',
-      accessor: (row) => row.assunto ?? '—',
+      accessor: (row) =>
+        row.origem === 'projeto' ? (row.stage ?? '—') : (row.assunto ?? '—'),
     },
 
     // ── Coluna 3: Equipe ──────────────────────────────────────────────────────
@@ -186,7 +217,8 @@ export function buildClientReportColumns(
       sortKey: 'inicioem',
       align: 'center',
       width: '130px',
-      accessor: (row) => formatDate(row.aberturaDosChamado),
+      // Linhas de projeto não têm "abertura do chamado" — exibe "—".
+      accessor: (row) => (row.aberturaDosChamado ? formatDate(row.aberturaDosChamado) : '—'),
     },
 
     // ── Coluna 11: Data do apontamento ─────────────────────────────────────────

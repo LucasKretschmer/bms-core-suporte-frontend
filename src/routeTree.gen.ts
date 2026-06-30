@@ -20,6 +20,7 @@ import { Route as AuthRelatoriosProdutividadeRouteImport } from './routes/_auth/
 import { Route as AuthRelatoriosMovimentacaoDiariaRouteImport } from './routes/_auth/relatorios/movimentacao-diaria'
 import { Route as AuthRelatoriosConsumoPlanosRouteImport } from './routes/_auth/relatorios/consumo-planos'
 import { Route as AuthRelatoriosClienteRouteImport } from './routes/_auth/relatorios/cliente'
+import { Route as AuthRelatoriosApontamentosProjetoRouteImport } from './routes/_auth/relatorios/apontamentos-projeto'
 import { Route as AuthRelatoriosApontamentosRouteImport } from './routes/_auth/relatorios/apontamentos'
 import { Route as AuthDashboardsSuporteRouteImport } from './routes/_auth/dashboards/suporte'
 import { Route as AuthDashboardsOnboardingRouteImport } from './routes/_auth/dashboards/onboarding'
@@ -83,6 +84,12 @@ const AuthRelatoriosClienteRoute = AuthRelatoriosClienteRouteImport.update({
   path: '/relatorios/cliente',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthRelatoriosApontamentosProjetoRoute =
+  AuthRelatoriosApontamentosProjetoRouteImport.update({
+    id: '/relatorios/apontamentos-projeto',
+    path: '/relatorios/apontamentos-projeto',
+    getParentRoute: () => AuthRoute,
+  } as any)
 const AuthRelatoriosApontamentosRoute =
   AuthRelatoriosApontamentosRouteImport.update({
     id: '/relatorios/apontamentos',
@@ -123,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
   '/dashboards/suporte': typeof AuthDashboardsSuporteRoute
   '/relatorios/apontamentos': typeof AuthRelatoriosApontamentosRoute
+  '/relatorios/apontamentos-projeto': typeof AuthRelatoriosApontamentosProjetoRoute
   '/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
   '/relatorios/movimentacao-diaria': typeof AuthRelatoriosMovimentacaoDiariaRoute
@@ -140,6 +148,7 @@ export interface FileRoutesByTo {
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
   '/dashboards/suporte': typeof AuthDashboardsSuporteRoute
   '/relatorios/apontamentos': typeof AuthRelatoriosApontamentosRoute
+  '/relatorios/apontamentos-projeto': typeof AuthRelatoriosApontamentosProjetoRoute
   '/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
   '/relatorios/movimentacao-diaria': typeof AuthRelatoriosMovimentacaoDiariaRoute
@@ -159,6 +168,7 @@ export interface FileRoutesById {
   '/_auth/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
   '/_auth/dashboards/suporte': typeof AuthDashboardsSuporteRoute
   '/_auth/relatorios/apontamentos': typeof AuthRelatoriosApontamentosRoute
+  '/_auth/relatorios/apontamentos-projeto': typeof AuthRelatoriosApontamentosProjetoRoute
   '/_auth/relatorios/cliente': typeof AuthRelatoriosClienteRoute
   '/_auth/relatorios/consumo-planos': typeof AuthRelatoriosConsumoPlanosRoute
   '/_auth/relatorios/movimentacao-diaria': typeof AuthRelatoriosMovimentacaoDiariaRoute
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/dashboards/onboarding'
     | '/dashboards/suporte'
     | '/relatorios/apontamentos'
+    | '/relatorios/apontamentos-projeto'
     | '/relatorios/cliente'
     | '/relatorios/consumo-planos'
     | '/relatorios/movimentacao-diaria'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/dashboards/onboarding'
     | '/dashboards/suporte'
     | '/relatorios/apontamentos'
+    | '/relatorios/apontamentos-projeto'
     | '/relatorios/cliente'
     | '/relatorios/consumo-planos'
     | '/relatorios/movimentacao-diaria'
@@ -213,6 +225,7 @@ export interface FileRouteTypes {
     | '/_auth/dashboards/onboarding'
     | '/_auth/dashboards/suporte'
     | '/_auth/relatorios/apontamentos'
+    | '/_auth/relatorios/apontamentos-projeto'
     | '/_auth/relatorios/cliente'
     | '/_auth/relatorios/consumo-planos'
     | '/_auth/relatorios/movimentacao-diaria'
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRelatoriosClienteRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/relatorios/apontamentos-projeto': {
+      id: '/_auth/relatorios/apontamentos-projeto'
+      path: '/relatorios/apontamentos-projeto'
+      fullPath: '/relatorios/apontamentos-projeto'
+      preLoaderRoute: typeof AuthRelatoriosApontamentosProjetoRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/relatorios/apontamentos': {
       id: '/_auth/relatorios/apontamentos'
       path: '/relatorios/apontamentos'
@@ -352,6 +372,7 @@ interface AuthRouteChildren {
   AuthDashboardsOnboardingRoute: typeof AuthDashboardsOnboardingRoute
   AuthDashboardsSuporteRoute: typeof AuthDashboardsSuporteRoute
   AuthRelatoriosApontamentosRoute: typeof AuthRelatoriosApontamentosRoute
+  AuthRelatoriosApontamentosProjetoRoute: typeof AuthRelatoriosApontamentosProjetoRoute
   AuthRelatoriosClienteRoute: typeof AuthRelatoriosClienteRoute
   AuthRelatoriosConsumoPlanosRoute: typeof AuthRelatoriosConsumoPlanosRoute
   AuthRelatoriosMovimentacaoDiariaRoute: typeof AuthRelatoriosMovimentacaoDiariaRoute
@@ -369,6 +390,8 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthDashboardsOnboardingRoute: AuthDashboardsOnboardingRoute,
   AuthDashboardsSuporteRoute: AuthDashboardsSuporteRoute,
   AuthRelatoriosApontamentosRoute: AuthRelatoriosApontamentosRoute,
+  AuthRelatoriosApontamentosProjetoRoute:
+    AuthRelatoriosApontamentosProjetoRoute,
   AuthRelatoriosClienteRoute: AuthRelatoriosClienteRoute,
   AuthRelatoriosConsumoPlanosRoute: AuthRelatoriosConsumoPlanosRoute,
   AuthRelatoriosMovimentacaoDiariaRoute: AuthRelatoriosMovimentacaoDiariaRoute,
