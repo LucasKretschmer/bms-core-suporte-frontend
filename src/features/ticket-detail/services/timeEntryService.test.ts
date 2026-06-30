@@ -52,9 +52,11 @@ describe('timeEntryService', () => {
     )
   })
 
-  it('deleteTimeEntry chama DELETE /{id}', async () => {
+  it('deleteTimeEntry chama DELETE /{id} com o motivo no body', async () => {
     mockedDelete.mockResolvedValueOnce({ status: 204 })
-    await deleteTimeEntry(1)
-    expect(mockedDelete).toHaveBeenCalledWith('/api/v1/time-entries/1')
+    await deleteTimeEntry(1, 'Lançamento duplicado')
+    expect(mockedDelete).toHaveBeenCalledWith('/api/v1/time-entries/1', {
+      data: { reason: 'Lançamento duplicado' },
+    })
   })
 })

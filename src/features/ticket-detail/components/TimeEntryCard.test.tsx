@@ -48,6 +48,23 @@ describe('TimeEntryCard', () => {
     expect(onEdit).toHaveBeenCalledTimes(1)
   })
 
+  it('oculta a ação excluir quando canDelete=false (não-gestor)', () => {
+    render(<TimeEntryCard entry={entry()} canEdit={false} onEdit={vi.fn()} onDelete={vi.fn()} />)
+    expect(screen.queryByText('excluir')).not.toBeInTheDocument()
+  })
+
+  it('mostra e dispara onDelete quando canDelete=true (gestor)', async () => {
+    const onDelete = vi.fn()
+    render(<TimeEntryCard entry={entry()} canEdit={false} onEdit={vi.fn()} canDelete onDelete={onDelete} />)
+    await userEvent.click(screen.getByText('excluir'))
+    expect(onDelete).toHaveBeenCalledTimes(1)
+  })
+
+  it('não renderiza excluir quando canDelete=true mas sem onDelete', () => {
+    render(<TimeEntryCard entry={entry()} canEdit={false} onEdit={vi.fn()} canDelete />)
+    expect(screen.queryByText('excluir')).not.toBeInTheDocument()
+  })
+
   it('mostra "sem pausa" quando não há segmento PAUSE', () => {
     render(<TimeEntryCard entry={entry()} canEdit={false} onEdit={vi.fn()} />)
     expect(screen.getByText(/sem pausa/)).toBeInTheDocument()
