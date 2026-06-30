@@ -82,17 +82,14 @@ export function useServerTable<TFilters extends object, TRow>({
   }
 
   function setSort(newSortBy: string) {
-    setSortBy((prev) => {
-      if (prev === newSortBy) {
-        // Mesma coluna → inverte direção
-        setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
-        return newSortBy
-      } else {
-        // Outra coluna → desc por padrão
-        setSortDirection('desc')
-        return newSortBy
-      }
-    })
+    if (sortBy === newSortBy) {
+      // Mesma coluna → inverte direção (asc ↔ desc)
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      // Outra coluna → começa decrescente por padrão
+      setSortBy(newSortBy)
+      setSortDirection('desc')
+    }
     setPageState(1)
   }
 
