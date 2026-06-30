@@ -242,7 +242,7 @@ export default function AppointmentsPage() {
         searchable
         isLoading={statusesQuery.isLoading}
         error={statusesQuery.isError ? 'Falha ao carregar status.' : undefined}
-        className="min-w-[180px]"
+        className="min-w-[216px]"
       />
 
       {/* Filtro de Equipes (multi-select com checkboxes) */}

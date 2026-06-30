@@ -64,6 +64,63 @@ describe('api — instância e interceptor 401', () => {
     expect(api.defaults.withCredentials).toBe(true)
   })
 
+  describe('paramsSerializer — arrays em query string (066)', () => {
+    /**
+     * Extrai a query string serializada pela instância `api`, usando o pipeline
+     * real do Axios (getUri aplica o paramsSerializer configurado).
+     */
+    function query(params: Record<string, unknown>): string {
+      const uri = api.getUri({ url: '/x', params })
+      const i = uri.indexOf('?')
+      return i === -1 ? '' : uri.slice(i + 1)
+    }
+
+    it('configura indexes: null (arrays repetidos sem colchetes)', () => {
+      const serializer = api.defaults.paramsSerializer
+      expect(serializer).toBeTypeOf('object')
+      expect((serializer as { indexes: number | null }).indexes).toBeNull()
+    })
+
+    it('serializa array de string como repeat SEM colchetes: status=a&status=b', () => {
+      expect(query({ status: ['aberto', 'fechado'] })).toBe('status=aberto&status=fechado')
+    })
+
+    it('serializa array numérico sem colchetes nem índices: teamId=1&teamId=2', () => {
+      expect(query({ teamId: [1, 2] })).toBe('teamId=1&teamId=2')
+    })
+
+    it('NÃO usa o formato com colchetes do default do axios v1', () => {
+      const q = query({ status: ['a', 'b'], teamId: [1, 2] })
+      expect(q).not.toContain('status[]')
+      expect(q).not.toContain('teamId[]')
+      expect(q).not.toContain('status[0]')
+    })
+
+    it('mantém params single-value inalterados (search, scope, sortBy)', () => {
+      const parts = query({ search: 'abc', scope: 'all', sortBy: 'tempo' }).split('&').sort()
+      expect(parts).toEqual(['scope=all', 'search=abc', 'sortBy=tempo'])
+    })
+
+    it('combina arrays e single-value no mesmo request (cenário Apontamentos)', () => {
+      const parts = query({
+        status: ['aberto', 'fechado'],
+        teamId: [3, 7],
+        scope: 'all',
+        search: 'q',
+      })
+        .split('&')
+        .sort()
+      expect(parts).toEqual([
+        'scope=all',
+        'search=q',
+        'status=aberto',
+        'status=fechado',
+        'teamId=3',
+        'teamId=7',
+      ])
+    })
+  })
+
   it('(a) 401 em request de negócio → refresh uma vez → refaz request com novo Bearer', async () => {
     const handler = getResponseRejectedHandler()
     vi.mocked(ensureSession).mockResolvedValueOnce(null)

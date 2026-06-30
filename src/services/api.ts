@@ -31,6 +31,13 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Serialização de arrays em query string SEM colchetes e SEM índices:
+  // `status=a&status=b` / `teamId=1&teamId=2` (formato "repeat").
+  // O model binding do ASP.NET Core liga esse formato a `[FromQuery] string[]` /
+  // `int[]` — ao contrário do default do axios v1 (`status[]=a&status[]=b`),
+  // que o ASP.NET ignora. Recurso nativo do axios v1, sem dependência extra.
+  // Params single-value (search, scope, from, to, sortBy…) não são afetados.
+  paramsSerializer: { indexes: null },
 })
 
 // Interceptor de request: injeta Bearer token (access) de memória
