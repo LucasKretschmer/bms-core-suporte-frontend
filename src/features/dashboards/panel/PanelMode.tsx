@@ -72,27 +72,47 @@ export function PanelMode({
   const onExitRef = useRef(onExit)
   onExitRef.current = onExit
 
+  // (BUG 051) Marca se o painel REALMENTE entrou em fullscreen.
+  // No iframe do BMS Core (sem `allow="fullscreen"`) o `requestFullscreen` é negado:
+  // não devemos tratar `fullscreenchange` como "saída" porque nunca houve entrada.
+  // Sem essa guarda, o ciclo entrar→falhar→evento encerra o painel logo após abrir
+  // ("clico e nada acontece"). Só encerramos por fullscreenchange se havíamos entrado.
+  const didEnterFullscreenRef = useRef(false)
+
   const handleExit = useCallback(() => {
     void exit()
     onExitRef.current()
   }, [exit])
 
-  // Entra em fullscreen ao ativar o painel (sem depender do sucesso).
+  // Entra em fullscreen ao ativar o painel (best-effort; o painel NÃO depende do sucesso).
   useEffect(() => {
-    if (isActive) {
-      void enter()
-      containerRef.current?.focus()
+    if (!isActive) return
+    let cancelled = false
+    void enter().then(() => {
+      // Só consideramos "entrou" se o browser realmente colocou o documento em fullscreen.
+      if (!cancelled && document.fullscreenElement) {
+        didEnterFullscreenRef.current = true
+      }
+    })
+    containerRef.current?.focus()
+    return () => {
+      cancelled = true
+      didEnterFullscreenRef.current = false
     }
   }, [isActive, enter])
 
-  // (BUG 014-g) Encerrar o painel ao sair do fullscreen (botão do browser) e com Escape.
-  // Escape funciona MESMO quando o fullscreen foi negado — o overlay é a fonte de verdade.
+  // (BUG 051) Encerrar o painel ao sair do fullscreen (botão do browser) e com Escape.
+  // - Escape SEMPRE encerra: é a fonte de verdade do overlay, funcione ou não o fullscreen.
+  // - fullscreenchange só encerra se ANTES tínhamos entrado em fullscreen de fato. No iframe,
+  //   onde o fullscreen é bloqueado, eventos espúrios de fullscreenchange (ex.: o pai sai do
+  //   fullscreen) não devem derrubar o painel recém-aberto.
   useEffect(() => {
     if (!isActive) return
 
     function onFullscreenChange() {
-      // Saiu do fullscreen enquanto o painel estava ativo → encerrar.
-      if (!document.fullscreenElement) {
+      // Saiu do fullscreen DEPOIS de ter entrado de fato → encerrar.
+      if (didEnterFullscreenRef.current && !document.fullscreenElement) {
+        didEnterFullscreenRef.current = false
         onExitRef.current()
       }
     }
