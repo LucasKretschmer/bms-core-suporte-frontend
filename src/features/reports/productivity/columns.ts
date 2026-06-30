@@ -5,45 +5,51 @@ import { formatSeconds, formatDecimal } from '../shared/utils/formatters'
 /**
  * Colunas da tabela U6 — Produtividade por Analista.
  *
- * Ordenação (053): o endpoint GET /api/v1/reports/productivity NÃO aceita sortBy —
- * o backend ordena de forma fixa por TotalSegundos desc (GetProductivityReportAsync).
- * Para não forjar ordenação client-side sobre dados paginados no servidor, TODAS as
- * colunas ficam `sortable: false`. Reabilitar coluna a coluna quando o backend
- * adicionar a whitelist de sortBy (gap reportado no handoff 053).
+ * Ordenação (056): o endpoint GET /api/v1/reports/productivity passou a aceitar
+ * `sortBy`/`sortDirection` com whitelist das 6 colunas (follow-up da 053). As colunas
+ * voltam a ser `sortable: true`, cada uma mapeada ao sortKey do CONTRATO 056:
+ *   nome | equipe | atendimentos | totalsegundos | aht | mediapausas
+ * O default de ordenação (totalsegundos desc) é definido no hook useProductivity,
+ * espelhando o comportamento do backend.
  */
 export const productivityColumns: ColumnDef<AgentMetricDto>[] = [
   {
     key: 'nome',
     header: 'Analista',
-    sortable: false,
+    sortable: true,
+    sortKey: 'nome',
     align: 'left',
     accessor: (row) => row.nome,
   },
   {
     key: 'equipe',
     header: 'Equipe',
-    sortable: false,
+    sortable: true,
+    sortKey: 'equipe',
     align: 'left',
     accessor: (row) => row.equipe ?? '—',
   },
   {
     key: 'nAtendimentos',
     header: 'Atendimentos',
-    sortable: false,
+    sortable: true,
+    sortKey: 'atendimentos',
     align: 'right',
     accessor: (row) => row.nAtendimentos,
   },
   {
     key: 'totalSegundos',
     header: 'Tempo Total',
-    sortable: false,
+    sortable: true,
+    sortKey: 'totalsegundos',
     align: 'right',
     accessor: (row) => formatSeconds(row.totalSegundos),
   },
   {
     key: 'ahtSegundos',
     header: 'AHT (Tempo Médio)',
-    sortable: false,
+    sortable: true,
+    sortKey: 'aht',
     align: 'right',
     accessor: (row) =>
       row.ahtSegundos !== null ? formatSeconds(row.ahtSegundos) : '—',
@@ -51,7 +57,8 @@ export const productivityColumns: ColumnDef<AgentMetricDto>[] = [
   {
     key: 'mediaPausas',
     header: 'Média de Pausas',
-    sortable: false,
+    sortable: true,
+    sortKey: 'mediapausas',
     align: 'right',
     accessor: (row) => formatDecimal(row.mediaPausas),
   },

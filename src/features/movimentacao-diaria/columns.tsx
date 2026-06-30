@@ -1,7 +1,8 @@
 /**
  * Colunas da tabela de logs de Movimentação Diária (021).
  *
- * Whitelist de sortBy (backend): data, quantidade, equipe, atualizadoem.
+ * Whitelist de sortBy (backend): data, quantidade, equipe, atualizadoem, status
+ * (este último adicionado na 056).
  * Colunas: Data · Status · Equipe · Quantidade · Última atualização.
  *
  * AP-SECURITY-001: o texto de status vem de statusLabel congelado ou de um rótulo
@@ -35,7 +36,8 @@ export function buildMovimentacaoDiariaColumns(): ColumnDef<MovimentacaoDiariaRo
     {
       key: 'status',
       header: 'Status',
-      sortable: false,
+      sortable: true,
+      sortKey: 'status',
       align: 'center',
       width: '200px',
       accessor: (row) => (

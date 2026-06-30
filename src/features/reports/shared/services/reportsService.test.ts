@@ -354,5 +354,23 @@ describe('reportsService', () => {
       expect(result.items[0].nome).toBe('Maria')
       expect(result.items[0].ahtSegundos).toBe(3600)
     })
+
+    it('repassa sortBy/sortDirection ao backend (056)', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listProductivity({
+        sortBy: 'totalsegundos',
+        sortDirection: 'desc',
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.sortBy).toBe('totalsegundos')
+      expect(params.sortDirection).toBe('desc')
+    })
   })
 })

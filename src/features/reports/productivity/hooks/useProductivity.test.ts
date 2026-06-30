@@ -106,6 +106,68 @@ describe('useProductivity', () => {
       expect(lastCall?.from).toBe('2024-01-01')
     })
   })
+
+  // ── 056: plumbing de ordenação ──────────────────────────────────────────────
+
+  it('inicia com ordenação default = totalsegundos desc (espelha o backend)', () => {
+    const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
+    expect(result.current.sortBy).toBe('totalsegundos')
+    expect(result.current.sortDirection).toBe('desc')
+  })
+
+  it('passa sortBy/sortDirection default para listProductivity', async () => {
+    const spy = vi.spyOn(reportsService, 'listProductivity').mockResolvedValue(emptyResponse)
+    renderHook(() => useProductivity(), { wrapper: createWrapper() })
+
+    await vi.waitFor(() => {
+      const firstCall = spy.mock.calls[0]?.[0]
+      expect(firstCall?.sortBy).toBe('totalsegundos')
+      expect(firstCall?.sortDirection).toBe('desc')
+    })
+  })
+
+  it('ao ordenar por outra coluna envia o sortKey com direção desc', async () => {
+    const spy = vi.spyOn(reportsService, 'listProductivity').mockResolvedValue(emptyResponse)
+    const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
+
+    act(() => result.current.setSort('nome'))
+
+    expect(result.current.sortBy).toBe('nome')
+    expect(result.current.sortDirection).toBe('desc')
+
+    await vi.waitFor(() => {
+      const lastCall = spy.mock.calls[spy.mock.calls.length - 1]?.[0]
+      expect(lastCall?.sortBy).toBe('nome')
+      expect(lastCall?.sortDirection).toBe('desc')
+    })
+  })
+
+  it('ao clicar de novo na mesma coluna inverte a direção (asc) e envia ao service', async () => {
+    const spy = vi.spyOn(reportsService, 'listProductivity').mockResolvedValue(emptyResponse)
+    const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
+
+    // default = totalsegundos desc; clicar na mesma coluna inverte para asc
+    act(() => result.current.setSort('totalsegundos'))
+
+    expect(result.current.sortBy).toBe('totalsegundos')
+    expect(result.current.sortDirection).toBe('asc')
+
+    await vi.waitFor(() => {
+      const lastCall = spy.mock.calls[spy.mock.calls.length - 1]?.[0]
+      expect(lastCall?.sortBy).toBe('totalsegundos')
+      expect(lastCall?.sortDirection).toBe('asc')
+    })
+  })
+
+  it('ao ordenar reseta a página para 1', () => {
+    const { result } = renderHook(() => useProductivity(), { wrapper: createWrapper() })
+
+    act(() => result.current.setPage(4))
+    expect(result.current.page).toBe(4)
+
+    act(() => result.current.setSort('nome'))
+    expect(result.current.page).toBe(1)
+  })
 })
 
 import { productivityColumns } from '../columns'
