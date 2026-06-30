@@ -13,7 +13,8 @@
  *   - TODO (Manager): quando o backend expor esses campos no ClientReportItemDto,
  *     adicionar as colunas aqui. Por ora, exibimos um placeholder "—" comentado.
  *
- * Whitelist de sortBy (backend, GET /reports/client format=rows): inicioem, totalsegundos, hubspotticketid.
+ * Whitelist de sortBy (backend, GET /reports/client format=rows): inicioem, totalsegundos,
+ * hubspotticketid, assunto (este último adicionado na 056).
  * Colunas fora dessa whitelist ficam sortable:false (não forjamos sort client-side — 053).
  */
 
@@ -85,14 +86,14 @@ export function buildClientReportColumns(
     },
 
     // ── Coluna 2: Nome do ticket ──────────────────────────────────────────────
-    // 053: backend (GET /reports/client, format=rows) só aceita sortBy
-    // inicioem | totalsegundos | hubspotticketid. 'assunto' NÃO está na whitelist,
-    // então a ordenação caía silenciosamente no default. Mantemos sortable:false
-    // até o backend adicionar 'assunto' (gap reportado no handoff 053).
+    // 056: backend (GET /reports/client, format=rows) passou a aceitar 'assunto'
+    // na whitelist de sortBy (follow-up da 053). Coluna religada ordena pelo
+    // assunto do ticket.
     {
       key: 'assunto',
       header: 'Nome do ticket',
-      sortable: false,
+      sortable: true,
+      sortKey: 'assunto',
       align: 'left',
       accessor: (row) => row.assunto ?? '—',
     },

@@ -180,8 +180,8 @@ describe('buildClientReportColumns — formatação de data e tempo', () => {
 
 describe('buildClientReportColumns — sortKeys (whitelist backend)', () => {
   it('sortKeys estão dentro da whitelist do backend', () => {
-    // GET /reports/client (format=rows): inicioem | totalsegundos | hubspotticketid.
-    const ALLOWED_SORT_KEYS = ['inicioem', 'totalsegundos', 'hubspotticketid']
+    // GET /reports/client (format=rows): inicioem | totalsegundos | hubspotticketid | assunto (056).
+    const ALLOWED_SORT_KEYS = ['inicioem', 'totalsegundos', 'hubspotticketid', 'assunto']
     const cols = buildClientReportColumns()
     cols.forEach((col) => {
       if (col.sortKey) {
@@ -190,9 +190,9 @@ describe('buildClientReportColumns — sortKeys (whitelist backend)', () => {
     })
   })
 
-  it('coluna "assunto" NÃO é sortável (fora da whitelist do backend — gap 053)', () => {
+  it('coluna "assunto" é sortável com sortKey "assunto" (religada na 056)', () => {
     const col = getColumn('assunto')
-    expect(col.sortable).toBe(false)
-    expect(col.sortKey).toBeUndefined()
+    expect(col.sortable).toBe(true)
+    expect(col.sortKey).toBe('assunto')
   })
 })

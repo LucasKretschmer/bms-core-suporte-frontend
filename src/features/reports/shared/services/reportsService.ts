@@ -110,6 +110,8 @@ type ProductivityParams = {
   from?: string | null
   to?: string | null
   teamId?: string | null
+  sortBy?: string | null
+  sortDirection?: 'asc' | 'desc'
   page: number
   pageSize: number
 }

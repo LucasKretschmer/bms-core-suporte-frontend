@@ -41,11 +41,18 @@ export function useProductivity() {
         from: params.filters.from,
         to: params.filters.to,
         teamId: params.filters.teamId,
+        // 056: o endpoint passou a aceitar sortBy/sortDirection (antes ordenava fixo
+        // por TotalSegundos desc). Front envia exatamente os sortKeys do CONTRATO.
+        sortBy: params.sortBy,
+        sortDirection: params.sortDirection,
         page: params.page,
         pageSize: params.pageSize,
       }),
     initialFilters,
     initialPageSize: 25,
+    // Default = totalsegundos desc — espelha o comportamento histórico do backend.
+    initialSortBy: 'totalsegundos',
+    initialSortDirection: 'desc',
     enabled: true,
   })
 }
