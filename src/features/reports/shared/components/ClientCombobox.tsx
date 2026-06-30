@@ -16,6 +16,11 @@ type ClientComboboxProps = {
    * A busca por CNPJ é server-side e independe deste flag — desligar só altera a exibição.
    */
   showCnpj?: boolean
+  /**
+   * Classe extra aplicada ao container do combobox (ex.: largura).
+   * Permite que telas controlem a largura do campo (068: cliente 2x mais largo).
+   */
+  className?: string
 }
 
 /**
@@ -31,6 +36,7 @@ export function ClientCombobox({
   required,
   placeholder = 'Buscar cliente…',
   showCnpj = true,
+  className,
 }: ClientComboboxProps) {
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -72,6 +78,7 @@ export function ClientCombobox({
       isAsync
       onSearch={handleSearch}
       isLoading={isLoading}
+      className={className}
     />
   )
 }

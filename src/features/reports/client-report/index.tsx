@@ -8,8 +8,9 @@
  *   - A coluna "Faturamento" usa apenas os 3 status: Plano de Suporte / Faturado / Não faturado.
  *   - A coluna "Categorização do atendimento" é a ServiceCategory interna (campo diferente).
  *
- * Filtros obrigatórios: Cliente (combobox assíncrono) + Competência (mês).
- * Enquanto não preenchidos, exibe EmptyState com instrução ao usuário.
+ * Filtros obrigatórios: Cliente (combobox assíncrono) + intervalo de datas
+ * (data inicial / data final — 068). Default ao abrir: 1º dia → último dia do mês
+ * atual. Enquanto não preenchidos, exibe EmptyState com instrução ao usuário.
  *
  * Linhas clicáveis: ao clicar numa linha, navega para o detalhe interno do ticket
  * (/relatorios/tickets/$ticketId). O detalhe é uso interno — a privacidade do cliente
@@ -138,7 +139,7 @@ export default function ClientReportPage() {
 
   /** Busca todas as páginas para export completo (nunca só a página visível) */
   const fetchAllForExport = useCallback(async () => {
-    if (!filters.clientId || !filters.month) return []
+    if (!filters.clientId || !filters.from || !filters.to) return []
 
     const PAGE_SIZE = 200
     const allItems: ReturnType<typeof itemToExportRow>[] = []
@@ -148,7 +149,8 @@ export default function ClientReportPage() {
     do {
       const result = await getClientReport({
         clientId: filters.clientId,
-        month: filters.month,
+        from: filters.from,
+        to: filters.to,
         origem: filters.origem,
         page: currentPage,
         pageSize: PAGE_SIZE,
@@ -166,7 +168,11 @@ export default function ClientReportPage() {
     } while (currentPage <= totalPages)
 
     return allItems
-  }, [filters.clientId, filters.month, filters.origem, sortBy, sortDirection])
+  }, [filters.clientId, filters.from, filters.to, filters.origem, sortBy, sortDirection])
+
+  /** Sufixo do nome de arquivo de export: intervalo de datas (from_to) ou 'periodo'. */
+  const periodSuffix =
+    filters.from && filters.to ? `${filters.from}_${filters.to}` : 'periodo'
 
   async function handleExportCsv() {
     setIsExporting(true)
@@ -176,9 +182,8 @@ export default function ClientReportPage() {
         reportData?.client.nomeFantasia ??
         reportData?.client.razaoSocial ??
         'cliente'
-      const month = filters.month ?? 'periodo'
       exportToCsv(
-        `relatorio-cliente-${clientName}-${month}`.toLowerCase().replace(/\s+/g, '-'),
+        `relatorio-cliente-${clientName}-${periodSuffix}`.toLowerCase().replace(/\s+/g, '-'),
         EXPORT_COLUMNS,
         rows,
       )
@@ -195,9 +200,8 @@ export default function ClientReportPage() {
         reportData?.client.nomeFantasia ??
         reportData?.client.razaoSocial ??
         'cliente'
-      const month = filters.month ?? 'periodo'
       await exportToXlsx(
-        `relatorio-cliente-${clientName}-${month}`.toLowerCase().replace(/\s+/g, '-'),
+        `relatorio-cliente-${clientName}-${periodSuffix}`.toLowerCase().replace(/\s+/g, '-'),
         EXPORT_COLUMNS,
         rows,
       )
@@ -238,7 +242,7 @@ export default function ClientReportPage() {
     reportData?.client.nomeFantasia ??
       reportData?.client.razaoSocial ??
       'cliente',
-    filters.month ?? 'periodo',
+    periodSuffix,
   ]
     .join('-')
     .toLowerCase()
@@ -253,19 +257,23 @@ export default function ClientReportPage() {
       ]}
       filters={
         <div className="flex flex-wrap items-end gap-3">
+          {/* 068: campo Cliente 2x mais largo (140px → 280px) que os demais filtros. */}
           <ClientCombobox
             value={filters.clientId}
             onChange={(clientId) => setFilters({ clientId })}
             required
             label="Cliente *"
             showCnpj={false}
+            className="min-w-[280px]"
           />
+          {/* 068: competência (mês) substituída por intervalo data inicial/final. */}
           <PeriodFilter
-            from={filters.month}
-            to={null}
-            onChange={(month) => setFilters({ month: month ?? null })}
-            mode="month"
-            labelFrom="Competência *"
+            from={filters.from}
+            to={filters.to}
+            onChange={(from, to) => setFilters({ from, to })}
+            mode="date"
+            labelFrom="Data inicial *"
+            labelTo="Data final *"
           />
           <Combobox
             label="Origem"
@@ -296,7 +304,7 @@ export default function ClientReportPage() {
       onRetry={refetch}
       emptyMessage={
         isFiltersEmpty
-          ? 'Selecione um cliente e uma competência para gerar o relatório.'
+          ? 'Selecione um cliente e um intervalo de datas para gerar o relatório.'
           : 'Nenhum apontamento encontrado para este cliente no período.'
       }
     >

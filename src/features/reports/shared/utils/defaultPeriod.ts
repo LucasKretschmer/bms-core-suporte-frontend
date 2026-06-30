@@ -1,4 +1,4 @@
-import { format, startOfMonth } from 'date-fns'
+import { endOfMonth, format, startOfMonth } from 'date-fns'
 
 /**
  * Período padrão compartilhado das telas de relatório/listagem.
@@ -23,5 +23,25 @@ export function defaultCurrentMonthPeriod(reference: Date = new Date()): {
   return {
     from: format(startOfMonth(reference), 'yyyy-MM-dd'),
     to: format(reference, 'yyyy-MM-dd'),
+  }
+}
+
+/**
+ * Período padrão do MÊS INTEIRO: do 1º dia ao ÚLTIMO dia do mês corrente.
+ *
+ * Difere de `defaultCurrentMonthPeriod` (que termina em "hoje"): aqui o fim é
+ * `endOfMonth(reference)`. Usado pelo Relatório do Cliente (068), onde o usuário
+ * pediu explicitamente o intervalo do 1º dia ao último dia do mês.
+ *
+ * Formato YYYY-MM-DD (fuso LOCAL via `format` — nunca `toISOString()`/UTC, que
+ * causa off-by-one em America/Sao_Paulo perto da meia-noite).
+ */
+export function defaultCurrentMonthFullPeriod(reference: Date = new Date()): {
+  from: string
+  to: string
+} {
+  return {
+    from: format(startOfMonth(reference), 'yyyy-MM-dd'),
+    to: format(endOfMonth(reference), 'yyyy-MM-dd'),
   }
 }
