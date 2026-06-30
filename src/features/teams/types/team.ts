@@ -82,3 +82,85 @@ function addMember(
     map.set(key, { id, nome, membros: [membro] })
   }
 }
+
+/**
+ * 037 — Filtros de tela (client-side, sobre os dados já carregados).
+ * Não altera o contrato/backend nem o agrupamento da 035; apenas restringe o que é exibido.
+ */
+export type TeamsFilters = {
+  /** Termo de busca por nome OU e-mail (case-insensitive, trim). */
+  search: string
+  /**
+   * Equipe selecionada. `null` = "Todas as equipes".
+   * `SEM_EQUIPE_FILTER_VALUE` = atendentes sem equipe.
+   */
+  equipeId: number | null
+}
+
+/** Valor sentinela do seletor para o grupo "Sem equipe". */
+export const SEM_EQUIPE_FILTER_VALUE = -1
+
+/** Uma equipe disponível no seletor (derivada dos dados carregados). */
+export type TeamOption = { id: number | null; nome: string }
+
+/**
+ * Lista as equipes presentes nos dados carregados, ordenadas por nome.
+ * Inclui um item "Sem equipe" (id `SEM_EQUIPE_FILTER_VALUE`) quando há
+ * atendentes sem equipe — para permitir filtrar por esse grupo.
+ */
+export function listTeamOptions(agents: AgentDto[]): TeamOption[] {
+  const map = new Map<number, string>()
+  let hasSemEquipe = false
+
+  for (const agent of agents) {
+    if (agent.equipes.length === 0) {
+      hasSemEquipe = true
+      continue
+    }
+    for (const equipe of agent.equipes) {
+      map.set(equipe.id, equipe.nome)
+    }
+  }
+
+  const options: TeamOption[] = Array.from(map.entries())
+    .map(([id, nome]) => ({ id, nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+
+  if (hasSemEquipe) {
+    options.push({ id: SEM_EQUIPE_FILTER_VALUE, nome: 'Sem equipe' })
+  }
+
+  return options
+}
+
+/**
+ * Aplica os filtros de tela (busca + equipe) a um atendente. AND entre os filtros.
+ *
+ * - Busca: confere se `nome` OU `email` contém o termo (case-insensitive, trim).
+ *   Termo vazio não filtra.
+ * - Equipe: `null` não filtra; `SEM_EQUIPE_FILTER_VALUE` mantém só quem não tem
+ *   equipe; um id mantém só quem é membro daquela equipe.
+ */
+export function agentMatchesFilters(agent: AgentDto, filters: TeamsFilters): boolean {
+  const term = filters.search.trim().toLowerCase()
+  if (term.length > 0) {
+    const nome = agent.nome.toLowerCase()
+    const email = (agent.email ?? '').toLowerCase()
+    if (!nome.includes(term) && !email.includes(term)) return false
+  }
+
+  if (filters.equipeId !== null) {
+    if (filters.equipeId === SEM_EQUIPE_FILTER_VALUE) {
+      if (agent.equipes.length > 0) return false
+    } else if (!agent.equipes.some((e) => e.id === filters.equipeId)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/** Filtra a lista de atendentes pelos filtros de tela (037). */
+export function filterAgents(agents: AgentDto[], filters: TeamsFilters): AgentDto[] {
+  return agents.filter((agent) => agentMatchesFilters(agent, filters))
+}

@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Badge } from '../../components/ui/Badge'
+import { Combobox, type ComboboxOption } from '../../components/ui/Combobox'
 import { DataTable } from '../../components/ui/DataTable/DataTable'
 import type { SortState } from '../../components/ui/DataTable/types'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
+import { Input } from '../../components/ui/Input'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { useToast } from '../../components/ui/Toast'
@@ -18,7 +20,17 @@ import {
 } from '../reports/shared/utils/exportTable'
 import { buildAgentColumns, agentSortValue, formatAgentTeams } from './columns'
 import { useTeamMembers } from './hooks/useTeamMembers'
-import { groupAgentsByTeam, type AgentDto } from './types/team'
+import {
+  filterAgents,
+  groupAgentsByTeam,
+  listTeamOptions,
+  SEM_EQUIPE_FILTER_VALUE,
+  type AgentDto,
+  type TeamsFilters,
+} from './types/team'
+
+/** Valor do seletor para "Todas as equipes". */
+const TODAS_EQUIPES_VALUE = 'todas'
 
 /** Colunas de export — espelham as colunas visíveis (sem campos internos). */
 const EXPORT_COLUMNS: ExportColumn[] = [
@@ -55,6 +67,19 @@ export default function TeamsPage() {
 
   const [sortState, setSortState] = useState<SortState>({ sortBy: 'nome', sortDirection: 'asc' })
 
+  // 037 — Filtros de tela (client-side). `searchInput` é o valor digitado;
+  // `searchTerm` é aplicado com debounce (mesmo padrão da movimentação diária).
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [equipeId, setEquipeId] = useState<number | null>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleSearchChange(value: string) {
+    setSearchInput(value)
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setSearchTerm(value), 300)
+  }
+
   function handleSort(sortKey: string) {
     setSortState((prev) =>
       prev.sortBy === sortKey
@@ -63,17 +88,44 @@ export default function TeamsPage() {
     )
   }
 
-  // Ordenação client-side (lista completa sem paginação)
+  const filters: TeamsFilters = useMemo(
+    () => ({ search: searchTerm, equipeId }),
+    [searchTerm, equipeId],
+  )
+
+  // Aplica os filtros (busca + equipe) sobre os dados já carregados (AND).
+  const filteredAgents = useMemo(
+    () => (data ? filterAgents(data, filters) : []),
+    [data, filters],
+  )
+
+  // Ordenação client-side (lista completa sem paginação) — sobre os filtrados.
   const sortedAgents = useMemo(() => {
-    if (!data) return []
     const sortBy = sortState.sortBy ?? 'nome'
     const factor = sortState.sortDirection === 'asc' ? 1 : -1
-    return [...data].sort(
+    return [...filteredAgents].sort(
       (a, b) => agentSortValue(a, sortBy).localeCompare(agentSortValue(b, sortBy), 'pt-BR') * factor,
     )
-  }, [data, sortState])
+  }, [filteredAgents, sortState])
 
-  const teams = useMemo(() => (data ? groupAgentsByTeam(data) : []), [data])
+  // Cards por equipe — agrupa os atendentes filtrados (035 inalterado).
+  const teams = useMemo(() => groupAgentsByTeam(filteredAgents), [filteredAgents])
+
+  // Opções do seletor de equipe — derivadas dos dados completos carregados.
+  const teamSelectOptions = useMemo<ComboboxOption[]>(() => {
+    const base = data ? listTeamOptions(data) : []
+    return [
+      { value: TODAS_EQUIPES_VALUE, label: 'Todas as equipes' },
+      ...base.map((t) => ({
+        value: String(t.id ?? SEM_EQUIPE_FILTER_VALUE),
+        label: t.nome,
+      })),
+    ]
+  }, [data])
+
+  function handleEquipeChange(value: string) {
+    setEquipeId(value === TODAS_EQUIPES_VALUE ? null : Number(value))
+  }
 
   const columns = useMemo(
     () => buildAgentColumns({ canEditRole: isGerentePlus, currentUserId: user?.id ?? null }),
@@ -139,6 +191,30 @@ export default function TeamsPage() {
 
         {!isLoading && !isError && data && data.length > 0 && (
           <>
+            {/* 037 — Filtros de tela (busca por nome/e-mail + equipe) */}
+            <section
+              aria-label="Filtros"
+              className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            >
+              <Input
+                id="teams-search"
+                label="Buscar atendente"
+                placeholder="Nome ou e-mail…"
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full sm:w-72"
+                type="search"
+              />
+              <Combobox
+                id="teams-equipe"
+                label="Equipe"
+                value={equipeId === null ? TODAS_EQUIPES_VALUE : String(equipeId)}
+                options={teamSelectOptions}
+                onChange={handleEquipeChange}
+                className="w-full sm:w-64"
+              />
+            </section>
+
             {/* Tabela atendente / equipe / papel */}
             <section aria-labelledby="atendentes-heading" className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
@@ -151,15 +227,19 @@ export default function TeamsPage() {
                   isExporting={isExporting}
                 />
               </div>
-              <div className="bg-card rounded-[5px] border border-border overflow-hidden">
-                <DataTable
-                  tableId="teams-agents"
-                  columns={columns}
-                  data={sortedAgents}
-                  sortState={sortState}
-                  onSort={handleSort}
-                />
-              </div>
+              {sortedAgents.length === 0 ? (
+                <EmptyState message="Nenhum atendente encontrado." />
+              ) : (
+                <div className="bg-card rounded-[5px] border border-border overflow-hidden">
+                  <DataTable
+                    tableId="teams-agents"
+                    columns={columns}
+                    data={sortedAgents}
+                    sortState={sortState}
+                    onSort={handleSort}
+                  />
+                </div>
+              )}
             </section>
 
             {/* Cards por equipe */}
@@ -167,7 +247,10 @@ export default function TeamsPage() {
               <h2 id="equipes-heading" className="text-[16px] font-medium text-foreground">
                 Equipes
               </h2>
-              <div className="flex flex-wrap gap-3">
+              {teams.length === 0 ? (
+                <EmptyState message="Nenhuma equipe encontrada." />
+              ) : (
+                <div className="flex flex-wrap gap-3">
                 {teams.map((team) => (
                   <div
                     key={team.id ?? team.nome}
@@ -203,7 +286,8 @@ export default function TeamsPage() {
                     </ul>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </section>
           </>
         )}
