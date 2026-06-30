@@ -1,7 +1,17 @@
 import { Badge } from '../../components/ui/Badge'
 import type { ColumnDef } from '../../components/ui/DataTable/types'
 import { AgentRoleCell } from './components/AgentRoleCell'
-import type { AgentDto } from './types/team'
+import type { AgentDto, AgentTeamDto } from './types/team'
+
+/**
+ * Formata as equipes do atendente para exibição (035 — multi-equipe).
+ * Junta os nomes (principal primeiro, como vem do backend) com "; ".
+ * Sem equipe → "—".
+ */
+export function formatAgentTeams(equipes: AgentTeamDto[]): string {
+  if (equipes.length === 0) return '—'
+  return equipes.map((e) => e.nome).join('; ')
+}
 
 type AgentColumnsOptions = {
   /** Se o usuário logado pode editar papéis (UX — backend é a fonte de verdade). */
@@ -41,11 +51,11 @@ export function buildAgentColumns({
     },
     {
       key: 'equipe',
-      header: 'Equipe',
+      header: 'Equipes',
       align: 'left',
       sortable: true,
       sortKey: 'equipe',
-      accessor: (row) => row.equipeNome ?? '—',
+      accessor: (row) => formatAgentTeams(row.equipes),
     },
     {
       key: 'papel',
@@ -73,7 +83,7 @@ export function agentSortValue(agent: AgentDto, sortBy: string): string {
     case 'email':
       return agent.email ?? ''
     case 'equipe':
-      return agent.equipeNome ?? ''
+      return formatAgentTeams(agent.equipes) === '—' ? '' : formatAgentTeams(agent.equipes)
     case 'papel':
       return agent.papel
     case 'nome':

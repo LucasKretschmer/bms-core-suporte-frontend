@@ -14,6 +14,10 @@ const agent: AgentDto = {
   equipeId: 5,
   equipeNome: 'Suporte',
   papel: 'ATENDENTE',
+  equipes: [
+    { id: 5, nome: 'Suporte', isPrimary: true },
+    { id: 8, nome: 'Onboarding', isPrimary: false },
+  ],
 }
 
 describe('teamsService', () => {

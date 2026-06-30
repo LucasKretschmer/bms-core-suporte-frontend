@@ -16,7 +16,7 @@ import {
   type ExportColumn,
   type ExportRow,
 } from '../reports/shared/utils/exportTable'
-import { buildAgentColumns, agentSortValue } from './columns'
+import { buildAgentColumns, agentSortValue, formatAgentTeams } from './columns'
 import { useTeamMembers } from './hooks/useTeamMembers'
 import { groupAgentsByTeam, type AgentDto } from './types/team'
 
@@ -24,15 +24,19 @@ import { groupAgentsByTeam, type AgentDto } from './types/team'
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Atendente', key: 'nome' },
   { header: 'E-mail', key: 'email' },
-  { header: 'Equipe', key: 'equipe' },
+  { header: 'Equipes', key: 'equipe' },
   { header: 'Perfil', key: 'papel' },
 ]
 
+/**
+ * 035 — 1 linha por atendente; as N equipes vão concatenadas (principal primeiro)
+ * para não inflar a planilha (decisão R4 da arquitetura).
+ */
 function mapAgentToExportRow(agent: AgentDto): ExportRow {
   return {
     nome: agent.nome,
     email: agent.email ?? '—',
-    equipe: agent.equipeNome ?? '—',
+    equipe: formatAgentTeams(agent.equipes),
     papel: agent.papel,
   }
 }
@@ -179,10 +183,20 @@ export default function TeamsPage() {
                     <ul className="mt-3 flex flex-col gap-2">
                       {team.membros.map((membro) => (
                         <li
-                          key={membro.userId}
+                          key={`${team.id ?? 'sem-equipe'}-${membro.userId}`}
                           className="flex items-center justify-between gap-2 text-sm text-foreground"
                         >
-                          <span className="truncate">{membro.nome}</span>
+                          <span className="flex items-center gap-1.5 truncate">
+                            <span className="truncate">{membro.nome}</span>
+                            {membro.isPrimary && (
+                              <span
+                                className="text-xs text-foreground/50"
+                                title="Equipe principal do atendente"
+                              >
+                                (principal)
+                              </span>
+                            )}
+                          </span>
                           <Badge value={membro.papel} />
                         </li>
                       ))}
