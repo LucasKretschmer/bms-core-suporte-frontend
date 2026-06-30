@@ -7,7 +7,7 @@ vi.mock('./components/AgentRoleCell', () => ({
   AgentRoleCell: () => <span data-testid="agent-role-cell" />,
 }))
 
-import { buildAgentColumns, agentSortValue } from './columns'
+import { buildAgentColumns, agentSortValue, formatAgentTeams } from './columns'
 import type { AgentDto } from './types/team'
 
 function makeAgent(overrides?: Partial<AgentDto>): AgentDto {
@@ -18,6 +18,7 @@ function makeAgent(overrides?: Partial<AgentDto>): AgentDto {
     equipeId: 5,
     equipeNome: 'Suporte',
     papel: 'ATENDENTE',
+    equipes: [{ id: 5, nome: 'Suporte', isPrimary: true }],
     ...overrides,
   }
 }
