@@ -8,7 +8,6 @@
  */
 
 import { useRef, useState } from 'react'
-import { format, startOfMonth } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
@@ -20,6 +19,7 @@ import { useMetricsOverview } from '../shared/hooks/useMetricsOverview'
 import { useMetricDrill } from '../shared/hooks/useMetricDrill'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
 import { listTeams } from '../../reports/shared/services/reportsService'
+import { defaultCurrentMonthPeriod } from '../../reports/shared/utils/defaultPeriod'
 import { metricFamily } from '../shared/types/metrics'
 import type {
   ClientRowDto,
@@ -43,11 +43,12 @@ export default function DashboardSuportePage() {
   const { isCoordenadorOuAcima } = usePermissions()
 
   const [scope, setScope] = useState<MetricsScope>('management:suporte')
-  // date-fns format (hora local) — evita off-by-one de timezone do toISOString (UTC).
+  // Período default = mês corrente (clearable), via helper compartilhado (053).
+  // format() local — evita off-by-one de timezone do toISOString (UTC).
   const [from, setFrom] = useState<string | null>(
-    format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+    () => defaultCurrentMonthPeriod().from,
   )
-  const [to, setTo] = useState<string | null>(format(new Date(), 'yyyy-MM-dd'))
+  const [to, setTo] = useState<string | null>(() => defaultCurrentMonthPeriod().to)
   const [clientId, setClientId] = useState<string | null>(null)
   const [planId, setPlanId] = useState<string | null>(null)
   // Drill paramétrico (016): KPI/fatia clicada → tabela dos registros. O metric do

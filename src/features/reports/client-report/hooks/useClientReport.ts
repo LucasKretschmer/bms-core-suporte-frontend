@@ -9,6 +9,7 @@
  * adaptamos a queryFn para retornar um PaginatedResponse sintético baseado nos
  * totais do DTO. A paginação dos items é enviada ao backend via params.
  */
+import { format } from 'date-fns'
 import { useServerTable } from '../../shared/hooks/useServerTable'
 import { getClientReport } from '../../shared/services/reportsService'
 import type { ClientReportDto } from '../../shared/types/reports'
@@ -18,6 +19,16 @@ import { useQuery } from '@tanstack/react-query'
 export type ClientReportFilters = {
   clientId: string | null
   month: string | null  // YYYY-MM
+}
+
+/**
+ * Competência (mês) default = mês corrente, no formato YYYY-MM (PeriodFilter mode="month").
+ * Clearable: o usuário pode limpar para null. O relatório só é gerado quando há
+ * cliente E competência — preencher a competência por padrão não torna o filtro
+ * obrigatório nem dispara a query sem cliente selecionado.
+ */
+function defaultCurrentMonth(reference: Date = new Date()): string {
+  return format(reference, 'yyyy-MM')
 }
 
 /**
@@ -50,7 +61,7 @@ export function useClientReport() {
         totalPages: Math.max(1, Math.ceil(report.totalApontamentos / pageSize)),
       }
     },
-    initialFilters: { clientId: null, month: null },
+    initialFilters: { clientId: null, month: defaultCurrentMonth() },
     initialSortBy: null,
     initialSortDirection: 'desc',
     enabled: false, // começa desativado; activado abaixo quando há filtros

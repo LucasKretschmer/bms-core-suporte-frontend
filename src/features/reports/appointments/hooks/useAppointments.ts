@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from 'react'
-import { format, startOfMonth } from 'date-fns'
 import { useServerTable } from '../../shared/hooks/useServerTable'
 import { listTicketsReport } from '../../shared/services/reportsService'
 import { usePermissions } from '../../../../hooks/usePermissions'
 import { defaultTicketScope, type TicketScope } from '../../../../utils/reportScope'
+import { defaultCurrentMonthPeriod } from '../../shared/utils/defaultPeriod'
 import type { TableParams } from '../../shared/hooks/useServerTable'
 import type { TicketReportItemDto } from '../../shared/types/reports'
 
@@ -16,15 +16,17 @@ export type AppointmentsFilters = {
   to: string | null
 }
 
-/** Período default: do 1º dia do mês corrente até hoje (formato YYYY-MM-DD, igual ao PeriodFilter). */
+/**
+ * Período default: do 1º dia do mês corrente até hoje (formato YYYY-MM-DD).
+ *
+ * Mantido como wrapper fino sobre o helper compartilhado `defaultCurrentMonthPeriod`
+ * (053) — preserva a assinatura/comportamento da 052 e o ponto de import existente.
+ */
 export function defaultAppointmentsPeriod(reference: Date = new Date()): {
   from: string
   to: string
 } {
-  return {
-    from: format(startOfMonth(reference), 'yyyy-MM-dd'),
-    to: format(reference, 'yyyy-MM-dd'),
-  }
+  return defaultCurrentMonthPeriod(reference)
 }
 
 /**
@@ -41,7 +43,7 @@ export function useAppointments() {
   // Memoizado por papel: useServerTable só usa initialFilters na 1ª render,
   // mas mantemos referência estável para evitar reset acidental.
   const initialFilters = useMemo<AppointmentsFilters>(() => {
-    const period = defaultAppointmentsPeriod()
+    const period = defaultCurrentMonthPeriod()
     return {
       scope: defaultTicketScope(isCoordenadorOuAcima),
       search: '',

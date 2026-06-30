@@ -10,6 +10,7 @@
 import { useCallback, useMemo } from 'react'
 import { useServerTable } from '../../reports/shared/hooks/useServerTable'
 import type { TableParams } from '../../reports/shared/hooks/useServerTable'
+import { defaultCurrentMonthPeriod } from '../../reports/shared/utils/defaultPeriod'
 import { listMovimentacaoDiaria } from '../services/movimentacaoDiariaService'
 import type { MovimentacaoDiariaRowDto, StatusBucket } from '../types/movimentacaoDiaria'
 import type { MetricsScope } from '../../dashboards/shared/types/metrics'
@@ -28,16 +29,22 @@ export function buildScope(equipeId: number | null): MetricsScope {
   return equipeId === null ? 'global' : `team:${equipeId}`
 }
 
-const INITIAL_FILTERS: MovimentacaoDiariaFilters = {
-  equipeId: null,
-  statusBucket: [],
-  search: '',
-  from: null,
-  to: null,
+/**
+ * Filtros iniciais — período default = mês corrente (clearable), via helper compartilhado (053).
+ */
+function buildInitialFilters(): MovimentacaoDiariaFilters {
+  const period = defaultCurrentMonthPeriod()
+  return {
+    equipeId: null,
+    statusBucket: [],
+    search: '',
+    from: period.from,
+    to: period.to,
+  }
 }
 
 export function useMovimentacaoDiariaLogs() {
-  const initialFilters = useMemo<MovimentacaoDiariaFilters>(() => INITIAL_FILTERS, [])
+  const initialFilters = useMemo<MovimentacaoDiariaFilters>(buildInitialFilters, [])
 
   const queryFn = useCallback(
     (params: TableParams<MovimentacaoDiariaFilters>) =>

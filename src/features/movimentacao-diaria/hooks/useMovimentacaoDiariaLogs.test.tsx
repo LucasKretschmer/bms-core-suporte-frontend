@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { format, startOfMonth } from 'date-fns'
 
 vi.mock('../services/movimentacaoDiariaService', () => ({
   listMovimentacaoDiaria: vi.fn(),
@@ -57,6 +58,21 @@ describe('useMovimentacaoDiariaLogs', () => {
       page: 1,
       pageSize: 25,
     })
+  })
+
+  it('default: período = mês corrente (1º dia → hoje) e é clearable', async () => {
+    const today = new Date()
+    const { result } = renderHook(() => useMovimentacaoDiariaLogs(), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() => expect(listMovimentacaoDiaria).toHaveBeenCalled())
+
+    expect(result.current.filters.from).toBe(format(startOfMonth(today), 'yyyy-MM-dd'))
+    expect(result.current.filters.to).toBe(format(today, 'yyyy-MM-dd'))
+
+    act(() => result.current.setFilters({ from: null, to: null }))
+    expect(result.current.filters.from).toBeNull()
+    expect(result.current.filters.to).toBeNull()
   })
 
   it('filtro por equipe monta scope team:{id} (sem duplicar equipeId)', async () => {

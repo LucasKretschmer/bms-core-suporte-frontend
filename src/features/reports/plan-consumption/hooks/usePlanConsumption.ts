@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { useServerTable } from '../../shared/hooks/useServerTable'
 import { listPlanConsumption } from '../../shared/services/reportsService'
+import { defaultCurrentMonthPeriod } from '../../shared/utils/defaultPeriod'
 import type { PlanConsumptionItemDto } from '../../shared/types/reports'
 import type { TableParams } from '../../shared/hooks/useServerTable'
 
@@ -10,11 +12,19 @@ type PlanConsumptionFilters = {
   to: string | null
 }
 
-const initialFilters: PlanConsumptionFilters = {
-  search: '',
-  planId: null,
-  from: null,
-  to: null,
+/**
+ * Filtros iniciais — período default = mês corrente (clearable), via helper compartilhado (053).
+ * O backend já assume o mês corrente quando from/to vêm nulos; preencher no front
+ * deixa o período visível ao usuário sem torná-lo obrigatório.
+ */
+function buildInitialFilters(): PlanConsumptionFilters {
+  const period = defaultCurrentMonthPeriod()
+  return {
+    search: '',
+    planId: null,
+    from: period.from,
+    to: period.to,
+  }
 }
 
 /**
@@ -23,6 +33,9 @@ const initialFilters: PlanConsumptionFilters = {
  * enabled=true sempre (não requer filtros obrigatórios).
  */
 export function usePlanConsumption() {
+  // useServerTable só usa initialFilters na 1ª render — memoizar mantém referência estável.
+  const initialFilters = useMemo(buildInitialFilters, [])
+
   return useServerTable<PlanConsumptionFilters, PlanConsumptionItemDto>({
     queryKey: 'plan-consumption',
     queryFn: (params: TableParams<PlanConsumptionFilters>) =>
