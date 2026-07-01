@@ -33,6 +33,7 @@ import type { PaginatedResponse } from '../../../types/api'
 function makeLog(overrides?: Partial<LogDto>): LogDto {
   return {
     logId: 1,
+    tipo: 'tickets',
     status: 'concluido',
     disparo: 'automatico',
     iniciadoEm: '2026-06-19T10:00:00Z',
@@ -44,6 +45,9 @@ function makeLog(overrides?: Partial<LogDto>): LogDto {
     projetosIgnorados: 0,
     empresasResolvidas: 4,
     contatosResolvidos: 5,
+    empresasCriadas: 0,
+    empresasAtualizadas: 0,
+    empresasDesativadas: 0,
     mensagemErro: null,
     ...overrides,
   }

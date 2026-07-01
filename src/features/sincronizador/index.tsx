@@ -40,12 +40,18 @@ const STATUS_LABEL: Record<SyncStatus, string> = {
 const LOGS_EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Status', key: 'status' },
   { header: 'Disparo', key: 'disparo' },
+  { header: 'Tipo', key: 'tipo' },
   { header: 'Iniciado em', key: 'iniciadoEm' },
   { header: 'Duração', key: 'duracao' },
   { header: 'Tickets / Projetos', key: 'contadores' },
-  { header: 'Emp. / Cont.', key: 'empresas' },
+  { header: 'Empresas', key: 'empresas' },
   { header: 'Erro', key: 'mensagemErro' },
 ]
+
+const TIPO_LABEL: Record<'tickets' | 'empresas', string> = {
+  tickets: 'Tickets',
+  empresas: 'Empresas',
+}
 
 function formatDateTimeSeconds(iso: string): string {
   try {
@@ -64,13 +70,20 @@ function formatDuracao(duracaoMs: number | null): string {
 }
 
 function mapLogToExportRow(log: LogDto): ExportRow {
+  const tipo = log.tipo ?? 'tickets'
+  const isEmpresas = tipo === 'empresas'
   return {
     status: STATUS_LABEL[log.status] ?? log.status,
     disparo: log.disparo === 'automatico' ? 'Automático' : 'Manual',
+    tipo: TIPO_LABEL[tipo],
     iniciadoEm: formatDateTimeSeconds(log.iniciadoEm),
     duracao: formatDuracao(log.duracaoMs),
-    contadores: `${log.ticketsUpserted}↑ ${log.ticketsIgnorados}↷ / ${log.projetosUpserted}↑ ${log.projetosIgnorados}↷`,
-    empresas: `${log.empresasResolvidas} / ${log.contatosResolvidos}`,
+    contadores: isEmpresas
+      ? '—'
+      : `${log.ticketsUpserted}↑ ${log.ticketsIgnorados}↷ / ${log.projetosUpserted}↑ ${log.projetosIgnorados}↷`,
+    empresas: isEmpresas
+      ? `${log.empresasCriadas}+ ${log.empresasAtualizadas}~ ${log.empresasDesativadas}−`
+      : `${log.empresasResolvidas} / ${log.contatosResolvidos}`,
     mensagemErro: log.mensagemErro ?? '—',
   }
 }
