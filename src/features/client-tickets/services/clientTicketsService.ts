@@ -1,5 +1,5 @@
 import { api } from '../../../services/api'
-import type { PaginatedResponse } from '../../../types/api'
+import type { ApiResponse, PaginatedResponse } from '../../../types/api'
 import type { TicketScope } from '../../../utils/reportScope'
 import type {
   PlanConsumptionItemDto,
@@ -13,14 +13,19 @@ import type {
  * - listClientTickets → GET /api/v1/reports/tickets?clientId= (PaginatedResponse cru, B1)
  * - getClientKpis     → GET /api/v1/metrics/plan-consumption (PaginatedResponse cru),
  *                       localizando a linha do cliente pelo clientId.
+ * - listTicketOwners  → GET /api/v1/reports/tickets/owners (opções do filtro de atendente, 070)
  */
 
-type ListClientTicketsParams = {
+export type ListClientTicketsParams = {
   clientId: number
   /** Default 'all': drill-down é CoordenadorPlus e deve listar TODOS os tickets do cliente. */
   scope?: TicketScope
   search?: string
   status?: string[]
+  /** Filtro multi-equipe (array de IDs de equipe). */
+  teamId?: number[]
+  /** Filtro multi-atendente (array de IDs de usuário/owner interno) — 070. */
+  owner?: number[]
   sortBy?: string | null
   sortDirection?: 'asc' | 'desc'
   page: number
@@ -39,6 +44,26 @@ export async function listClientTickets(
     { params: cleanParams({ scope, ...rest }) },
   )
   return data
+}
+
+/**
+ * Opção legível de atendente (owner) para o filtro multi-select (070).
+ * value = id interno do usuário (enviado em owner[]); label = nome de exibição.
+ */
+export type TicketOwnerOption = {
+  value: number
+  label: string
+}
+
+/**
+ * Opções de atendente (owner) do filtro de chamados do cliente (070).
+ * Envelope ApiResponse<{ value; label }[]> (mesmo padrão de /reports/tickets/statuses).
+ */
+export async function listTicketOwners(): Promise<TicketOwnerOption[]> {
+  const { data } = await api.get<ApiResponse<TicketOwnerOption[]>>(
+    '/api/v1/reports/tickets/owners',
+  )
+  return data.data
 }
 
 /**

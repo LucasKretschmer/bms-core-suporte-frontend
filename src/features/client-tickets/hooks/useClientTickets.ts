@@ -7,11 +7,15 @@ import type { ClientTicketItemDto } from '../types/clientTickets'
 export type ClientTicketsFilters = {
   search: string
   status: string[]
+  teamId: number[]
+  owner: number[]
 }
 
 const INITIAL_FILTERS: ClientTicketsFilters = {
   search: '',
   status: [],
+  teamId: [],
+  owner: [],
 }
 
 /**
@@ -25,6 +29,8 @@ export function useClientTickets(clientId: number) {
         clientId,
         search: params.filters.search || undefined,
         status: params.filters.status.length > 0 ? params.filters.status : undefined,
+        teamId: params.filters.teamId.length > 0 ? params.filters.teamId : undefined,
+        owner: params.filters.owner.length > 0 ? params.filters.owner : undefined,
         sortBy: params.sortBy ?? undefined,
         sortDirection: params.sortDirection,
         page: params.page,

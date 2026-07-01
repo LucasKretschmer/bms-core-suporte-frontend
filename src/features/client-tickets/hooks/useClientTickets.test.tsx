@@ -41,4 +41,22 @@ describe('useClientTickets', () => {
     expect(result.current.filters.status).toEqual([])
     expect(result.current.sortDirection).toBe('desc')
   })
+
+  it('inicia com teamId e owner arrays vazios (070)', () => {
+    const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
+    expect(result.current.filters.teamId).toEqual([])
+    expect(result.current.filters.owner).toEqual([])
+  })
+
+  it('encaminha teamId e owner ao service quando preenchidos (070)', async () => {
+    const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
+
+    result.current.setFilters({ teamId: [1, 2], owner: [7] })
+
+    await waitFor(() => {
+      expect(service.listClientTickets).toHaveBeenCalledWith(
+        expect.objectContaining({ teamId: [1, 2], owner: [7] }),
+      )
+    })
+  })
 })

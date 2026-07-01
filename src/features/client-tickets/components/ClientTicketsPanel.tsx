@@ -13,9 +13,14 @@
  */
 
 import { useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../components/ui/Pagination'
 import { Input } from '../../../components/ui/Input'
+import {
+  MultiSelectCombobox,
+  type MultiSelectOption,
+} from '../../../components/ui/MultiSelectCombobox'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Skeleton } from '../../../components/ui/Skeleton'
@@ -35,9 +40,10 @@ import {
 } from '../../reports/shared/utils/fetchAllPaginated'
 import { formatHours, formatPercent, formatSeconds } from '../../reports/shared/utils/formatters'
 import { getPercentClass } from '../../reports/plan-consumption/columns'
+import { getTicketStatuses, listTeams } from '../../reports/shared/services/reportsService'
 import type { ClientTicketItemDto } from '../types/clientTickets'
 import { buildClientTicketsColumns } from '../columns'
-import { listClientTickets } from '../services/clientTicketsService'
+import { listClientTickets, listTicketOwners } from '../services/clientTicketsService'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
 
@@ -113,6 +119,37 @@ export function ClientTicketsPanel({
 
   const columns = useMemo(() => buildClientTicketsColumns(), [])
 
+  // Opções dos filtros multi-select (Equipe, Atendente, Status).
+  // Loading/erro do fetch não quebram o painel — o controle apenas fica vazio/desabilitado.
+  const teamsQuery = useQuery({
+    queryKey: ['teams'],
+    queryFn: listTeams,
+    staleTime: 5 * 60 * 1000,
+  })
+  const ownersQuery = useQuery({
+    queryKey: ['ticket-owners'],
+    queryFn: listTicketOwners,
+    staleTime: 5 * 60 * 1000,
+  })
+  const statusesQuery = useQuery({
+    queryKey: ['ticket-statuses'],
+    queryFn: getTicketStatuses,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const teamOptions = useMemo<MultiSelectOption<number>[]>(
+    () => (teamsQuery.data ?? []).map((t) => ({ value: t.id, label: t.nome })),
+    [teamsQuery.data],
+  )
+  const ownerOptions = useMemo<MultiSelectOption<number>[]>(
+    () => (ownersQuery.data ?? []).map((o) => ({ value: o.value, label: o.label })),
+    [ownersQuery.data],
+  )
+  const statusOptions = useMemo<MultiSelectOption<string>[]>(
+    () => (statusesQuery.data ?? []).map((s) => ({ value: s.value, label: s.label })),
+    [statusesQuery.data],
+  )
+
   const toast = useToast()
   const [isExporting, setIsExporting] = useState(false)
 
@@ -127,6 +164,8 @@ export function ClientTicketsPanel({
         clientId,
         search: filters.search || undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
+        teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
+        owner: filters.owner.length > 0 ? filters.owner : undefined,
         sortBy: sortBy ?? undefined,
         sortDirection,
         page,
@@ -213,15 +252,62 @@ export function ClientTicketsPanel({
       {/* Filtros */}
       <div className="p-4 bg-card rounded-[5px] border border-border">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <Input
-            label="Buscar"
-            id={`${tableId}-search`}
-            type="text"
-            value={searchInput}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Ticket, assunto, atendente…"
-            className="min-w-[220px]"
-          />
+          <div className="flex flex-wrap items-end gap-3">
+            <Input
+              label="Buscar"
+              id={`${tableId}-search`}
+              type="text"
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Ticket, assunto, atendente…"
+              className="min-w-[220px]"
+            />
+
+            {/* Filtro de Equipe (multi-select com checkboxes) */}
+            <MultiSelectCombobox<number>
+              id={`${tableId}-teams`}
+              label="Equipe"
+              summaryLabel="Equipe"
+              value={filters.teamId}
+              options={teamOptions}
+              onChange={(teamId) => setFilters({ teamId })}
+              placeholder="Todas"
+              searchable
+              isLoading={teamsQuery.isLoading}
+              error={teamsQuery.isError ? 'Falha ao carregar equipes.' : undefined}
+              className="min-w-[180px]"
+            />
+
+            {/* Filtro de Atendente (multi-select com checkboxes, 070) */}
+            <MultiSelectCombobox<number>
+              id={`${tableId}-owners`}
+              label="Atendente"
+              summaryLabel="Atendente"
+              value={filters.owner}
+              options={ownerOptions}
+              onChange={(owner) => setFilters({ owner })}
+              placeholder="Todos"
+              searchable
+              isLoading={ownersQuery.isLoading}
+              error={ownersQuery.isError ? 'Falha ao carregar atendentes.' : undefined}
+              className="min-w-[200px]"
+            />
+
+            {/* Filtro de Status (multi-select com checkboxes) */}
+            <MultiSelectCombobox<string>
+              id={`${tableId}-status`}
+              label="Status"
+              summaryLabel="Status"
+              value={filters.status}
+              options={statusOptions}
+              onChange={(status) => setFilters({ status })}
+              placeholder="Todos"
+              searchable
+              isLoading={statusesQuery.isLoading}
+              error={statusesQuery.isError ? 'Falha ao carregar status.' : undefined}
+              className="min-w-[200px]"
+            />
+          </div>
           {!isEmpty && (
             <ExportButtons
               onExportCsv={() => void handleExportCsv()}
