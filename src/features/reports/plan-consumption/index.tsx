@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Input } from '../../../components/ui/Input'
 import { Pagination } from '../../../components/ui/Pagination'
@@ -14,6 +15,7 @@ import { planConsumptionColumns } from './columns'
 import { usePlanConsumption } from './hooks/usePlanConsumption'
 import { formatClientName, formatHours, formatPercent } from '../shared/utils/formatters'
 import { ClientTicketsPanel } from '../../client-tickets/components/ClientTicketsPanel'
+import type { ClientTicketItemDto } from '../../client-tickets/types/clientTickets'
 import type { PlanConsumptionItemDto } from '../shared/types/reports'
 
 /** Chave única para persistência da ordem das colunas */
@@ -41,10 +43,25 @@ export default function PlanConsumptionPage() {
     setFilters,
   } = usePlanConsumption()
 
+  const navigate = useNavigate()
+
   // Drill-down inline (#11): abre um drawer com os chamados do cliente na própria tela.
   const [openClient, setOpenClient] = useState<PlanConsumptionItemDto | null>(null)
   // Ref para devolver o foco à última linha clicada ao fechar o drawer (AP-FRONTEND-004).
   const lastTriggerRef = useRef<HTMLElement | null>(null)
+
+  // Click no chamado (070): navega para o detalhe/apontamentos do ticket por id interno.
+  // O link externo do HubSpot continua na célula "Ticket" (stopPropagation).
+  const handleTicketClick = useCallback(
+    (row: ClientTicketItemDto) => {
+      void navigate({
+        to: '/relatorios/tickets/$ticketId',
+        params: { ticketId: String(row.ticketId) },
+        search: { from: 'consumo-planos' },
+      })
+    },
+    [navigate],
+  )
 
   const handleRowClick = useCallback((row: PlanConsumptionItemDto) => {
     // Guarda o elemento focado (linha clicada) para restaurar o foco ao fechar.
@@ -224,10 +241,12 @@ export default function PlanConsumptionPage() {
           onClose={handleCloseDrawer}
           title={`Chamados — ${formatClientName(openClient)}`}
           size="xl"
+          className="max-w-[90vw] w-[90vw]"
         >
           <ClientTicketsPanel
             clientId={openClient.clientId}
             tableId={`client-tickets-drawer-${openClient.clientId}`}
+            onTicketClick={handleTicketClick}
           />
         </Modal>
       )}

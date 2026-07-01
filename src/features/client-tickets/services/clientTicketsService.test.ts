@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { getClientKpis, listClientTickets } from './clientTicketsService'
+import { getClientKpis, listClientTickets, listTicketOwners } from './clientTicketsService'
 import { api } from '../../../services/api'
 
 vi.mock('../../../services/api', () => ({
@@ -51,6 +51,47 @@ describe('clientTicketsService', () => {
     await listClientTickets({ clientId: 1, search: '', page: 1, pageSize: 25 })
     const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
     expect(callParams).not.toHaveProperty('search')
+  })
+
+  it('listClientTickets envia teamId e owner como arrays quando preenchidos (070)', async () => {
+    mockedGet.mockResolvedValueOnce(paginated([]))
+    await listClientTickets({
+      clientId: 1,
+      status: ['Aberto', 'Em andamento'],
+      teamId: [1, 2],
+      owner: [7, 9],
+      page: 1,
+      pageSize: 25,
+    })
+    const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
+    expect(callParams.status).toEqual(['Aberto', 'Em andamento'])
+    expect(callParams.teamId).toEqual([1, 2])
+    expect(callParams.owner).toEqual([7, 9])
+  })
+
+  it('listClientTickets omite teamId/owner quando undefined (cleanParams)', async () => {
+    mockedGet.mockResolvedValueOnce(paginated([]))
+    await listClientTickets({
+      clientId: 1,
+      teamId: undefined,
+      owner: undefined,
+      page: 1,
+      pageSize: 25,
+    })
+    const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
+    expect(callParams).not.toHaveProperty('teamId')
+    expect(callParams).not.toHaveProperty('owner')
+  })
+
+  it('listTicketOwners desempacota data.data do envelope ApiResponse (070)', async () => {
+    const owners = [
+      { value: 1, label: 'Ana Silva' },
+      { value: 2, label: 'Bruno Costa' },
+    ]
+    mockedGet.mockResolvedValueOnce({ data: { data: owners, message: 'OK' } })
+    const result = await listTicketOwners()
+    expect(result).toEqual(owners)
+    expect(mockedGet).toHaveBeenCalledWith('/api/v1/reports/tickets/owners')
   })
 
   it('getClientKpis localiza a linha do cliente em plan-consumption', async () => {
