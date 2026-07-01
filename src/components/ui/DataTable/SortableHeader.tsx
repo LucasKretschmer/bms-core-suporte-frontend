@@ -17,8 +17,15 @@ const alignClasses = {
 }
 
 /**
- * Header de coluna com botão de ordenação (asc/desc).
- * Ícone indica a direção atual ou neutro se não está ordenado.
+ * Conteúdo do cabeçalho de coluna.
+ *
+ * Quando a coluna é ordenável, o cabeçalho é um `<button>` que **preenche a
+ * célula `<th>` inteira** (largura e altura 100% + padding do header), de modo
+ * que qualquer clique no cabeçalho aciona a ordenação (080). O `<button>` real
+ * preserva a acessibilidade (foco/Enter/Espaço) e o toggle asc/desc (071).
+ *
+ * Quando a coluna não é ordenável, renderiza apenas o rótulo estático (sem
+ * clique, sem cursor pointer, sem hover de ordenação).
  */
 export function SortableHeader({
   label,
@@ -28,7 +35,8 @@ export function SortableHeader({
   onSort,
   align = 'center',
 }: SortableHeaderProps) {
-  const isActive = sortable && sortKey && sortState?.sortBy === sortKey
+  const canSort = Boolean(sortable && sortKey && onSort)
+  const isActive = Boolean(sortable && sortKey && sortState?.sortBy === sortKey)
   const direction = isActive ? sortState?.sortDirection : null
 
   function handleSort() {
@@ -37,38 +45,57 @@ export function SortableHeader({
     }
   }
 
+  if (!canSort) {
+    // Coluna não-ordenável: rótulo estático, sem interação.
+    return (
+      <div
+        className={clsx(
+          'flex h-9 w-full items-center gap-1 px-5',
+          alignClasses[align],
+        )}
+      >
+        <span>{label}</span>
+      </div>
+    )
+  }
+
   return (
-    <div
-      className={clsx('flex items-center gap-1', alignClasses[align])}
+    <button
+      type="button"
+      onClick={handleSort}
+      aria-label={`Ordenar por ${typeof label === 'string' ? label : sortKey}`}
+      className={clsx(
+        // Preenche o <th> inteiro para que qualquer clique ordene (080).
+        'flex h-9 w-full cursor-pointer items-center gap-1 px-5',
+        'text-inherit transition-colors',
+        'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+        alignClasses[align],
+        isActive && 'text-primary',
+      )}
     >
       <span>{label}</span>
-      {sortable && sortKey && (
-        <button
-          type="button"
-          onClick={handleSort}
-          aria-label={`Ordenar por ${typeof label === 'string' ? label : sortKey}`}
-          className={clsx(
-            'inline-flex flex-col items-center justify-center gap-px',
-            'text-muted hover:text-foreground transition-colors',
-            isActive && 'text-primary',
-          )}
-        >
-          {direction === 'asc' ? (
-            <svg aria-hidden="true" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-            </svg>
-          ) : direction === 'desc' ? (
-            <svg aria-hidden="true" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          ) : (
-            // Ícone neutro (ambas setas)
-            <svg aria-hidden="true" className="h-3 w-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-            </svg>
-          )}
-        </button>
-      )}
-    </div>
+      <span
+        aria-hidden="true"
+        className={clsx(
+          'inline-flex flex-col items-center justify-center gap-px',
+          isActive ? 'text-primary' : 'text-muted',
+        )}
+      >
+        {direction === 'asc' ? (
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+          </svg>
+        ) : direction === 'desc' ? (
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        ) : (
+          // Ícone neutro (ambas setas)
+          <svg className="h-3 w-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+          </svg>
+        )}
+      </span>
+    </button>
   )
 }
