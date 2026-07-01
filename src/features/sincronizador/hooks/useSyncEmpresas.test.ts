@@ -32,12 +32,15 @@ vi.mock('../services/sincronizadorService', () => ({
 
 import { useSyncEmpresas } from './useSyncEmpresas'
 
-function createWrapper() {
-  const queryClient = new QueryClient({
+function createClient() {
+  return new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   })
+}
+
+function createWrapper(client: QueryClient = createClient()) {
   return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children)
+    React.createElement(QueryClientProvider, { client }, children)
 }
 
 describe('useSyncEmpresas', () => {
@@ -102,5 +105,46 @@ describe('useSyncEmpresas', () => {
   it('isPending=false quando não há mutation em andamento', () => {
     const { result } = renderHook(() => useSyncEmpresas(), { wrapper: createWrapper() })
     expect(result.current.isPending).toBe(false)
+  })
+
+  it('sucesso → invalida a query dos logs do sincronizador (088)', async () => {
+    mockSyncEmpresas.mockResolvedValueOnce({ criadas: 2, atualizadas: 1, desativadas: 0 })
+    const client = createClient()
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useSyncEmpresas(), {
+      wrapper: createWrapper(client),
+    })
+
+    act(() => {
+      result.current.mutate()
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['sincronizador-logs'],
+    })
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['sincronizador-status'],
+    })
+  })
+
+  it('erro → NÃO invalida as queries', async () => {
+    mockSyncEmpresas.mockRejectedValueOnce(new Error('Falha'))
+    const client = createClient()
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useSyncEmpresas(), {
+      wrapper: createWrapper(client),
+    })
+
+    act(() => {
+      result.current.mutate()
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(invalidateSpy).not.toHaveBeenCalled()
   })
 })

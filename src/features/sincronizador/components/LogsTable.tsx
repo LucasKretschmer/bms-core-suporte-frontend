@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import type { ColumnDef, SortState } from '../../../components/ui/DataTable/types'
 import { DurationLabel } from './DurationLabel'
-import type { LogDto, SyncStatus } from '../types/sincronizador'
+import type { LogDto, SyncLogTipo, SyncStatus } from '../types/sincronizador'
 
 type LogsTableProps = {
   data: LogDto[]
@@ -45,6 +45,25 @@ function formatDisparo(disparo: string): string {
   return disparo === 'automatico' ? 'Automático' : 'Manual'
 }
 
+const TIPO_LABEL: Record<SyncLogTipo, string> = {
+  tickets: 'Tickets',
+  empresas: 'Empresas',
+}
+
+/**
+ * Rótulo do tipo da rodada (088).
+ * Logs antigos podem não trazer `tipo` no wire (linhas anteriores à migration);
+ * nesse caso assume 'tickets' — comportamento histórico.
+ */
+function formatTipo(tipo: SyncLogTipo | undefined): string {
+  return TIPO_LABEL[tipo ?? 'tickets']
+}
+
+/** Placeholder de célula sem valor aplicável ao tipo da rodada. */
+function EmptyCell() {
+  return <span className="text-foreground/30">—</span>
+}
+
 function formatDate(iso: string): string {
   try {
     return format(parseISO(iso), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })
@@ -72,6 +91,14 @@ const COLUMNS: ColumnDef<LogDto>[] = [
     accessor: (row) => formatDisparo(row.disparo),
   },
   {
+    key: 'tipo',
+    header: 'Tipo',
+    sortable: false,
+    align: 'center',
+    width: '90px',
+    accessor: (row) => formatTipo(row.tipo),
+  },
+  {
     key: 'iniciadoEm',
     header: 'Iniciado em',
     sortable: true,
@@ -94,20 +121,36 @@ const COLUMNS: ColumnDef<LogDto>[] = [
     header: 'Tickets / Projetos',
     sortable: false,
     align: 'center',
-    accessor: (row) => (
-      <span className="text-foreground/80">
-        {row.ticketsUpserted}↑ {row.ticketsIgnorados}↷ / {row.projetosUpserted}↑{' '}
-        {row.projetosIgnorados}↷
-      </span>
-    ),
+    // Só aplica a rodadas de tickets; rodadas de empresas não têm esses contadores.
+    accessor: (row) =>
+      (row.tipo ?? 'tickets') === 'empresas' ? (
+        <EmptyCell />
+      ) : (
+        <span className="text-foreground/80">
+          {row.ticketsUpserted}↑ {row.ticketsIgnorados}↷ / {row.projetosUpserted}↑{' '}
+          {row.projetosIgnorados}↷
+        </span>
+      ),
   },
   {
     key: 'empresas',
-    header: 'Emp. / Cont.',
+    header: 'Empresas',
     sortable: false,
     align: 'center',
-    width: '100px',
-    accessor: (row) => `${row.empresasResolvidas} / ${row.contatosResolvidos}`,
+    width: '160px',
+    // Rodada de empresas → criadas/atualizadas/desativadas (088).
+    // Rodada de tickets → empresas/contatos resolvidos (comportamento anterior).
+    accessor: (row) =>
+      (row.tipo ?? 'tickets') === 'empresas' ? (
+        <span
+          className="text-foreground/80"
+          title="Criadas / Atualizadas / Desativadas"
+        >
+          {row.empresasCriadas}+ {row.empresasAtualizadas}~ {row.empresasDesativadas}−
+        </span>
+      ) : (
+        `${row.empresasResolvidas} / ${row.contatosResolvidos}`
+      ),
   },
   {
     key: 'mensagemErro',

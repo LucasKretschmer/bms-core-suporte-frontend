@@ -4,6 +4,8 @@ import { z } from 'zod'
 export type SyncStatus = 'executando' | 'concluido' | 'erro'
 export type SyncDisparo = 'automatico' | 'manual'
 export type RegistroTipo = 'ticket' | 'projeto'
+/** Discriminador do log: rodada de sync de tickets ou de empresas (088). */
+export type SyncLogTipo = 'tickets' | 'empresas'
 /** Status agregado do sistema, calculado pelo backend (não derivar no front). */
 export type StatusSistema = 'online' | 'offline' | 'degradado'
 
@@ -15,6 +17,8 @@ export type StatusSistema = 'online' | 'offline' | 'degradado'
  */
 export type LogDto = {
   logId: number
+  /** Discriminador da rodada: 'tickets' (padrão histórico) | 'empresas' (088). */
+  tipo: SyncLogTipo
   status: SyncStatus
   disparo: SyncDisparo
   iniciadoEm: string
@@ -26,6 +30,10 @@ export type LogDto = {
   projetosIgnorados: number
   empresasResolvidas: number
   contatosResolvidos: number
+  /** Contadores da rodada de empresas (088) — só relevantes quando tipo='empresas'. */
+  empresasCriadas: number
+  empresasAtualizadas: number
+  empresasDesativadas: number
   mensagemErro: string | null
 }
 
