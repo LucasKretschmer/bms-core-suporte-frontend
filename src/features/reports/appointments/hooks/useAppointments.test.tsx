@@ -45,6 +45,8 @@ function setRole(isCoordenadorOuAcima: boolean) {
 beforeEach(() => {
   // Default da maioria dos casos: Atendente (scope 'mine').
   setRole(false)
+  // Isola cada teste: sem filtros persistidos remanescentes (075).
+  sessionStorage.clear()
 })
 
 function createWrapper() {
@@ -177,6 +179,118 @@ describe('useAppointments', () => {
     act(() => result.current.setPage(4))
     act(() => result.current.setFilters({ teamId: [3] }))
     expect(result.current.page).toBe(1)
+  })
+})
+
+describe('useAppointments — preservação de filtros ao voltar do detalhe (075)', () => {
+  const STORAGE_KEY = 'report-filters:appointments'
+
+  it('reidrata filtros salvos em sessionStorage (status/teamId/from/to/scope/search)', () => {
+    setRole(true) // Coordenador+: pode ter escolhido scope 'team'
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        scope: 'team',
+        search: 'nfe',
+        status: ['Aberto', 'Fechado'],
+        teamId: [7, 9],
+        from: '2026-03-01',
+        to: '2026-03-31',
+        sortBy: 'totalSeconds',
+        sortDirection: 'asc',
+      }),
+    )
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.filters.scope).toBe('team')
+    expect(result.current.filters.search).toBe('nfe')
+    expect(result.current.filters.status).toEqual(['Aberto', 'Fechado'])
+    expect(result.current.filters.teamId).toEqual([7, 9])
+    expect(result.current.filters.from).toBe('2026-03-01')
+    expect(result.current.filters.to).toBe('2026-03-31')
+  })
+
+  it('reidrata a ordenação salva (sortBy/sortDirection)', () => {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ sortBy: 'totalSeconds', sortDirection: 'asc' }),
+    )
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.sortBy).toBe('totalSeconds')
+    expect(result.current.sortDirection).toBe('asc')
+  })
+
+  it('sem nada salvo, usa os defaults (período mês atual, scope por papel, sort desc)', () => {
+    const today = new Date()
+    const expectedFrom = format(startOfMonth(today), 'yyyy-MM-dd')
+    const expectedTo = format(today, 'yyyy-MM-dd')
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.filters.scope).toBe('mine')
+    expect(result.current.filters.search).toBe('')
+    expect(result.current.filters.status).toEqual([])
+    expect(result.current.filters.teamId).toEqual([])
+    expect(result.current.filters.from).toBe(expectedFrom)
+    expect(result.current.filters.to).toBe(expectedTo)
+    expect(result.current.sortBy).toBeNull()
+    expect(result.current.sortDirection).toBe('desc')
+  })
+
+  it('blob parcial: campos ausentes caem nos defaults, presentes são restaurados', () => {
+    // Só status salvo — restante deve vir dos defaults.
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ status: ['Em andamento'] }))
+
+    const today = new Date()
+    const expectedFrom = format(startOfMonth(today), 'yyyy-MM-dd')
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.filters.status).toEqual(['Em andamento'])
+    expect(result.current.filters.scope).toBe('mine')
+    expect(result.current.filters.from).toBe(expectedFrom)
+    expect(result.current.sortBy).toBeNull()
+  })
+
+  it('preserva período limpo intencionalmente (from/to = null salvos)', () => {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ from: null, to: null, status: ['Aberto'] }),
+    )
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.filters.from).toBeNull()
+    expect(result.current.filters.to).toBeNull()
+    expect(result.current.filters.status).toEqual(['Aberto'])
+  })
+
+  it('blob inválido (JSON corrompido) cai nos defaults sem quebrar', () => {
+    sessionStorage.setItem(STORAGE_KEY, '{corrompido')
+
+    const today = new Date()
+    const expectedFrom = format(startOfMonth(today), 'yyyy-MM-dd')
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current.filters.from).toBe(expectedFrom)
+    expect(result.current.filters.scope).toBe('mine')
+    expect(result.current.sortDirection).toBe('desc')
   })
 })
 
