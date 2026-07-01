@@ -29,6 +29,9 @@ const alignClasses = {
  *
  * Nota: a reordenação de colunas por arrastar foi removida (071) — o drag no
  * cabeçalho interceptava o clique do botão de ordenar, impedindo o toggle.
+ * O botão de ordenação preenche a célula `<th>` inteira (080), de modo que
+ * qualquer clique no cabeçalho aciona a ordenação, preservando a semântica de
+ * `<button>` (teclado/foco) e o `aria-sort` na célula.
  */
 export function DataTable<TRow>({
   columns,
@@ -44,30 +47,47 @@ export function DataTable<TRow>({
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr>
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                style={{ width: col.width }}
-                className={clsx(
-                  // Especificações frontend.md
-                  'h-9 px-5 font-medium text-foreground/80 bg-background',
-                  'border-[0.7px] border-border',
-                  'first:rounded-tl-[5px] last:rounded-tr-[5px]',
-                  'select-none',
-                  'border-b border-border',
-                  alignClasses[col.align ?? 'center'],
-                )}
-              >
-                <SortableHeader
-                  label={col.headerNode ?? col.header}
-                  sortKey={col.sortKey}
-                  sortable={col.sortable}
-                  sortState={sortState}
-                  onSort={onSort}
-                  align={col.align ?? 'center'}
-                />
-              </th>
-            ))}
+            {columns.map((col) => {
+              const canSort = Boolean(col.sortable && col.sortKey)
+              const isSorted = canSort && sortState?.sortBy === col.sortKey
+              const ariaSort: React.AriaAttributes['aria-sort'] = isSorted
+                ? sortState?.sortDirection === 'asc'
+                  ? 'ascending'
+                  : 'descending'
+                : canSort
+                  ? 'none'
+                  : undefined
+              return (
+                <th
+                  key={col.key}
+                  style={{ width: col.width }}
+                  aria-sort={ariaSort}
+                  className={clsx(
+                    // Especificações frontend.md — padding movido para o
+                    // conteúdo do header (SortableHeader) para que o clique
+                    // preencha a célula inteira quando ordenável (080).
+                    'h-9 p-0 font-medium text-foreground/80 bg-background',
+                    'border-[0.7px] border-border',
+                    'first:rounded-tl-[5px] last:rounded-tr-[5px]',
+                    'select-none',
+                    'border-b border-border',
+                    // Hover discreto no cabeçalho ordenável (sombra do DS).
+                    canSort &&
+                      'transition-shadow duration-150 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+                    alignClasses[col.align ?? 'center'],
+                  )}
+                >
+                  <SortableHeader
+                    label={col.headerNode ?? col.header}
+                    sortKey={col.sortKey}
+                    sortable={col.sortable}
+                    sortState={sortState}
+                    onSort={onSort}
+                    align={col.align ?? 'center'}
+                  />
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>
