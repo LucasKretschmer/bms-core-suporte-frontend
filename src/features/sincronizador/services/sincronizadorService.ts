@@ -6,6 +6,7 @@ import type {
   ListLogsParams,
   RunResultDto,
   SyncTeamsResultDto,
+  SyncEmpresasResultDto,
   RegistroDto,
   BuscaRegistrosParams,
   TicketManutencaoDto,
@@ -66,6 +67,17 @@ export async function runSincronizador(): Promise<RunResultDto> {
 export async function syncTeams(): Promise<SyncTeamsResultDto> {
   const { data } = await api.post<{ data: SyncTeamsResultDto }>(
     '/api/v1/admin/sync/owners',
+  )
+  return data.data
+}
+
+/**
+ * POST /api/v1/sincronizador/empresas → { data: SyncEmpresasResultDto, message } (envelope).
+ * Sincronização de empresas dedicada (081) — síncrona, separada do sync de tickets.
+ */
+export async function syncEmpresas(): Promise<SyncEmpresasResultDto> {
+  const { data } = await api.post<{ data: SyncEmpresasResultDto }>(
+    '/api/v1/sincronizador/empresas',
   )
   return data.data
 }

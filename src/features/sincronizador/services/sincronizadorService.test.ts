@@ -16,6 +16,7 @@ import {
   listSincronizacaoLogs,
   runSincronizador,
   syncTeams,
+  syncEmpresas,
   listRegistrosTickets,
   listRegistrosProjetos,
   listRegistros,
@@ -188,6 +189,24 @@ describe('sincronizadorService', () => {
 
       expect(api.post).toHaveBeenCalledWith('/api/v1/admin/sync/owners')
       expect(result).toEqual({ ownersProcessed: 3, teamsProcessed: 2 })
+    })
+  })
+
+  // ── syncEmpresas ──────────────────────────────────────────────────────────────
+
+  describe('syncEmpresas', () => {
+    it('POST no endpoint dedicado e desempacota o envelope { data }', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: {
+          data: { criadas: 5, atualizadas: 3, desativadas: 1 },
+          message: 'Empresas sincronizadas.',
+        },
+      })
+
+      const result = await syncEmpresas()
+
+      expect(api.post).toHaveBeenCalledWith('/api/v1/sincronizador/empresas')
+      expect(result).toEqual({ criadas: 5, atualizadas: 3, desativadas: 1 })
     })
   })
 
