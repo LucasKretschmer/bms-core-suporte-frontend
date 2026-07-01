@@ -52,6 +52,16 @@ export type SyncTeamsResultDto = {
   teamsProcessed: number
 }
 
+/**
+ * Resultado da sincronização de empresas (081) — processo dedicado e
+ * separado do sync de tickets. Contadores do upsert + reconciliação.
+ */
+export type SyncEmpresasResultDto = {
+  criadas: number
+  atualizadas: number
+  desativadas: number
+}
+
 /** Item de ticket vindo de /registros/tickets (camelCase). */
 export type TicketManutencaoDto = {
   ticketId: number

@@ -23,6 +23,7 @@ import { LogsTable } from './components/LogsTable'
 import { ManutencaoRegistros } from './components/ManutencaoRegistros'
 import { SyncStatusBadge } from './components/SyncStatusBadge'
 import { SyncTeamsButton } from './components/SyncTeamsButton'
+import { SyncEmpresasButton } from './components/SyncEmpresasButton'
 import { listSincronizacaoLogs } from './services/sincronizadorService'
 import { useSincronizadorLogs } from './hooks/useSincronizadorLogs'
 import { useSincronizadorStatus } from './hooks/useSincronizadorStatus'
@@ -304,7 +305,20 @@ export default function SincronizadorPage() {
         <SyncTeamsButton />
       </section>
 
-      {/* ── Seção 4: Manutenção de Registros ── */}
+      {/* ── Seção 4: Empresas (081 — provisório, separado do sync de tickets) ── */}
+      <section aria-labelledby="empresas-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
+        <h2 id="empresas-heading" className="text-[20px] font-medium text-foreground">
+          Empresas
+        </h2>
+        <p className="text-sm text-foreground/70">
+          Sincroniza as empresas do HubSpot com o sistema (cadastro, dados e plano),
+          desativando as que foram removidas. Processo manual e independente da
+          sincronização de tickets — use quando houver mudanças de empresas ou planos.
+        </p>
+        <SyncEmpresasButton />
+      </section>
+
+      {/* ── Seção 5: Manutenção de Registros ── */}
       <section aria-labelledby="manutencao-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
         <h2 id="manutencao-heading" className="text-[20px] font-medium text-foreground">
           Manutenção de Registros
