@@ -140,6 +140,14 @@ export type ClientReportItemDto = {
   equipeAtribuida: string | null
   solicitante: RequesterDto | null
   atendente: string
+  /**
+   * Dono/responsável do chamado (owner do ticket) — DISTINTO do `atendente` do
+   * apontamento. Vem do backend (096) como chave JSON `donoChamado` (camelCase).
+   * Null para origem = 'projeto' (projeto pode não ter owner) ou quando o backend
+   * local ainda não expõe o campo — nesse caso o consolidado degrada para o
+   * fallback de atendentes distintos.
+   */
+  donoChamado?: string | null
   categorizacaoAtendimento: string | null
   faturamento: FaturamentoStatus
   aberturaDosChamado: string | null  // ISO Z (null p/ projeto)

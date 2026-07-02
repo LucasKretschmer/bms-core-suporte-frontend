@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
-type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen'
 
 type ModalProps = {
   isOpen: boolean
@@ -11,13 +11,24 @@ type ModalProps = {
   children: React.ReactNode
   size?: ModalSize
   className?: string
+  /**
+   * Intensidade do blur do backdrop. 'sm' (default) preserva o visual atual dos
+   * modais existentes; 'lg' aplica um desfoque mais forte (opt-in) para previews
+   * em tela quase cheia. Não altera outros usos do Modal.
+   */
+  backdropBlur?: 'sm' | 'lg'
 }
 
+/**
+ * 'fullscreen' = quase tela cheia com 4% de margem em cada borda (92vw × 92vh).
+ * Usado no preview de PDF (096). O body do modal usa flex-1 para preencher a altura.
+ */
 const sizeClasses: Record<ModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-2xl',
   xl: 'max-w-5xl',
+  fullscreen: 'w-[92vw] max-w-[92vw] h-[92vh] max-h-[92vh]',
 }
 
 /**
@@ -25,7 +36,15 @@ const sizeClasses: Record<ModalSize, string> = {
  * Cantos 16px, padding lateral 28px, padding topo/base 20px.
  * Trap de foco, Escape fecha, overlay clica-para-fechar.
  */
-export function Modal({ isOpen, onClose, title, children, size = 'md', className }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  className,
+  backdropBlur = 'sm',
+}: ModalProps) {
   const titleId = 'modal-title'
   const firstFocusableRef = useRef<HTMLButtonElement>(null)
 
@@ -61,7 +80,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
     >
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className={clsx(
+          'absolute inset-0 bg-black/40',
+          backdropBlur === 'lg' ? 'backdrop-blur-md' : 'backdrop-blur-sm',
+        )}
         aria-hidden="true"
         onClick={onClose}
       />
@@ -71,6 +93,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
         className={clsx(
           'relative z-10 w-full bg-card rounded-2xl shadow-xl',
           'flex flex-col',
+          size === 'fullscreen' && 'overflow-hidden',
           sizeClasses[size],
           className,
         )}
@@ -95,8 +118,16 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
           </div>
         )}
 
-        {/* Body com scroll interno */}
-        <div className="px-7 py-5 overflow-y-auto max-h-[calc(100vh-160px)]">
+        {/* Body com scroll interno. Em fullscreen, preenche a altura restante
+            (flex-1, min-h-0) em vez de usar uma altura máxima fixa. */}
+        <div
+          className={clsx(
+            'px-7 py-5 overflow-y-auto',
+            size === 'fullscreen'
+              ? 'flex-1 min-h-0'
+              : 'max-h-[calc(100vh-160px)]',
+          )}
+        >
           {children}
         </div>
       </div>

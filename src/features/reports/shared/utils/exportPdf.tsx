@@ -1,5 +1,39 @@
-import type { ClientReportDto } from '../types/reports'
+import type { ClientReportDto, ClientReportItemDto } from '../types/reports'
 import { formatDate, formatSeconds, formatMonth } from './formatters'
+import {
+  consolidateClientReport,
+  type ConsolidatedClientReportRow,
+} from '../../client-report/utils/consolidateClientReport'
+
+/**
+ * Tipo do relatório em PDF (096).
+ *  - 'detalhado'   → 1 linha por apontamento (comportamento original).
+ *  - 'consolidado' → 1 linha por chamado (soma/agregação — ver consolidateClientReport).
+ */
+export type ClientReportPdfType = 'detalhado' | 'consolidado'
+
+/**
+ * Opções de geração do PDF do Relatório do Cliente.
+ * `items` é o conjunto COMPLETO de apontamentos (todas as páginas) — nunca só a
+ * página visível. O `report` fornece cabeçalho e KPIs.
+ */
+type GenerateClientReportPdfOptions = {
+  report: ClientReportDto
+  items: ClientReportItemDto[]
+  type: ClientReportPdfType
+}
+
+/**
+ * Intervalo de datas de um chamado consolidado → "dd/MM/yyyy – dd/MM/yyyy"
+ * (ou data única quando início e fim coincidem / só há uma data).
+ */
+function formatDateRange(inicio: string | null, fim: string | null): string {
+  if (!inicio && !fim) return '—'
+  const ini = inicio ? formatDate(inicio) : null
+  const end = fim ? formatDate(fim) : null
+  if (ini && end) return ini === end ? ini : `${ini} – ${end}`
+  return ini ?? end ?? '—'
+}
 
 /**
  * Export PDF do Relatório do Cliente.
@@ -8,8 +42,13 @@ import { formatDate, formatSeconds, formatMonth } from './formatters'
  *
  * PRIVACIDADE: nunca incluir categoria do HubSpot (Problema - Invoicy etc.)
  * O DTO ClientReportItemDto não contém esse campo — garantia em tempo de tipo.
+ * A consolidação (096) apenas agrega campos existentes — não introduz novos.
  */
-export async function generateClientReportPdf(report: ClientReportDto): Promise<Blob> {
+export async function generateClientReportPdf(
+  options: GenerateClientReportPdfOptions,
+): Promise<Blob> {
+  const { report, items, type } = options
+
   // Lazy import para não carregar @react-pdf/renderer no bundle inicial
   const { pdf, Document, Page, Text, View, StyleSheet } = await import('@react-pdf/renderer')
 
@@ -84,8 +123,6 @@ export async function generateClientReportPdf(report: ClientReportDto): Promise<
         'BMS Core Suporte'
       : 'BMS Core Suporte'
 
-  const items = report.items ?? []
-
   const kpis = [
     { label: 'Apontamentos', value: String(report.totalApontamentos) },
     { label: 'Tempo Total', value: formatSeconds(report.totalSegundos) },
@@ -105,13 +142,70 @@ export async function generateClientReportPdf(report: ClientReportDto): Promise<
     'Tempo',
   ]
 
+  const typeLabel = type === 'consolidado' ? 'Consolidado' : 'Detalhado'
+
+  // Linhas do corpo — cada tipo produz uma lista de células já formatadas.
+  type PdfRow = {
+    key: string
+    origem: string
+    ticket: string
+    atendente: string
+    categorizacao: string
+    faturamento: string
+    abertura: string
+    apontamento: string
+    tempo: string
+  }
+
+  const rows: PdfRow[] =
+    type === 'consolidado'
+      ? consolidateClientReport(items).map((row: ConsolidatedClientReportRow) => {
+          const isProjeto = row.origem === 'projeto'
+          return {
+            key: row.chaveChamado,
+            origem: isProjeto ? 'Projeto' : 'Ticket',
+            ticket: isProjeto
+              ? (row.projetoNome ?? '—')
+              : row.hubspotTicketId
+                ? `#${row.hubspotTicketId}`
+                : '—',
+            atendente: row.atendente || '—',
+            categorizacao: row.categorizacaoAtendimento ?? '—',
+            faturamento: row.faturamento || '—',
+            abertura: row.aberturaDosChamado ? formatDate(row.aberturaDosChamado) : '—',
+            apontamento: formatDateRange(
+              row.dataApontamentoInicio,
+              row.dataApontamentoFim,
+            ),
+            tempo: formatSeconds(row.totalSegundos),
+          }
+        })
+      : items.map((item) => {
+          const isProjeto = item.origem === 'projeto'
+          return {
+            key: String(item.timeEntryId),
+            origem: isProjeto ? 'Projeto' : 'Ticket',
+            ticket: isProjeto
+              ? (item.projetoNome ?? '—')
+              : item.hubspotTicketId
+                ? `#${item.hubspotTicketId}`
+                : '—',
+            atendente: item.atendente || '—',
+            categorizacao: item.categorizacaoAtendimento ?? '—',
+            faturamento: item.faturamento,
+            abertura: item.aberturaDosChamado ? formatDate(item.aberturaDosChamado) : '—',
+            apontamento: formatDate(item.dataApontamento),
+            tempo: formatSeconds(item.totalSegundos),
+          }
+        })
+
   const PdfDocument = () => (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page}>
         <View style={styles.section}>
           <Text style={styles.title}>{appName}</Text>
           <Text style={styles.subtitle}>
-            Relatório do Cliente —{' '}
+            Relatório do Cliente ({typeLabel}) —{' '}
             {report.client.nomeFantasia ?? report.client.razaoSocial ?? '—'} •{' '}
             {formatMonth(report.competencia)}
           </Text>
@@ -136,30 +230,19 @@ export async function generateClientReportPdf(report: ClientReportDto): Promise<
           ))}
         </View>
 
-        {/* Linhas da tabela (visão combinada ticket + projeto, 057) */}
-        {items.map((item) => {
-          const isProjeto = item.origem === 'projeto'
-          return (
-            <View key={item.timeEntryId} style={styles.tableRow}>
-              <Text style={styles.tableCell}>{isProjeto ? 'Projeto' : 'Ticket'}</Text>
-              <Text style={styles.tableCell}>
-                {isProjeto
-                  ? (item.projetoNome ?? '—')
-                  : item.hubspotTicketId
-                    ? `#${item.hubspotTicketId}`
-                    : '—'}
-              </Text>
-              <Text style={styles.tableCell}>{item.atendente}</Text>
-              <Text style={styles.tableCell}>{item.categorizacaoAtendimento ?? '—'}</Text>
-              <Text style={styles.tableCell}>{item.faturamento}</Text>
-              <Text style={styles.tableCell}>
-                {item.aberturaDosChamado ? formatDate(item.aberturaDosChamado) : '—'}
-              </Text>
-              <Text style={styles.tableCell}>{formatDate(item.dataApontamento)}</Text>
-              <Text style={styles.tableCell}>{formatSeconds(item.totalSegundos)}</Text>
-            </View>
-          )
-        })}
+        {/* Linhas da tabela (detalhado = 1 por apontamento; consolidado = 1 por chamado) */}
+        {rows.map((row) => (
+          <View key={row.key} style={styles.tableRow}>
+            <Text style={styles.tableCell}>{row.origem}</Text>
+            <Text style={styles.tableCell}>{row.ticket}</Text>
+            <Text style={styles.tableCell}>{row.atendente}</Text>
+            <Text style={styles.tableCell}>{row.categorizacao}</Text>
+            <Text style={styles.tableCell}>{row.faturamento}</Text>
+            <Text style={styles.tableCell}>{row.abertura}</Text>
+            <Text style={styles.tableCell}>{row.apontamento}</Text>
+            <Text style={styles.tableCell}>{row.tempo}</Text>
+          </View>
+        ))}
       </Page>
     </Document>
   )

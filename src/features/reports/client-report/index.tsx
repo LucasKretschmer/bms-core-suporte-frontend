@@ -137,12 +137,15 @@ export default function ClientReportPage() {
   // Estado de export
   const [isExporting, setIsExporting] = useState(false)
 
-  /** Busca todas as páginas para export completo (nunca só a página visível) */
-  const fetchAllForExport = useCallback(async () => {
+  /**
+   * Busca TODOS os apontamentos (todas as páginas) — nunca só a página visível.
+   * Base tanto do export (CSV/Excel) quanto do PDF (detalhado/consolidado).
+   */
+  const fetchAllItems = useCallback(async (): Promise<ClientReportItemDto[]> => {
     if (!filters.clientId || !filters.from || !filters.to) return []
 
     const PAGE_SIZE = 200
-    const allItems: ReturnType<typeof itemToExportRow>[] = []
+    const allItems: ClientReportItemDto[] = []
     let currentPage = 1
     let totalPages = 1
 
@@ -162,13 +165,19 @@ export default function ClientReportPage() {
         Math.ceil(result.totalApontamentos / PAGE_SIZE),
       )
       ;(result.items ?? []).forEach((item) => {
-        allItems.push(itemToExportRow(item))
+        allItems.push(item)
       })
       currentPage++
     } while (currentPage <= totalPages)
 
     return allItems
   }, [filters.clientId, filters.from, filters.to, filters.origem, sortBy, sortDirection])
+
+  /** Linhas de export (CSV/Excel) — deriva do conjunto completo de itens. */
+  const fetchAllForExport = useCallback(async () => {
+    const items = await fetchAllItems()
+    return items.map(itemToExportRow)
+  }, [fetchAllItems])
 
   /** Sufixo do nome de arquivo de export: intervalo de datas (from_to) ou 'periodo'. */
   const periodSuffix =
@@ -294,7 +303,11 @@ export default function ClientReportPage() {
               onExportXlsx={() => void handleExportXlsx()}
               isExporting={isExporting}
             />
-            <ClientReportPdf report={reportData} filename={pdfFilename} />
+            <ClientReportPdf
+              report={reportData}
+              filename={pdfFilename}
+              fetchAllItems={fetchAllItems}
+            />
           </div>
         ) : null
       }
