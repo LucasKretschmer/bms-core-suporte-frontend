@@ -1,4 +1,3 @@
-import { InfoIcon } from '../../../components/ui/InfoIcon'
 import type { ColumnDef } from '../../../components/ui/DataTable/types'
 import type { PlanConsumptionItemDto } from '../shared/types/reports'
 import { formatHours, formatPercent } from '../shared/utils/formatters'
@@ -98,14 +97,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasAdicionais',
     header: 'Horas Adicionais',
-    headerNode: React.createElement(
-      'span',
-      { className: 'inline-flex items-center gap-1' },
-      'Horas Adicionais',
-      React.createElement(InfoIcon, {
-        tooltip: 'Horas consumidas além do plano contratado.',
-      }),
-    ),
+    headerInfo: 'Horas consumidas além do plano contratado.',
     sortable: true,
     sortKey: 'horasadicionais',
     align: 'right',
@@ -125,14 +117,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasFaturaveis',
     header: 'Horas Faturáveis',
-    headerNode: React.createElement(
-      'span',
-      { className: 'inline-flex items-center gap-1' },
-      'Horas Faturáveis',
-      React.createElement(InfoIcon, {
-        tooltip: 'Horas cobradas fora do plano (billableOutsidePlan).',
-      }),
-    ),
+    headerInfo: 'Horas cobradas fora do plano (billableOutsidePlan).',
     sortable: true,
     sortKey: 'horasfaturaveis',
     align: 'right',
@@ -141,14 +126,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasAnalise',
     header: 'Horas de Análise',
-    headerNode: React.createElement(
-      'span',
-      { className: 'inline-flex items-center gap-1' },
-      'Horas de Análise',
-      React.createElement(InfoIcon, {
-        tooltip: 'Horas em tickets de análise interna.',
-      }),
-    ),
+    headerInfo: 'Horas em tickets de análise interna.',
     sortable: true,
     sortKey: 'horasanalise',
     align: 'right',

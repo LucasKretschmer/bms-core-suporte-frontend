@@ -86,11 +86,15 @@ describe('planConsumptionColumns — estrutura', () => {
     })
   })
 
-  it('colunas com tooltip ⓘ têm headerNode definido', () => {
+  it('colunas com tooltip ⓘ usam headerInfo (fora do botão de ordenação, 098 r2)', () => {
     const tooltipCols = ['horasAdicionais', 'horasFaturaveis', 'horasAnalise']
     tooltipCols.forEach((key) => {
       const col = planConsumptionColumns.find((c) => c.key === key)
-      expect(col?.headerNode).toBeDefined()
+      // O tooltip é declarado como texto em `headerInfo` — não como um
+      // InfoIcon embutido em `headerNode` (que geraria <button> em <button>).
+      expect(typeof col?.headerInfo).toBe('string')
+      expect(col?.headerInfo?.length).toBeGreaterThan(0)
+      expect(col?.headerNode).toBeUndefined()
     })
   })
 

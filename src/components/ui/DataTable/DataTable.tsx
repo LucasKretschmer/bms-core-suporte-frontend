@@ -84,6 +84,7 @@ export function DataTable<TRow>({
                     sortState={sortState}
                     onSort={onSort}
                     align={col.align ?? 'center'}
+                    headerInfo={col.headerInfo}
                   />
                 </th>
               )

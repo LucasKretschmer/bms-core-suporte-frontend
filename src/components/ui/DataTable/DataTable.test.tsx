@@ -73,11 +73,16 @@ describe('DataTable', () => {
     const sortButton = screen.getByRole('button', { name: /ordenar por nome/i })
     const th = sortButton.closest('th') as HTMLTableCellElement
 
-    // O botão é o único filho interativo e preenche a célula inteira: qualquer
-    // clique visual no <th> cai sobre ele. Cobrimos os pontos internos do
-    // cabeçalho — o rótulo e o ícone — que estão dentro do botão full-cell.
+    // Sem ⓘ, o botão de ordenação é o único elemento interativo do cabeçalho e
+    // preenche a célula inteira (wrapper w-full + botão w-full): qualquer clique
+    // visual no <th> cai sobre ele. O botão vive dentro de um wrapper <div> que
+    // ocupa toda a célula (necessário para posicionar o ⓘ como irmão, 098 r2).
     expect(th.querySelectorAll('button')).toHaveLength(1)
-    expect(th.firstElementChild).toBe(sortButton)
+    const wrapper = th.firstElementChild as HTMLElement
+    expect(wrapper.tagName).toBe('DIV')
+    expect(wrapper.className).toContain('w-full')
+    expect(wrapper.firstElementChild).toBe(sortButton)
+    expect(sortButton.className).toContain('w-full')
 
     // Clicar no rótulo (dentro do botão) ordena.
     fireEvent.click(screen.getByText('Nome'))
@@ -188,6 +193,119 @@ describe('DataTable', () => {
     expect(headers.length).toBe(2)
     headers.forEach((th) => {
       expect(th.getAttribute('draggable')).not.toBe('true')
+    })
+  })
+
+  it('cabeçalho não quebra linha: conteúdo do header ordenável usa whitespace-nowrap (098)', () => {
+    renderTable({ sortBy: null, sortDirection: 'desc' })
+    const sortButton = screen.getByRole('button', { name: /ordenar por nome/i })
+    expect(sortButton.className).toContain('whitespace-nowrap')
+  })
+
+  it('cabeçalho não quebra linha: header não-ordenável usa whitespace-nowrap (098)', () => {
+    renderTable({ sortBy: null, sortDirection: 'desc' })
+    const headers = document.querySelectorAll('th')
+    const idHeader = Array.from(headers).find((th) =>
+      th.textContent?.includes('ID'),
+    )!
+    const content = idHeader.querySelector('div')!
+    expect(content.className).toContain('whitespace-nowrap')
+  })
+
+  it('renderiza headerNode (ex.: rótulo + InfoIcon) no cabeçalho (098)', () => {
+    const columnsWithNode: ColumnDef<Row>[] = [
+      {
+        key: 'nome',
+        header: 'Nome',
+        headerNode: <span data-testid="header-node">Horas Adicionais</span>,
+        accessor: (r) => r.nome,
+        sortable: true,
+        sortKey: 'nome',
+        align: 'right',
+      },
+    ]
+    render(
+      <DataTable
+        tableId="t"
+        columns={columnsWithNode}
+        data={rows}
+        sortState={{ sortBy: null, sortDirection: 'desc' }}
+        onSort={vi.fn()}
+      />,
+    )
+    expect(screen.getByTestId('header-node')).toHaveTextContent('Horas Adicionais')
+  })
+
+  it('coluna sortable com ⓘ: clicar no ícone (i) NÃO ordena (098 r2)', () => {
+    const onSort = vi.fn()
+    const columnsWithInfo: ColumnDef<Row>[] = [
+      {
+        key: 'nome',
+        header: 'Horas Adicionais',
+        headerInfo: 'Horas consumidas além do plano.',
+        accessor: (r) => r.nome,
+        sortable: true,
+        sortKey: 'nome',
+        align: 'right',
+      },
+    ]
+    render(
+      <DataTable
+        tableId="t"
+        columns={columnsWithInfo}
+        data={rows}
+        sortState={{ sortBy: null, sortDirection: 'desc' }}
+        onSort={onSort}
+      />,
+    )
+    // O botão do ⓘ é identificado pelo aria-label = texto do tooltip.
+    const infoButton = screen.getByRole('button', {
+      name: 'Horas consumidas além do plano.',
+    })
+    fireEvent.click(infoButton)
+    // Clicar no (i) apenas exibe o tooltip — jamais ordena.
+    expect(onSort).not.toHaveBeenCalled()
+
+    // Clicar no rótulo (dentro do botão de ordenação) continua ordenando.
+    fireEvent.click(screen.getByText('Horas Adicionais'))
+    expect(onSort).toHaveBeenCalledTimes(1)
+    expect(onSort).toHaveBeenCalledWith('nome')
+  })
+
+  it('coluna sortable com ⓘ: sem <button> dentro de <button> no <th> (098 r2)', () => {
+    const columnsWithInfo: ColumnDef<Row>[] = [
+      {
+        key: 'nome',
+        header: 'Horas Adicionais',
+        headerInfo: 'Horas consumidas além do plano.',
+        accessor: (r) => r.nome,
+        sortable: true,
+        sortKey: 'nome',
+        align: 'right',
+      },
+    ]
+    render(
+      <DataTable
+        tableId="t"
+        columns={columnsWithInfo}
+        data={rows}
+        sortState={{ sortBy: null, sortDirection: 'desc' }}
+        onSort={vi.fn()}
+      />,
+    )
+    const th = screen
+      .getByRole('button', { name: /ordenar por/i })
+      .closest('th') as HTMLTableCellElement
+
+    // Há exatamente 2 botões (ordenar + ⓘ), ambos irmãos — nunca aninhados.
+    const buttons = Array.from(th.querySelectorAll('button'))
+    expect(buttons).toHaveLength(2)
+    buttons.forEach((btn) => {
+      // Nenhum botão contém outro botão...
+      expect(btn.querySelector('button')).toBeNull()
+      // ...e nenhum botão tem um <button> ancestral dentro do <th>.
+      const ancestorButton = btn.parentElement?.closest('button')
+      expect(ancestorButton).toBeNull()
     })
   })
 
