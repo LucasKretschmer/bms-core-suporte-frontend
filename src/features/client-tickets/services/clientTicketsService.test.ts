@@ -83,6 +83,34 @@ describe('clientTicketsService', () => {
     expect(callParams).not.toHaveProperty('owner')
   })
 
+  it('listClientTickets envia from/to (período) quando preenchidos (095)', async () => {
+    mockedGet.mockResolvedValueOnce(paginated([]))
+    await listClientTickets({
+      clientId: 1,
+      from: '2026-06-01',
+      to: '2026-06-30',
+      page: 1,
+      pageSize: 25,
+    })
+    const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
+    expect(callParams.from).toBe('2026-06-01')
+    expect(callParams.to).toBe('2026-06-30')
+  })
+
+  it('listClientTickets omite from/to quando vazios/undefined (cleanParams) (095)', async () => {
+    mockedGet.mockResolvedValueOnce(paginated([]))
+    await listClientTickets({
+      clientId: 1,
+      from: '',
+      to: undefined,
+      page: 1,
+      pageSize: 25,
+    })
+    const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
+    expect(callParams).not.toHaveProperty('from')
+    expect(callParams).not.toHaveProperty('to')
+  })
+
   it('listTicketOwners desempacota data.data do envelope ApiResponse (070)', async () => {
     const owners = [
       { value: 1, label: 'Ana Silva' },

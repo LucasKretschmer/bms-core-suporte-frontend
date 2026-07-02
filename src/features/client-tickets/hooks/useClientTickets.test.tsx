@@ -59,4 +59,47 @@ describe('useClientTickets', () => {
       )
     })
   })
+
+  it('inicia from/to nulos quando sem datas iniciais (095)', () => {
+    const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
+    expect(result.current.filters.from).toBeNull()
+    expect(result.current.filters.to).toBeNull()
+  })
+
+  it('semeia from/to a partir das datas iniciais e as encaminha ao service (095)', async () => {
+    const { result } = renderHook(
+      () => useClientTickets(1, { from: '2026-06-01', to: '2026-06-30' }),
+      { wrapper: wrapper() },
+    )
+    expect(result.current.filters.from).toBe('2026-06-01')
+    expect(result.current.filters.to).toBe('2026-06-30')
+
+    await waitFor(() => {
+      expect(service.listClientTickets).toHaveBeenCalledWith(
+        expect.objectContaining({ from: '2026-06-01', to: '2026-06-30' }),
+      )
+    })
+  })
+
+  it('encaminha from/to ao service ao alterar o período (095)', async () => {
+    const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
+
+    result.current.setFilters({ from: '2026-07-01', to: '2026-07-15' })
+
+    await waitFor(() => {
+      expect(service.listClientTickets).toHaveBeenCalledWith(
+        expect.objectContaining({ from: '2026-07-01', to: '2026-07-15' }),
+      )
+    })
+  })
+
+  it('omite from/to (undefined) ao service quando o período está nulo (095)', async () => {
+    renderHook(() => useClientTickets(1), { wrapper: wrapper() })
+    await waitFor(() => {
+      expect(service.listClientTickets).toHaveBeenCalled()
+    })
+    const lastCall = vi.mocked(service.listClientTickets).mock.calls.at(-1)?.[0]
+    expect(lastCall?.from).toBeUndefined()
+    expect(lastCall?.to).toBeUndefined()
+  })
 })

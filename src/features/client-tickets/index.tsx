@@ -19,9 +19,16 @@ import { useClientKpis } from './hooks/useClientKpis'
 
 type ClientTicketsPageProps = {
   clientId: number
+  /** Período inicial (YYYY-MM-DD) vindo dos search params da rota (095). */
+  initialFrom?: string | null
+  initialTo?: string | null
 }
 
-export default function ClientTicketsPage({ clientId }: ClientTicketsPageProps) {
+export default function ClientTicketsPage({
+  clientId,
+  initialFrom = null,
+  initialTo = null,
+}: ClientTicketsPageProps) {
   const navigate = useNavigate()
   const kpisQuery = useClientKpis(clientId)
 
@@ -50,7 +57,12 @@ export default function ClientTicketsPage({ clientId }: ClientTicketsPageProps) 
         { label: clientName },
       ]}
     >
-      <ClientTicketsPanel clientId={clientId} onTicketClick={handleTicketClick} />
+      <ClientTicketsPanel
+        clientId={clientId}
+        onTicketClick={handleTicketClick}
+        initialFrom={initialFrom}
+        initialTo={initialTo}
+      />
     </PageWrapper>
   )
 }

@@ -247,6 +247,8 @@ export default function PlanConsumptionPage() {
             clientId={openClient.clientId}
             tableId={`client-tickets-drawer-${openClient.clientId}`}
             onTicketClick={handleTicketClick}
+            initialFrom={filters.from}
+            initialTo={filters.to}
           />
         </Modal>
       )}

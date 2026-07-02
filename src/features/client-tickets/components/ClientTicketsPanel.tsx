@@ -28,6 +28,7 @@ import { useToast } from '../../../components/ui/Toast'
 import { KpiCard } from '../../dashboards/shared/components/KpiCard'
 import { KpiCardGrid } from '../../dashboards/shared/components/KpiCardGrid'
 import { ExportButtons } from '../../reports/shared/components/ExportButtons'
+import { PeriodFilter } from '../../reports/shared/components/PeriodFilter'
 import {
   exportToCsv,
   exportToXlsx,
@@ -86,12 +87,17 @@ type ClientTicketsPanelProps = {
   tableId?: string
   /** Callback ao clicar numa linha de ticket (ex.: navegar ao detalhe). */
   onTicketClick?: (row: ClientTicketItemDto) => void
+  /** Período inicial (YYYY-MM-DD) — pré-preenchimento vindo da origem (095). */
+  initialFrom?: string | null
+  initialTo?: string | null
 }
 
 export function ClientTicketsPanel({
   clientId,
   tableId = 'client-tickets',
   onTicketClick,
+  initialFrom = null,
+  initialTo = null,
 }: ClientTicketsPanelProps) {
   const kpisQuery = useClientKpis(clientId)
   const {
@@ -106,7 +112,7 @@ export function ClientTicketsPanel({
     setPageSize,
     setSort,
     setFilters,
-  } = useClientTickets(clientId)
+  } = useClientTickets(clientId, { from: initialFrom, to: initialTo })
 
   // Busca textual com debounce
   const [searchInput, setSearchInput] = useState(filters.search)
@@ -166,6 +172,8 @@ export function ClientTicketsPanel({
         status: filters.status.length > 0 ? filters.status : undefined,
         teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
         owner: filters.owner.length > 0 ? filters.owner : undefined,
+        from: filters.from ?? undefined,
+        to: filters.to ?? undefined,
         sortBy: sortBy ?? undefined,
         sortDirection,
         page,
@@ -306,6 +314,13 @@ export function ClientTicketsPanel({
               isLoading={statusesQuery.isLoading}
               error={statusesQuery.isError ? 'Falha ao carregar status.' : undefined}
               className="min-w-[200px]"
+            />
+
+            {/* Filtro de período (095) — ligado a filters.from/to, clearable. */}
+            <PeriodFilter
+              from={filters.from}
+              to={filters.to}
+              onChange={(from, to) => setFilters({ from, to })}
             />
           </div>
           {!isEmpty && (

@@ -5,13 +5,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { ClientTicketsPanel } from './ClientTicketsPanel'
 import { ToastProvider } from '../../../components/ui/Toast'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
+import { listClientTickets } from '../services/clientTicketsService'
 import type { ClientTicketItemDto } from '../types/clientTickets'
 
 /**
@@ -63,7 +64,7 @@ function ticketsState(partial: Partial<TicketsReturn>): TicketsReturn {
     pageSize: 25,
     sortBy: null,
     sortDirection: 'desc',
-    filters: { search: '', status: [], teamId: [], owner: [] },
+    filters: { search: '', status: [], teamId: [], owner: [], from: null, to: null },
     setPage: vi.fn(),
     setPageSize: vi.fn(),
     setSort: vi.fn(),
@@ -187,5 +188,106 @@ describe('ClientTicketsPanel — click no chamado (070)', () => {
     fireEvent.click(screen.getByText('Falha no relatório'))
     expect(onTicketClick).toHaveBeenCalledTimes(1)
     expect(onTicketClick.mock.calls[0][0]).toMatchObject({ ticketId: 77 })
+  })
+})
+
+describe('ClientTicketsPanel — filtro de período (095)', () => {
+  it('renderiza o filtro de período (PeriodFilter: De/Até)', () => {
+    mockedTickets.mockReturnValue(
+      ticketsState({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      }),
+    )
+    renderPanel(<ClientTicketsPanel clientId={1} />)
+    expect(screen.getByText('De')).toBeInTheDocument()
+    expect(screen.getByText('Até')).toBeInTheDocument()
+  })
+
+  it('pré-preenche o período via initialFrom/initialTo (semeia o hook)', () => {
+    mockedTickets.mockReturnValue(
+      ticketsState({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      }),
+    )
+    renderPanel(
+      <ClientTicketsPanel clientId={1} initialFrom="2026-06-01" initialTo="2026-06-30" />,
+    )
+    // O hook (mockado) deve receber as datas iniciais para semear o estado.
+    expect(mockedTickets).toHaveBeenCalledWith(1, { from: '2026-06-01', to: '2026-06-30' })
+  })
+
+  it('passa null ao hook quando não há datas iniciais', () => {
+    mockedTickets.mockReturnValue(
+      ticketsState({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      }),
+    )
+    renderPanel(<ClientTicketsPanel clientId={1} />)
+    expect(mockedTickets).toHaveBeenCalledWith(1, { from: null, to: null })
+  })
+
+  it('reflete o período atual do filtro nos inputs (De/Até)', () => {
+    mockedTickets.mockReturnValue(
+      ticketsState({
+        filters: {
+          search: '',
+          status: [],
+          teamId: [],
+          owner: [],
+          from: '2026-06-01',
+          to: '2026-06-30',
+        },
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      }),
+    )
+    renderPanel(<ClientTicketsPanel clientId={1} />)
+    expect(screen.getByLabelText('De')).toHaveValue('2026-06-01')
+    expect(screen.getByLabelText('Até')).toHaveValue('2026-06-30')
+  })
+
+  it('export inclui from/to do período no fetch (095)', async () => {
+    const items: ClientTicketItemDto[] = [
+      {
+        ticketId: 10,
+        hubspotTicketId: '555',
+        assunto: 'Erro no login',
+        clienteNome: 'Acme',
+        equipe: 'Suporte',
+        ownerNome: 'Maria',
+        status: 'Aberto',
+        totalSeconds: 3600,
+        apontamentosCount: 2,
+        hubspotUrl: null,
+      },
+    ]
+    vi.mocked(listClientTickets).mockResolvedValue({
+      items,
+      totalCount: 1,
+      page: 1,
+      pageSize: 200,
+      totalPages: 1,
+    })
+    mockedTickets.mockReturnValue(
+      ticketsState({
+        filters: {
+          search: '',
+          status: [],
+          teamId: [],
+          owner: [],
+          from: '2026-06-01',
+          to: '2026-06-30',
+        },
+        data: { items, totalCount: 1, page: 1, pageSize: 25, totalPages: 1 },
+      }),
+    )
+    renderPanel(<ClientTicketsPanel clientId={1} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /csv/i }))
+
+    await waitFor(() => {
+      expect(vi.mocked(listClientTickets)).toHaveBeenCalledWith(
+        expect.objectContaining({ from: '2026-06-01', to: '2026-06-30' }),
+      )
+    })
   })
 })

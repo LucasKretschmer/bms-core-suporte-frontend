@@ -3,6 +3,7 @@ import {
   lazyRouteComponent,
   redirect,
   useParams,
+  useSearch,
 } from '@tanstack/react-router'
 import { z } from 'zod'
 import { tokenStore } from '../../../utils/tokenStore'
@@ -17,7 +18,12 @@ import { tokenStore } from '../../../utils/tokenStore'
 
 const searchSchema = z.object({
   // 'dashboard' = origem do drill-down de Saúde dos Planos (016).
+  // ATENÇÃO: `from` aqui é o ENUM de ORIGEM do drill-down — NÃO é data.
   from: z.enum(['consumo-planos', 'dashboard']).optional(),
+  // Período pré-preenchido a partir da origem (095), YYYY-MM-DD.
+  // Nomes propositalmente distintos de `from` (enum de origem) para não colidir.
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
 })
 
 const ClientTicketsPage = lazyRouteComponent(
@@ -36,5 +42,14 @@ export const Route = createFileRoute('/_auth/relatorios/clientes/$clientId')({
 
 function RouteComponent() {
   const { clientId } = useParams({ from: '/_auth/relatorios/clientes/$clientId' })
-  return <ClientTicketsPage clientId={Number(clientId)} />
+  const { dateFrom, dateTo } = useSearch({
+    from: '/_auth/relatorios/clientes/$clientId',
+  })
+  return (
+    <ClientTicketsPage
+      clientId={Number(clientId)}
+      initialFrom={dateFrom ?? null}
+      initialTo={dateTo ?? null}
+    />
+  )
 }

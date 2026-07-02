@@ -26,6 +26,14 @@ export type ListClientTicketsParams = {
   teamId?: number[]
   /** Filtro multi-atendente (array de IDs de usuário/owner interno) — 070. */
   owner?: number[]
+  /**
+   * Início do período (YYYY-MM-DD) — mesmo formato de listPlanConsumption/reportsService.
+   * O backend (GET /api/v1/reports/tickets) já aceita from/to (DateTime?); afeta
+   * totalSeconds/apontamentosCount. Vazio/undefined → cleanParams remove (sem filtro).
+   */
+  from?: string
+  /** Fim do período (YYYY-MM-DD). Ver observação em `from`. */
+  to?: string
   sortBy?: string | null
   sortDirection?: 'asc' | 'desc'
   page: number
