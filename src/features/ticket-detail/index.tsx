@@ -2,7 +2,7 @@
  * F3 — Tela "Detalhe do ticket" (/relatorios/tickets/$ticketId).
  *
  * Header + meta + KPIs + lista de cards de apontamento (com SegmentTimeline).
- * Criar/editar/excluir apontamento via TimeEntryModal (F4).
+ * Criar/editar apontamento via TimeEntryModal (F4). Cancelar/restaurar (099).
  * Breadcrumb encadeado conforme a origem do drill-down (F5/R2).
  */
 
@@ -19,7 +19,9 @@ import { TicketDetailHeader } from './components/TicketDetailHeader'
 import { TicketKpiSummary } from './components/TicketKpiSummary'
 import { TimeEntryCard } from './components/TimeEntryCard'
 import { TimeEntryModal } from './components/TimeEntryModal'
-import { DeleteTimeEntryDialog } from './components/DeleteTimeEntryDialog'
+import { CancelTimeEntryDialog } from './components/CancelTimeEntryDialog'
+import { Modal } from '../../components/ui/Modal'
+import { Button } from '../../components/ui/Button'
 import { useTicketDetail } from './hooks/useTicketDetail'
 import { useTicketTimeEntries } from './hooks/useTicketTimeEntries'
 import { useTimeEntryMutations } from './hooks/useTimeEntryMutations'
@@ -47,11 +49,12 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
 
   const headerQuery = useTicketDetail(ticketId)
   const entriesQuery = useTicketTimeEntries(ticketId)
-  const { remove } = useTimeEntryMutations(ticketId)
+  const { cancel, restore } = useTimeEntryMutations(ticketId)
 
   const [modal, setModal] = useState<ModalState>({ open: false })
-  const [deleteTarget, setDeleteTarget] = useState<TicketTimeEntryDto | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<TicketTimeEntryDto | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [restoreTarget, setRestoreTarget] = useState<TicketTimeEntryDto | null>(null)
   const { agentOptions, categoryOptions, isLoading: optionsLoading } = useModalOptions(modal.open)
 
   const ticket = headerQuery.data
@@ -76,34 +79,50 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
     return isCoordenadorOuAcima || entry.userId === currentUserId
   }
 
-  /** Exclusão com motivo é restrita a gestor (Gerente/Admin) — 047. */
-  const canDeleteEntries = isGerentePlus
+  /** Cancelar/restaurar apontamento é restrito a gestor (Gerente/Admin) — 099. */
+  const canManageEntries = isGerentePlus
 
-  /** Rótulo curto do apontamento para contextualizar o diálogo de exclusão. */
+  /** Rótulo curto do apontamento para contextualizar o diálogo de cancelamento. */
   function entryLabel(entry: TicketTimeEntryDto): string {
     const agente = entry.agenteNome?.trim() || 'Atendente'
     return `${agente} · ${formatTime(entry.startTime)}`
   }
 
-  function openDelete(entry: TicketTimeEntryDto) {
-    setDeleteError(null)
-    setDeleteTarget(entry)
+  function openCancel(entry: TicketTimeEntryDto) {
+    setCancelError(null)
+    setCancelTarget(entry)
   }
 
-  function handleConfirmDelete(reason: string) {
-    if (!deleteTarget) return
-    setDeleteError(null)
-    remove.mutate(
-      { id: deleteTarget.id, reason },
+  function handleConfirmCancel(reason: string) {
+    if (!cancelTarget) return
+    setCancelError(null)
+    cancel.mutate(
+      { id: cancelTarget.id, note: reason },
       {
         onSuccess: () => {
-          toast.success('Apontamento excluído.')
-          setDeleteTarget(null)
+          toast.success('Apontamento cancelado.')
+          setCancelTarget(null)
         },
         onError: (err) => {
           const msg = handleApiError(err)
-          setDeleteError(msg)
+          setCancelError(msg)
           toast.error(msg)
+        },
+      },
+    )
+  }
+
+  function handleConfirmRestore() {
+    if (!restoreTarget) return
+    restore.mutate(
+      { id: restoreTarget.id },
+      {
+        onSuccess: () => {
+          toast.success('Apontamento restaurado.')
+          setRestoreTarget(null)
+        },
+        onError: (err) => {
+          toast.error(handleApiError(err))
         },
       },
     )
@@ -165,8 +184,9 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
                 entry={entry}
                 canEdit={canEditEntry(entry)}
                 onEdit={(e) => setModal({ open: true, mode: 'edit', entry: e })}
-                canDelete={canDeleteEntries}
-                onDelete={openDelete}
+                canManage={canManageEntries}
+                onCancel={openCancel}
+                onRestore={setRestoreTarget}
               />
             ))}
         </section>
@@ -184,11 +204,11 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
           optionsLoading={optionsLoading}
           canChangeAgent={isCoordenadorOuAcima}
           currentUserId={currentUserId}
-          canDelete={modal.mode === 'edit' && canDeleteEntries}
+          canManage={modal.mode === 'edit' && canManageEntries}
           onClose={() => setModal({ open: false })}
-          onRequestDelete={(e) => {
+          onRequestCancel={(e) => {
             setModal({ open: false })
-            openDelete(e)
+            openCancel(e)
           }}
           onSubmitted={() => {
             void entriesQuery.refetch()
@@ -196,18 +216,54 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
         />
       )}
 
-      <DeleteTimeEntryDialog
-        isOpen={deleteTarget !== null}
-        entryLabel={deleteTarget ? entryLabel(deleteTarget) : undefined}
-        isSubmitting={remove.isPending}
-        apiError={deleteError}
-        onConfirm={handleConfirmDelete}
+      <CancelTimeEntryDialog
+        isOpen={cancelTarget !== null}
+        entryLabel={cancelTarget ? entryLabel(cancelTarget) : undefined}
+        isSubmitting={cancel.isPending}
+        apiError={cancelError}
+        onConfirm={handleConfirmCancel}
         onClose={() => {
-          if (remove.isPending) return
-          setDeleteTarget(null)
-          setDeleteError(null)
+          if (cancel.isPending) return
+          setCancelTarget(null)
+          setCancelError(null)
         }}
       />
+
+      {restoreTarget && (
+        <Modal
+          isOpen={restoreTarget !== null}
+          size="sm"
+          title="Restaurar apontamento"
+          onClose={() => {
+            if (restore.isPending) return
+            setRestoreTarget(null)
+          }}
+        >
+          <div className="flex flex-col gap-5">
+            <p className="-mt-1 text-sm text-foreground/70">
+              O tempo volta a contar nas somas. Deseja restaurar este apontamento?
+              {` (${entryLabel(restoreTarget)})`}
+            </p>
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <Button
+                variant="secondary"
+                onClick={() => setRestoreTarget(null)}
+                disabled={restore.isPending}
+              >
+                Voltar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmRestore}
+                isLoading={restore.isPending}
+                disabled={restore.isPending}
+              >
+                Restaurar
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </PageWrapper>
   )
 }

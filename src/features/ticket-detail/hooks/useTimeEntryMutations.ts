@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  cancelTimeEntry,
   createManualTimeEntry,
-  deleteTimeEntry,
+  restoreTimeEntry,
   updateManualTimeEntry,
   type WorkBlockPayload,
 } from '../services/timeEntryService'
@@ -58,11 +59,16 @@ export function useTimeEntryMutations(ticketId: number) {
     onSuccess: invalidateDetail,
   })
 
-  const remove = useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
-      deleteTimeEntry(id, reason.trim()),
+  const cancel = useMutation({
+    mutationFn: ({ id, note }: { id: number; note: string }) =>
+      cancelTimeEntry(id, note.trim(), crypto.randomUUID()),
     onSuccess: invalidateDetail,
   })
 
-  return { create, update, remove }
+  const restore = useMutation({
+    mutationFn: ({ id }: { id: number }) => restoreTimeEntry(id, crypto.randomUUID()),
+    onSuccess: invalidateDetail,
+  })
+
+  return { create, update, cancel, restore }
 }

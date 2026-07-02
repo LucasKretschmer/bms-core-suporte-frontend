@@ -7,10 +7,15 @@ type TimeEntryCardProps = {
   entry: TicketTimeEntryDto
   canEdit: boolean
   onEdit: (entry: TicketTimeEntryDto) => void
-  /** Pode excluir o lançamento (gestor — 047). Quando true, exibe a ação "excluir". */
-  canDelete?: boolean
-  /** Dispara o fluxo de exclusão com motivo para este apontamento (047). */
-  onDelete?: (entry: TicketTimeEntryDto) => void
+  /**
+   * Pode gerir o ciclo de vida do apontamento (gestor — 099). Quando true, exibe
+   * "Cancelar apontamento" em COMPLETED e "Restaurar" em CANCELLED.
+   */
+  canManage?: boolean
+  /** Dispara o fluxo de cancelamento com motivo para este apontamento (099). */
+  onCancel?: (entry: TicketTimeEntryDto) => void
+  /** Dispara o fluxo de restauração (confirmação simples, sem motivo) (099). */
+  onRestore?: (entry: TicketTimeEntryDto) => void
 }
 
 /**
@@ -37,10 +42,21 @@ function EditIcon() {
   )
 }
 
-function TrashIcon() {
+/** Ícone de "ban" (proibido) para a ação de cancelar apontamento. */
+function BanIcon() {
   return (
     <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.6 5.6l12.8 12.8" />
+    </svg>
+  )
+}
+
+/** Ícone de "restaurar" (seta circular). */
+function RestoreIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M4 9a8 8 0 1 1 1.5 8" />
     </svg>
   )
 }
@@ -50,17 +66,24 @@ function TrashIcon() {
  * Header: agente + categorização + (badge "Faturável por fora").
  * Meta: data/hora início→fim + nº de pausas. Direita: tempo + link editar (canEdit).
  * Timeline proporcional + lista de segmentos detalhada + observação.
+ *
+ * Apontamentos CANCELLED permanecem visíveis com estilo discreto (099): badge
+ * "Cancelado", motivo (note), quem cancelou (canceladoPorNome) e a ação "Restaurar".
  */
 export function TimeEntryCard({
   entry,
   canEdit,
   onEdit,
-  canDelete = false,
-  onDelete,
+  canManage = false,
+  onCancel,
+  onRestore,
 }: TimeEntryCardProps) {
   const pauseCount = entry.segments.filter((s) => s.type === 'PAUSE').length
   const end = entry.endTime
   const crossesDay = end ? formatDate(entry.startTime) !== formatDate(end) : false
+
+  const isCancelled = entry.status.toUpperCase() === 'CANCELLED'
+  const isCompleted = entry.status.toUpperCase() === 'COMPLETED'
 
   const metaTime = end
     ? `${formatDate(entry.startTime)} · ${formatTime(entry.startTime)} → ${crossesDay ? `${formatDate(end)} ` : ''}${formatTime(end)}`
@@ -68,8 +91,13 @@ export function TimeEntryCard({
 
   const pauseLabel = pauseCount > 0 ? `${pauseCount} pausa(s)` : 'sem pausa'
 
+  // Cancelados: card discreto (opacidade reduzida) para não competir com os ativos.
+  const articleClass = isCancelled
+    ? 'rounded-xl border border-border bg-card p-4 opacity-70'
+    : 'rounded-xl border border-border bg-card p-4'
+
   return (
-    <article className="rounded-xl border border-border bg-card p-4">
+    <article className={articleClass}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -90,7 +118,8 @@ export function TimeEntryCard({
             {formatSeconds(entry.totalSeconds)}
           </div>
           <div className="mt-0.5 flex items-center justify-end gap-3">
-            {canEdit && (
+            {/* Editar: bloqueado em cancelados (restaure antes de editar). */}
+            {canEdit && !isCancelled && (
               <button
                 type="button"
                 onClick={() => onEdit(entry)}
@@ -100,15 +129,28 @@ export function TimeEntryCard({
                 editar
               </button>
             )}
-            {canDelete && onDelete && (
+            {/* Cancelar: só em COMPLETED e com permissão de gestor. */}
+            {canManage && onCancel && isCompleted && (
               <button
                 type="button"
-                onClick={() => onDelete(entry)}
-                aria-label="Excluir lançamento"
+                onClick={() => onCancel(entry)}
+                aria-label="Cancelar apontamento"
                 className="inline-flex items-center gap-1 text-xs text-error-fg hover:underline rounded focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <TrashIcon />
-                excluir
+                <BanIcon />
+                Cancelar apontamento
+              </button>
+            )}
+            {/* Restaurar: só em CANCELLED e com permissão de gestor. */}
+            {canManage && onRestore && isCancelled && (
+              <button
+                type="button"
+                onClick={() => onRestore(entry)}
+                aria-label="Restaurar apontamento"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline rounded focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <RestoreIcon />
+                Restaurar
               </button>
             )}
           </div>
@@ -146,8 +188,17 @@ export function TimeEntryCard({
         </ul>
       )}
 
-      {/* Observação */}
-      {entry.note && (
+      {/* Motivo do cancelamento + quem cancelou (099) — destacado nos cancelados. */}
+      {isCancelled && (
+        <div className="mt-2 rounded-md border border-border bg-badge-neutro-bg px-3 py-2 text-xs text-foreground/70">
+          <span className="font-semibold">Cancelado</span>
+          {entry.canceladoPorNome ? ` por ${entry.canceladoPorNome}` : ''}
+          {entry.note ? ` · Motivo: ${entry.note}` : ''}
+        </div>
+      )}
+
+      {/* Observação (apontamentos ativos — nos cancelados a nota vira o motivo acima). */}
+      {!isCancelled && entry.note && (
         <p className="mt-2 text-sm text-foreground/80">
           <span className="font-semibold">Obs:</span> {entry.note}
         </p>

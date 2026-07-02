@@ -30,6 +30,9 @@ export type TicketTimeEntryDto = {
   totalSeconds: number
   note: string | null
   pendingCategory: boolean
+  /** Quem cancelou o apontamento (099) — preenchido quando status = CANCELLED. */
+  canceladoPorUserId: number | null
+  canceladoPorNome: string | null
   segments: TicketSegmentDto[]
 }
 

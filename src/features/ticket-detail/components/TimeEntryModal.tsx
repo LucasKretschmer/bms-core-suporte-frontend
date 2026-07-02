@@ -25,12 +25,21 @@ type TimeEntryModalProps = {
   canChangeAgent: boolean
   /** userId do usuário logado — default do atendente em modo create */
   currentUserId: number
-  /** Pode excluir o apontamento (gestor — 047) */
-  canDelete: boolean
+  /** Pode gerir o ciclo de vida do apontamento (gestor — 099) */
+  canManage: boolean
   onClose: () => void
-  /** Solicita ao pai abrir o diálogo de exclusão com motivo obrigatório (047). */
-  onRequestDelete: (entry: TicketTimeEntryDto) => void
+  /** Solicita ao pai abrir o diálogo de cancelamento com motivo obrigatório (099). */
+  onRequestCancel: (entry: TicketTimeEntryDto) => void
   onSubmitted: () => void
+}
+
+function BanIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.6 5.6l12.8 12.8" />
+    </svg>
+  )
 }
 
 function TrashIcon() {
@@ -95,9 +104,9 @@ export function TimeEntryModal({
   optionsLoading = false,
   canChangeAgent,
   currentUserId,
-  canDelete,
+  canManage,
   onClose,
-  onRequestDelete,
+  onRequestCancel,
   onSubmitted,
 }: TimeEntryModalProps) {
   const toast = useToast()
@@ -317,16 +326,19 @@ export function TimeEntryModal({
           {/* Rodapé */}
           <div className="flex items-center justify-between gap-3 pt-1">
             <div>
-              {mode === 'edit' && canDelete && entry && (
-                <Button
-                  variant="ghost"
-                  onClick={() => onRequestDelete(entry)}
-                  className="text-error-fg"
-                  icon={<TrashIcon />}
-                >
-                  Excluir
-                </Button>
-              )}
+              {mode === 'edit' &&
+                canManage &&
+                entry &&
+                entry.status.toUpperCase() === 'COMPLETED' && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => onRequestCancel(entry)}
+                    className="text-error-fg"
+                    icon={<BanIcon />}
+                  >
+                    Cancelar apontamento
+                  </Button>
+                )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>

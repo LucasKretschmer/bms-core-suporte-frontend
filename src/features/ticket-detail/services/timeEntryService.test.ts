@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
+  cancelTimeEntry,
   createManualTimeEntry,
-  deleteTimeEntry,
+  restoreTimeEntry,
   updateManualTimeEntry,
 } from './timeEntryService'
 import { api } from '../../../services/api'
@@ -12,13 +13,11 @@ vi.mock('../../../services/api', () => ({
 
 const mockedPost = vi.mocked(api.post)
 const mockedPut = vi.mocked(api.put)
-const mockedDelete = vi.mocked(api.delete)
 
 describe('timeEntryService', () => {
   beforeEach(() => {
     mockedPost.mockReset()
     mockedPut.mockReset()
-    mockedDelete.mockReset()
   })
 
   it('createManualTimeEntry envia Idempotency-Key e desempacota ApiResponse', async () => {
@@ -52,11 +51,23 @@ describe('timeEntryService', () => {
     )
   })
 
-  it('deleteTimeEntry chama DELETE /{id} com o motivo no body', async () => {
-    mockedDelete.mockResolvedValueOnce({ status: 204 })
-    await deleteTimeEntry(1, 'Lançamento duplicado')
-    expect(mockedDelete).toHaveBeenCalledWith('/api/v1/time-entries/1', {
-      data: { reason: 'Lançamento duplicado' },
+  it('cancelTimeEntry faz POST /{id}/cancel com note no body e Idempotency-Key', async () => {
+    mockedPost.mockResolvedValueOnce({ data: { data: { id: 1 }, message: 'ok' } })
+    const result = await cancelTimeEntry(1, 'Lançamento duplicado na cobrança', 'key-cancel')
+    expect(mockedPost).toHaveBeenCalledWith(
+      '/api/v1/time-entries/1/cancel',
+      { note: 'Lançamento duplicado na cobrança' },
+      { headers: { 'Idempotency-Key': 'key-cancel' } },
+    )
+    expect(result).toEqual({ id: 1 })
+  })
+
+  it('restoreTimeEntry faz POST /{id}/restore sem body e com Idempotency-Key', async () => {
+    mockedPost.mockResolvedValueOnce({ data: { data: { id: 2 }, message: 'ok' } })
+    const result = await restoreTimeEntry(2, 'key-restore')
+    expect(mockedPost).toHaveBeenCalledWith('/api/v1/time-entries/2/restore', undefined, {
+      headers: { 'Idempotency-Key': 'key-restore' },
     })
+    expect(result).toEqual({ id: 2 })
   })
 })

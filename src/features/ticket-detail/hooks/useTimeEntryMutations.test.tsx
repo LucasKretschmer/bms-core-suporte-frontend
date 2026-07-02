@@ -8,7 +8,8 @@ import type { TimeEntryFormValues } from '../types/timeEntrySchema'
 vi.mock('../services/timeEntryService', () => ({
   createManualTimeEntry: vi.fn(),
   updateManualTimeEntry: vi.fn(),
-  deleteTimeEntry: vi.fn(),
+  cancelTimeEntry: vi.fn(),
+  restoreTimeEntry: vi.fn(),
 }))
 
 function wrapper(client: QueryClient) {
@@ -46,7 +47,8 @@ describe('useTimeEntryMutations', () => {
   beforeEach(() => {
     vi.mocked(service.createManualTimeEntry).mockReset()
     vi.mocked(service.updateManualTimeEntry).mockReset()
-    vi.mocked(service.deleteTimeEntry).mockReset()
+    vi.mocked(service.cancelTimeEntry).mockReset()
+    vi.mocked(service.restoreTimeEntry).mockReset()
   })
 
   it('create monta payload com works em ISO Z, userId e gera Idempotency-Key', async () => {
@@ -98,26 +100,62 @@ describe('useTimeEntryMutations', () => {
     expect(payload).not.toHaveProperty('userId')
   })
 
-  it('remove chama deleteTimeEntry com o id e o motivo (trim)', async () => {
-    vi.mocked(service.deleteTimeEntry).mockResolvedValue()
+  it('cancel chama cancelTimeEntry com id, note (trim) e uma Idempotency-Key', async () => {
+    vi.mocked(service.cancelTimeEntry).mockResolvedValue({ id: 1 })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const { result } = renderHook(() => useTimeEntryMutations(10), {
       wrapper: wrapper(client),
     })
 
-    await result.current.remove.mutateAsync({ id: 1, reason: '  motivo válido  ' })
-    expect(service.deleteTimeEntry).toHaveBeenCalledWith(1, 'motivo válido')
+    await result.current.cancel.mutateAsync({ id: 1, note: '  motivo de cancelamento  ' })
+
+    const [id, note, key] = vi.mocked(service.cancelTimeEntry).mock.calls[0]
+    expect(id).toBe(1)
+    expect(note).toBe('motivo de cancelamento')
+    expect(typeof key).toBe('string')
+    expect(key.length).toBeGreaterThan(0)
   })
 
-  it('remove invalida as queries do detalhe no sucesso', async () => {
-    vi.mocked(service.deleteTimeEntry).mockResolvedValue()
+  it('cancel invalida as queries do detalhe no sucesso', async () => {
+    vi.mocked(service.cancelTimeEntry).mockResolvedValue({ id: 1 })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useTimeEntryMutations(10), {
       wrapper: wrapper(client),
     })
 
-    await result.current.remove.mutateAsync({ id: 1, reason: 'motivo válido' })
+    await result.current.cancel.mutateAsync({ id: 1, note: 'motivo de cancelamento' })
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['ticket-time-entries', 10] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['ticket-detail', 10] })
+    })
+  })
+
+  it('restore chama restoreTimeEntry com o id e uma Idempotency-Key', async () => {
+    vi.mocked(service.restoreTimeEntry).mockResolvedValue({ id: 3 })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { result } = renderHook(() => useTimeEntryMutations(10), {
+      wrapper: wrapper(client),
+    })
+
+    await result.current.restore.mutateAsync({ id: 3 })
+
+    const [id, key] = vi.mocked(service.restoreTimeEntry).mock.calls[0]
+    expect(id).toBe(3)
+    expect(typeof key).toBe('string')
+    expect(key.length).toBeGreaterThan(0)
+  })
+
+  it('restore invalida as queries do detalhe no sucesso', async () => {
+    vi.mocked(service.restoreTimeEntry).mockResolvedValue({ id: 3 })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useTimeEntryMutations(10), {
+      wrapper: wrapper(client),
+    })
+
+    await result.current.restore.mutateAsync({ id: 3 })
 
     await waitFor(() => {
       expect(spy).toHaveBeenCalledWith({ queryKey: ['ticket-time-entries', 10] })
