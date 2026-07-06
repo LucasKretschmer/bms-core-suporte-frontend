@@ -27,7 +27,7 @@ function ExternalIcon() {
 
 /**
  * Header do detalhe do ticket (referência protótipo L554-562).
- * #ID — assunto [status] + meta + botões (Adicionar apontamento / Abrir no HubSpot).
+ * #ID — assunto [status] + meta + botões (Adicionar apontamento / Acessar no HubSpot).
  * Alerta Invoicy (R10) quando a categoria HubSpot é a de análise.
  */
 export function TicketDetailHeader({
@@ -77,7 +77,7 @@ export function TicketDetailHeader({
               className="inline-flex items-center justify-center gap-2.5 h-9 px-3 py-2.5 rounded-[5px] font-semibold text-sm bg-card text-foreground border border-border transition-shadow duration-150 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
             >
               <ExternalIcon />
-              <span>Abrir no HubSpot</span>
+              <span>Acessar no HubSpot</span>
             </a>
           )}
         </div>
