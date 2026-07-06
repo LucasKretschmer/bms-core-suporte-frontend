@@ -9,11 +9,12 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { format, startOfMonth } from 'date-fns'
 import { useAppointments, defaultAppointmentsPeriod } from './useAppointments'
 import { usePermissions } from '../../../../hooks/usePermissions'
+import { listTicketsReport } from '../../shared/services/reportsService'
 import type { PaginatedResponse } from '../../../../types/api'
 import type { TicketReportItemDto } from '../../shared/types/reports'
 
@@ -179,6 +180,58 @@ describe('useAppointments', () => {
     act(() => result.current.setPage(4))
     act(() => result.current.setFilters({ teamId: [3] }))
     expect(result.current.page).toBe(1)
+  })
+
+  // ── Filtro de categoria (107) ────────────────────────────────────────────────
+
+  it('categoria inicia como array vazio e aceita múltiplos valores', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+    expect(result.current.filters.categoria).toEqual([])
+
+    act(() => result.current.setFilters({ categoria: ['Problema - Invoicy', 'Dúvida'] }))
+    expect(result.current.filters.categoria).toEqual(['Problema - Invoicy', 'Dúvida'])
+  })
+
+  it('ao mudar filtro de categoria, reseta para página 1', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.setPage(2))
+    act(() => result.current.setFilters({ categoria: ['Problema - Invoicy'] }))
+    expect(result.current.page).toBe(1)
+  })
+
+  it('envia categoria[] ao service quando há categorias selecionadas', async () => {
+    const mocked = vi.mocked(listTicketsReport)
+    mocked.mockClear()
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.setFilters({ categoria: ['Problema - Invoicy'] }))
+
+    await waitFor(() => {
+      expect(mocked).toHaveBeenCalledWith(
+        expect.objectContaining({ categoria: ['Problema - Invoicy'] }),
+      )
+    })
+  })
+
+  it('não envia categoria ao service quando o filtro está vazio (undefined)', async () => {
+    const mocked = vi.mocked(listTicketsReport)
+    mocked.mockClear()
+
+    renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mocked).toHaveBeenCalled())
+    const firstArg = mocked.mock.calls[0][0]
+    expect(firstArg.categoria).toBeUndefined()
   })
 })
 

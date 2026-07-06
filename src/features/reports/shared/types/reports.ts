@@ -75,6 +75,12 @@ export type TicketReportItemDto = {
   equipe: string | null
   ownerNome: string | null
   status: string | null
+  /**
+   * Categoria do HubSpot (ex.: "Problema - Invoicy"). Exibida apenas na TELA
+   * (coluna + filtro) desta tela interna — NUNCA no export CSV/Excel (privacidade,
+   * AP-SECURITY-001/§8.3). Null quando o backend não classifica o ticket.
+   */
+  categoria?: string | null
   totalSeconds: number
   apontamentosCount: number
   hubspotUrl: string | null

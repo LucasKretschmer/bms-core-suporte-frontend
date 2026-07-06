@@ -13,6 +13,8 @@ export type AppointmentsFilters = {
   search: string
   status: string[]
   teamId: number[]
+  /** Categorias HubSpot selecionadas no filtro (107). Vazio = sem filtro de categoria. */
+  categoria: string[]
   from: string | null
   to: string | null
 }
@@ -67,6 +69,7 @@ export function useAppointments() {
       search: '',
       status: [],
       teamId: [],
+      categoria: [],
       from: period.from,
       to: period.to,
     }
@@ -87,6 +90,7 @@ export function useAppointments() {
       search: saved.search ?? defaults.search,
       status: saved.status ?? defaults.status,
       teamId: saved.teamId ?? defaults.teamId,
+      categoria: saved.categoria ?? defaults.categoria,
       from: saved.from !== undefined ? saved.from : defaults.from,
       to: saved.to !== undefined ? saved.to : defaults.to,
     }
@@ -105,6 +109,7 @@ export function useAppointments() {
         search: params.filters.search || undefined,
         status: params.filters.status.length > 0 ? params.filters.status : undefined,
         teamId: params.filters.teamId.length > 0 ? params.filters.teamId : undefined,
+        categoria: params.filters.categoria.length > 0 ? params.filters.categoria : undefined,
         from: params.filters.from ?? undefined,
         to: params.filters.to ?? undefined,
         sortBy: params.sortBy ?? undefined,

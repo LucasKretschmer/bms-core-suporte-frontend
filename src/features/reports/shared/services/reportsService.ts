@@ -48,6 +48,8 @@ type TicketsReportParams = {
   search?: string
   status?: string[]
   teamId?: number[]
+  /** Categorias HubSpot para filtrar — enviado como categoria[] (array na query). */
+  categoria?: string[]
   from?: string | null
   to?: string | null
   sortBy?: string | null
@@ -80,6 +82,24 @@ export type TicketStatusOption = {
 export async function getTicketStatuses(): Promise<TicketStatusOption[]> {
   const { data } = await api.get<ApiResponse<TicketStatusOption[]>>(
     '/api/v1/reports/tickets/statuses',
+  )
+  return data.data
+}
+
+/** Opção de categoria HubSpot: value = categoria enviada em categoria[]; label = texto exibido. */
+export type TicketCategoryOption = {
+  value: string
+  label: string
+}
+
+/**
+ * Opções de categoria (HubSpot) para o filtro multi-select de Apontamentos (107).
+ * Distinct do backend, mesmo padrão/envelope de getTicketStatuses.
+ * Envelope ApiResponse<{ value; label }[]>.
+ */
+export async function getTicketCategories(): Promise<TicketCategoryOption[]> {
+  const { data } = await api.get<ApiResponse<TicketCategoryOption[]>>(
+    '/api/v1/reports/tickets/categories',
   )
   return data.data
 }

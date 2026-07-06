@@ -32,6 +32,7 @@ vi.mock('../../../components/ui/Toast', () => ({
 // Service usado pelos useQuery internos (status/equipes) — retornam vazio.
 vi.mock('../shared/services/reportsService', () => ({
   getTicketStatuses: vi.fn().mockResolvedValue([]),
+  getTicketCategories: vi.fn().mockResolvedValue([]),
   listTeams: vi.fn().mockResolvedValue([]),
   listTicketsReport: vi.fn().mockResolvedValue({
     items: [],
@@ -42,9 +43,10 @@ vi.mock('../shared/services/reportsService', () => ({
   }),
 }))
 
-import AppointmentsPage from './index'
+import AppointmentsPage, { EXPORT_COLUMNS, mapToExportRow } from './index'
 import { useAppointments } from './hooks/useAppointments'
 import { usePermissions } from '../../../hooks/usePermissions'
+import type { TicketReportItemDto } from '../shared/types/reports'
 
 const mockedUseAppointments = vi.mocked(useAppointments)
 const mockedUsePermissions = vi.mocked(usePermissions)
@@ -72,6 +74,7 @@ beforeEach(() => {
       search: '',
       status: [],
       teamId: [],
+      categoria: [],
       from: null,
       to: null,
     },
@@ -114,5 +117,37 @@ describe('AppointmentsPage — largura dos filtros multi-select (067/071)', () =
     expect(teamsContainer).not.toBeNull()
     expect(teamsContainer).toHaveClass('min-w-[180px]')
     expect(teamsContainer).not.toHaveClass('min-w-[216px]')
+  })
+})
+
+describe('AppointmentsPage — filtro de Categoria (107)', () => {
+  it('renderiza o filtro de Categoria na barra de filtros', () => {
+    renderPage()
+    expect(screen.getByText('Categoria')).toBeInTheDocument()
+  })
+})
+
+describe('AppointmentsPage — export sem categoria (107, privacidade)', () => {
+  it('EXPORT_COLUMNS não inclui a coluna categoria', () => {
+    expect(EXPORT_COLUMNS.some((c) => c.key === 'categoria')).toBe(false)
+  })
+
+  it('mapToExportRow não expõe a categoria HubSpot na linha exportada', () => {
+    const item: TicketReportItemDto = {
+      ticketId: 1,
+      hubspotTicketId: '1001',
+      assunto: 'Erro',
+      clienteNome: 'ACME',
+      equipe: 'BR',
+      ownerNome: 'Ana',
+      status: 'Aberto',
+      categoria: 'Problema - Invoicy',
+      totalSeconds: 60,
+      apontamentosCount: 1,
+      hubspotUrl: null,
+    }
+    const row = mapToExportRow(item)
+    expect(row).not.toHaveProperty('categoria')
+    expect(Object.values(row)).not.toContain('Problema - Invoicy')
   })
 })

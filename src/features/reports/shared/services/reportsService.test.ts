@@ -12,6 +12,7 @@ import {
   listTeams,
   getClientReport,
   getTicketStatuses,
+  getTicketCategories,
   listPlanConsumption,
   listProjectAppointments,
   listTicketsReport,
@@ -395,6 +396,47 @@ describe('reportsService', () => {
       const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
         .params
       expect(params.teamId).toEqual([1, 3])
+    })
+
+    it('envia categoria como array de strings na query (107)', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listTicketsReport({
+        categoria: ['Problema - Invoicy', 'Dúvida'],
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.categoria).toEqual(['Problema - Invoicy', 'Dúvida'])
+    })
+  })
+
+  // ── getTicketCategories (107) ─────────────────────────────────────────────────
+
+  describe('getTicketCategories', () => {
+    it('desempacota data.data do envelope ApiResponse com {value,label}', async () => {
+      const options = [
+        { value: 'Problema - Invoicy', label: 'Problema - Invoicy' },
+        { value: 'Dúvida', label: 'Dúvida' },
+      ]
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: options } })
+
+      const result = await getTicketCategories()
+
+      expect(result).toEqual(options)
+      expect(result[0].value).toBe('Problema - Invoicy')
+    })
+
+    it('chama o endpoint correto', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [] } })
+
+      await getTicketCategories()
+
+      expect(api.get).toHaveBeenCalledWith('/api/v1/reports/tickets/categories')
     })
   })
 

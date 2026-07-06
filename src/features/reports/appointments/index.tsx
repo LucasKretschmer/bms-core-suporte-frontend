@@ -24,7 +24,12 @@ import type { MultiSelectOption } from '../../../components/ui/MultiSelectCombob
 import { useToast } from '../../../components/ui/Toast'
 import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
-import { getTicketStatuses, listTeams, listTicketsReport } from '../shared/services/reportsService'
+import {
+  getTicketCategories,
+  getTicketStatuses,
+  listTeams,
+  listTicketsReport,
+} from '../shared/services/reportsService'
 import { formatSeconds } from '../shared/utils/formatters'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
@@ -48,7 +53,9 @@ const SCOPE_OPTIONS = [
 
 // ── Colunas para export (mapeamento de campos simples, sem JSX) ──────────────
 
-const EXPORT_COLUMNS: ExportColumn[] = [
+// Exportado para teste (107): garante que a categoria HubSpot NUNCA entra no
+// arquivo exportável desta tela (privacidade — só aparece na tela).
+export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket', key: 'ticket' },
   { header: 'Assunto', key: 'assunto' },
   { header: 'Cliente', key: 'cliente' },
@@ -59,7 +66,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Apontamentos', key: 'apontamentos' },
 ]
 
-function mapToExportRow(item: TicketReportItemDto): ExportRow {
+export function mapToExportRow(item: TicketReportItemDto): ExportRow {
   return {
     ticket: `#${item.hubspotTicketId}`,
     assunto: item.assunto ?? '',
@@ -106,6 +113,12 @@ export default function AppointmentsPage() {
     queryFn: listTeams,
     staleTime: 5 * 60 * 1000,
   })
+  // Opções de categoria HubSpot (107). Falha/loading não quebram a tela.
+  const categoriesQuery = useQuery({
+    queryKey: ['ticket-categories'],
+    queryFn: getTicketCategories,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const statusOptions = useMemo<MultiSelectOption<string>[]>(
     () => (statusesQuery.data ?? []).map((s) => ({ value: s.value, label: s.label })),
@@ -114,6 +127,10 @@ export default function AppointmentsPage() {
   const teamOptions = useMemo<MultiSelectOption<number>[]>(
     () => (teamsQuery.data ?? []).map((t) => ({ value: t.id, label: t.nome })),
     [teamsQuery.data],
+  )
+  const categoriaOptions = useMemo<MultiSelectOption<string>[]>(
+    () => (categoriesQuery.data ?? []).map((c) => ({ value: c.value, label: c.label })),
+    [categoriesQuery.data],
   )
 
   // Busca textual com debounce via useDeferredValue
@@ -158,6 +175,7 @@ export default function AppointmentsPage() {
         search: filters.search || undefined,
         status: filters.status.length > 0 ? filters.status : undefined,
         teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
+        categoria: filters.categoria.length > 0 ? filters.categoria : undefined,
         from: filters.from ?? undefined,
         to: filters.to ?? undefined,
         sortBy: sortBy ?? undefined,
@@ -258,6 +276,21 @@ export default function AppointmentsPage() {
         isLoading={teamsQuery.isLoading}
         error={teamsQuery.isError ? 'Falha ao carregar equipes.' : undefined}
         className="min-w-[180px]"
+      />
+
+      {/* Filtro de Categoria HubSpot (107) — só na tela, nunca no export */}
+      <MultiSelectCombobox<string>
+        id="appointments-categoria"
+        label="Categoria"
+        summaryLabel="Categoria"
+        value={filters.categoria}
+        options={categoriaOptions}
+        onChange={(categoria) => setFilters({ categoria })}
+        placeholder="Todas"
+        searchable
+        isLoading={categoriesQuery.isLoading}
+        error={categoriesQuery.isError ? 'Falha ao carregar categorias.' : undefined}
+        className="min-w-[220px]"
       />
 
       {/* Período */}

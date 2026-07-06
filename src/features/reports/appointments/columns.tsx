@@ -12,6 +12,19 @@ import { Badge } from '../../../components/ui/Badge'
 import type { ColumnDef } from '../../../components/ui/DataTable/types'
 import type { TicketReportItemDto } from '../shared/types/reports'
 import { formatSeconds } from '../shared/utils/formatters'
+import { INVOICY_CATEGORY } from '../../ticket-detail/constants'
+
+/**
+ * Destaque `tomato` (107): aplicado APENAS ao badge de Status quando a categoria
+ * do ticket é "Problema - Invoicy" — nunca à linha inteira. `tomato` é o named
+ * color CSS (rgb(255,99,71)) escolhido explicitamente pelo usuário; exceção
+ * pontual e documentada ao design system por tokens. Texto tomato + fundo
+ * tomato translúcido; sobrepõe as classes de cor por token do Badge.
+ */
+const INVOICY_STATUS_STYLE: React.CSSProperties = {
+  color: 'tomato',
+  backgroundColor: 'rgba(255, 99, 71, 0.12)',
+}
 
 /**
  * Ícone de link externo — aria-hidden pois o texto do link já é descritivo.
@@ -96,6 +109,15 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       accessor: (row) => row.ownerNome ?? '—',
     },
     {
+      // Categoria do HubSpot — exibida só na tela (nunca no export, por privacidade).
+      // Não ordenável: coluna informativa; o filtro dedicado cobre a segmentação.
+      key: 'categoria',
+      header: 'Categoria',
+      sortable: false,
+      align: 'left',
+      accessor: (row) => row.categoria ?? '—',
+    },
+    {
       key: 'status',
       header: 'Status',
       sortable: true,
@@ -104,14 +126,21 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       width: '160px',
       // Status pode vir como label longo do backend (ex.: "Em atendimento (Relacionamento BR)").
       // Truncamos com reticências + tooltip (title) para não estourar a largura da coluna.
-      accessor: (row) =>
-        row.status ? (
+      // Destaque tomato (107): apenas o badge de Status quando categoria === Invoicy.
+      accessor: (row) => {
+        if (!row.status) return <span className="text-foreground/40">—</span>
+        const isInvoicy = row.categoria === INVOICY_CATEGORY
+        return (
           <div className="flex justify-center">
-            <Badge value={row.status} truncate className="max-w-[140px]" />
+            <Badge
+              value={row.status}
+              truncate
+              className="max-w-[140px]"
+              style={isInvoicy ? INVOICY_STATUS_STYLE : undefined}
+            />
           </div>
-        ) : (
-          <span className="text-foreground/40">—</span>
-        ),
+        )
+      },
     },
     {
       key: 'tempo',

@@ -9,6 +9,12 @@ type BadgeProps = {
    * O valor completo fica acessível via `title`/`aria-label`.
    */
   truncate?: boolean
+  /**
+   * Estilo inline opcional. Reservado para exceções pontuais ao design system
+   * (ex.: destaque `tomato` de categoria Invoicy, 107). Sobrepõe as classes de
+   * cor por token. Uso normal deve seguir os tokens — não abusar deste escape.
+   */
+  style?: React.CSSProperties
 }
 
 /**
@@ -36,19 +42,20 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
 
 const FALLBACK: BadgeStyle = { bg: 'bg-badge-neutro-bg', fg: 'text-badge-neutro-fg' }
 
-export function Badge({ value, className, truncate = false }: BadgeProps) {
-  const style = BADGE_MAP[value] ?? FALLBACK
+export function Badge({ value, className, truncate = false, style }: BadgeProps) {
+  const tone = BADGE_MAP[value] ?? FALLBACK
 
   return (
     <span
       aria-label={value}
       // title só quando truncado: garante o valor completo via tooltip nativo
       title={truncate ? value : undefined}
+      style={style}
       className={clsx(
         'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
         truncate && 'max-w-full truncate',
-        style.bg,
-        style.fg,
+        tone.bg,
+        tone.fg,
         className,
       )}
     >
