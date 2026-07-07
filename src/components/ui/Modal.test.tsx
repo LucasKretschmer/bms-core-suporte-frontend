@@ -15,7 +15,7 @@ describe('Modal', () => {
       </Modal>,
     )
     const dialog = screen.getByRole('dialog')
-    const content = dialog.querySelector('.bg-card') as HTMLElement
+    const content = dialog.querySelector('.bg-white') as HTMLElement
     expect(content.className).toContain('w-[92vw]')
     expect(content.className).toContain('h-[92vh]')
     expect(content.className).toContain('max-w-[92vw]')

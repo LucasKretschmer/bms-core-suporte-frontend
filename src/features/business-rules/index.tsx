@@ -47,7 +47,7 @@ export default function BusinessRulesPage() {
         </p>
 
         {isLoading && (
-          <div className="bg-card rounded-[5px] border border-border p-6">
+          <div className="bg-card rounded-card border border-border p-6">
             <Skeleton lines={6} />
           </div>
         )}

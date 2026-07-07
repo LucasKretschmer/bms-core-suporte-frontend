@@ -44,7 +44,7 @@ export function TeamRulesCard({
   return (
     <section
       aria-labelledby={`${baseId}-heading`}
-      className="bg-card rounded-xl border border-border p-5 flex flex-col gap-4 min-w-[280px] flex-1 max-w-md"
+      className="bg-card rounded-card border border-border p-5 flex flex-col gap-4 min-w-[280px] flex-1 max-w-md"
     >
       <h3 id={`${baseId}-heading`} className="text-[16px] font-medium text-foreground">
         {teamNome}

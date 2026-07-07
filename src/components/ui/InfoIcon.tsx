@@ -112,7 +112,7 @@ export function InfoIcon({ tooltip, className }: InfoIconProps) {
         onBlur={hide}
         onClick={stopClick}
         onPointerDown={stopClick}
-        className="text-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary rounded-full leading-none"
+        className="text-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary-light focus-visible:ring-offset-2 rounded-full leading-none"
       >
         <svg
           aria-hidden="true"
@@ -138,7 +138,7 @@ export function InfoIcon({ tooltip, className }: InfoIconProps) {
               top: position?.top ?? -9999,
             }}
             className={clsx(
-              'fixed z-[60] -translate-x-1/2 whitespace-nowrap rounded bg-black px-2 py-1 text-xs text-white shadow-lg pointer-events-none',
+              'fixed z-[60] -translate-x-1/2 whitespace-nowrap rounded-control bg-ink px-2.5 py-1.5 text-xs text-white shadow-lg pointer-events-none',
               // Enquanto a posição não foi medida, mantém invisível para evitar flash.
               position ? 'visible' : 'invisible',
             )}
@@ -149,8 +149,8 @@ export function InfoIcon({ tooltip, className }: InfoIconProps) {
               className={clsx(
                 'absolute left-1/2 -translate-x-1/2 border-4 border-transparent',
                 position?.below
-                  ? 'bottom-full border-b-black'
-                  : 'top-full border-t-black',
+                  ? 'bottom-full border-b-ink'
+                  : 'top-full border-t-ink',
               )}
             />
           </span>,

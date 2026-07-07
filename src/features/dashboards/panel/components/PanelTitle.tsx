@@ -32,7 +32,7 @@ export function PanelTitle({ teamName, scopeLabel, liveStatus }: PanelTitleProps
       >
         {teamName}
       </h1>
-      <span className="rounded-full bg-muted/15 px-2.5 py-0.5 text-sm text-muted">
+      <span className="rounded-pill bg-muted/15 px-2.5 py-0.5 text-sm text-muted">
         {scopeLabel}
       </span>
       <LiveIndicator status={liveStatus} />

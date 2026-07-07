@@ -49,7 +49,7 @@ export function TicketDetailHeader({
   ].filter((p): p is string => Boolean(p))
 
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
+    <section className="rounded-card border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 flex-wrap text-2xl font-semibold text-foreground">
@@ -74,7 +74,7 @@ export function TicketDetailHeader({
               href={ticket.hubspotUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2.5 h-9 px-3 py-2.5 rounded-[5px] font-semibold text-sm bg-card text-foreground border border-border transition-shadow duration-150 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+              className="inline-flex items-center justify-center gap-2.5 h-9 px-3 py-2.5 rounded-control font-semibold text-sm bg-card text-foreground border border-border transition-shadow duration-150 hover:shadow-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
             >
               <ExternalIcon />
               <span>Acessar no HubSpot</span>
@@ -86,7 +86,7 @@ export function TicketDetailHeader({
       {isInvoicy && (
         <p
           role="status"
-          className="mt-3 rounded-[5px] border border-warning-fg/30 bg-warning-bg px-3 py-2 text-sm text-warning-fg"
+          className="mt-3 rounded-input border border-warning-fg/30 bg-warning-bg px-3 py-2 text-sm text-warning-fg"
         >
           <span className="font-semibold">
             Ticket [{INVOICY_CATEGORY}]: horas vão para análise, fora do consumo do plano.

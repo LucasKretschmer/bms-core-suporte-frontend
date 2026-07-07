@@ -65,7 +65,7 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-card border border-border rounded-[5px] p-3 shadow text-xs">
+    <div className="bg-card border border-border rounded-control p-3 shadow text-xs">
       <p className="font-medium mb-1">{label ? formatTooltipDate(label) : ''}</p>
       {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }}>

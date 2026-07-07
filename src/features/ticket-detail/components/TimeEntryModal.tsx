@@ -231,7 +231,7 @@ export function TimeEntryModal({
             {fields.map((field, index) => {
               const blockErrors = errors.works?.[index]
               return (
-                <fieldset key={field.id} className="rounded-lg border border-border p-3">
+                <fieldset key={field.id} className="rounded-input border border-border p-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <legend className="text-xs text-foreground/50">Apontamento {index + 1}</legend>
                     {fields.length > 1 && (
@@ -255,7 +255,7 @@ export function TimeEntryModal({
                         id={`works-${index}-start`}
                         type="datetime-local"
                         {...register(`works.${index}.start`)}
-                        className="h-9 rounded-[5px] border border-border px-3 text-sm bg-card text-foreground outline-none focus:border-[#666]"
+                        className="h-9 rounded-input border border-border px-3 text-sm bg-card text-foreground outline-none focus:border-primary-medium"
                       />
                       {blockErrors?.start?.message && (
                         <p className="text-xs text-error-fg" role="alert">
@@ -271,7 +271,7 @@ export function TimeEntryModal({
                         id={`works-${index}-end`}
                         type="datetime-local"
                         {...register(`works.${index}.end`)}
-                        className="h-9 rounded-[5px] border border-border px-3 text-sm bg-card text-foreground outline-none focus:border-[#666]"
+                        className="h-9 rounded-input border border-border px-3 text-sm bg-card text-foreground outline-none focus:border-primary-medium"
                       />
                       {blockErrors?.end?.message && (
                         <p className="text-xs text-error-fg" role="alert">
@@ -293,7 +293,7 @@ export function TimeEntryModal({
             <button
               type="button"
               onClick={addBlock}
-              className="w-full inline-flex items-center justify-center gap-2 h-9 rounded-[5px] border border-dashed border-border text-sm text-foreground transition-shadow duration-150 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] focus-visible:ring-2 focus-visible:ring-primary"
+              className="w-full inline-flex items-center justify-center gap-2 h-9 rounded-control border border-dashed border-border text-sm text-foreground transition-shadow duration-150 hover:shadow-hover focus-visible:ring-2 focus-visible:ring-primary"
             >
               <PlusIcon />
               Adicionar apontamento
@@ -308,7 +308,7 @@ export function TimeEntryModal({
             <textarea
               id="te-note"
               {...register('note')}
-              className="h-20 rounded-[5px] border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-[#666] resize-none"
+              className="h-20 rounded-input border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-primary-medium resize-none"
             />
             {errors.note?.message && (
               <p className="text-xs text-error-fg" role="alert">

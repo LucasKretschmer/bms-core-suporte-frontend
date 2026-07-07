@@ -1,71 +1,81 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+/* 1) Montserrat — inclui 800 (títulos Migrate usam font-extrabold) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+/* 2) Tailwind v4 */
 @import "tailwindcss";
 
+/* 3) Design System Migrate — @theme completo + utilitários de gradiente + @source './dist' */
+@import '@migrate/design-system/styles.css';
+
+/* 4) Fallback de scan: garante que as classes compiladas do pacote não sejam removidas.
+      Path relativo a ESTE arquivo (src/styles/global.css → raiz/node_modules).
+      Manter mesmo que o @source interno do pacote já funcione — é barato e evita CSS faltando. */
+@source '../../node_modules/@migrate/design-system/dist';
+
+/* 5) Tokens semânticos DO APP repontados p/ Migrate (mantêm os NOMES → telas não mudam) */
 @theme {
-  /* ── Fonte principal ── */
-  --font-sans: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* NÃO redefinir --color-primary/-medium/-light, --color-border, --color-muted, --font-sans:
+     já vêm do DS com os valores Migrate corretos. Redefinir aqui sobrescreveria o DS. */
 
-  /* ── Cores semânticas BMS ── */
-  --color-primary:    #2563EB;   /* azul principal BMS */
-  --color-foreground: #1A1A1A;   /* texto principal */
-  --color-background: #F5F6FA;   /* fundo geral */
-  --color-card:       #FFFFFF;   /* fundo de card/modal */
-  --color-border:     #E2E8F0;   /* bordas */
-  --color-muted:      #6B7280;   /* texto secundário */
-  --color-sidebar:    #1E293B;   /* fundo do sidebar */
-  --color-sidebar-fg: #F1F5F9;   /* texto no sidebar */
-  --color-sidebar-active: #2563EB; /* item ativo no sidebar */
+  /* ── Texto e superfícies do app (nomes herdados das telas) ── */
+  --color-foreground: #002f4f;   /* azul-profundo (texto padrão sobre claro) */
+  --color-background: #f0f4f7;   /* surface-hover Migrate (fundo geral) */
+  --color-card:       #ffffff;   /* fundo de card/modal */
 
-  /* ── Alertas (frontend.md) ── */
-  --color-success-bg: #DDFFDD;
-  --color-error-bg:   #FFE0E0;
-  --color-warning-bg: #FFFBEF;
-  --color-info-bg:    #DFF1FD;
+  /* ── Sidebar (flutuante + degradê — ver seção 3 da arquitetura) ── */
+  --color-sidebar:        #002f4f; /* mantido p/ compat; o fundo real vira bg-grad-escuro */
+  --color-sidebar-fg:     #ffffff;
+  --color-sidebar-active: #1a79c2; /* usado só se algum lugar referenciar; ver seção 3 p/ o padrão real */
 
-  --color-success-fg: #166534;
-  --color-error-fg:   #991B1B;
-  --color-warning-fg: #92400E;
-  --color-info-fg:    #1E40AF;
+  /* ── Alertas — fundos (já batem com Migrate) ── */
+  --color-success-bg: #ddffdd;
+  --color-error-bg:   #ffe0e0;
+  --color-warning-bg: #fffbef;
+  --color-info-bg:    #dff1fd;
+
+  /* ── Alertas — texto/acento (repontados) ── */
+  --color-success-fg: #008000;
+  --color-error-fg:   #ff0000;
+  --color-warning-fg: #e07600;
+  --color-info-fg:    #074b7f;
 
   /* ── Paleta de gráficos (chart tokens) ── */
-  --color-chart-1: #2563EB;   /* azul primário */
-  --color-chart-2: #16A34A;   /* verde */
-  --color-chart-3: #D97706;   /* âmbar */
-  --color-chart-4: #DC2626;   /* vermelho */
-  --color-chart-5: #7C3AED;   /* roxo */
-  --color-chart-6: #0891B2;   /* ciano */
-  --color-chart-7: #DB2777;   /* rosa */
-  --color-chart-8: #65A30D;   /* lima */
+  --color-chart-1: #074b7f;
+  --color-chart-2: #1a79c2;
+  --color-chart-3: #ff8500;
+  --color-chart-4: #008000;
+  --color-chart-5: #4a89c4;
+  --color-chart-6: #e07600;
+  --color-chart-7: #002f4f;
+  --color-chart-8: #b0451e;
 
   /* ── Séries fixas — movimentação diária ── */
-  --color-chart-novos:      #2563EB;  /* azul */
-  --color-chart-andamento:  #D97706;  /* âmbar */
-  --color-chart-resolvidos: #16A34A;  /* verde */
-  --color-chart-cancelados: #6B7280;  /* cinza */
-  --color-chart-aberto:     #DC2626;  /* vermelho */
+  --color-chart-novos:      #1a79c2;
+  --color-chart-andamento:  #ff8500;
+  --color-chart-resolvidos: #008000;
+  --color-chart-cancelados: #666666;
+  --color-chart-aberto:     #ff0000;
 
   /* ── Saúde de planos ── */
-  --color-chart-verde:      #16A34A;  /* < 80% */
-  --color-chart-amarelo:    #D97706;  /* 80–95% */
-  --color-chart-vermelho:   #DC2626;  /* >= 95% */
+  --color-chart-verde:      #008000;  /* < 80% */
+  --color-chart-amarelo:    #ff8500;  /* 80–95% */
+  --color-chart-vermelho:   #ff0000;  /* >= 95% */
 
   /* ── Badge de faturamento ── */
-  --color-badge-plano-bg:  #DBEAFE;
-  --color-badge-plano-fg:  #1E40AF;
-  --color-badge-faturado-bg: #D1FAE5;
-  --color-badge-faturado-fg: #065F46;
-  --color-badge-nao-faturado-bg: #F3F4F6;
-  --color-badge-nao-faturado-fg: #374151;
-  --color-badge-neutro-bg: #F3F4F6;
-  --color-badge-neutro-fg: #374151;
+  --color-badge-plano-bg:  #dff1fd;
+  --color-badge-plano-fg:  #074b7f;
+  --color-badge-faturado-bg: #ddffdd;
+  --color-badge-faturado-fg: #008000;
+  --color-badge-nao-faturado-bg: #f0f4f7;
+  --color-badge-nao-faturado-fg: #666666;
+  --color-badge-neutro-bg: #f0f4f7;
+  --color-badge-neutro-fg: #666666;
 
   /* ── Badge de origem (057 — visão por cliente combinada) ── */
-  /* Projeto = azul (deriva da paleta do badge-plano já existente) */
-  --color-badge-origem-projeto-bg: #DBEAFE;
-  --color-badge-origem-projeto-fg: #1E40AF;
-  /* Ticket = laranja (token novo — não existia laranja no tema) */
-  --color-badge-origem-ticket-bg: #FFEDD5;
-  --color-badge-origem-ticket-fg: #9A3412;
+  --color-badge-origem-projeto-bg: #dff1fd;
+  --color-badge-origem-projeto-fg: #074b7f;
+  --color-badge-origem-ticket-bg: #fff3e0;
+  --color-badge-origem-ticket-fg: #e07600;
 }
 
 /* ── Reset global ── */

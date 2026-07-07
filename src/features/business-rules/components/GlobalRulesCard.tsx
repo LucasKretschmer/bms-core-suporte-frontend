@@ -38,7 +38,7 @@ export function GlobalRulesCard({ rules, isSaving, onSaveIdle }: GlobalRulesCard
   return (
     <section
       aria-labelledby="global-rules-heading"
-      className="bg-card rounded-[5px] border border-border p-6 flex flex-col gap-4"
+      className="bg-card rounded-card border border-border p-6 flex flex-col gap-4"
     >
       <h2 id="global-rules-heading" className="text-[16px] font-medium text-foreground">
         Regras globais
@@ -61,7 +61,7 @@ export function GlobalRulesCard({ rules, isSaving, onSaveIdle }: GlobalRulesCard
           disabled={isSaving}
           onChange={(e) => setValue(e.target.value)}
           onBlur={commit}
-          className="h-9 rounded-[5px] border border-border px-3 py-2.5 text-sm text-foreground bg-card outline-none focus:border-[#666] focus:ring-0 disabled:opacity-50"
+          className="h-9 rounded-input border border-border px-3 py-2.5 text-sm text-foreground bg-card outline-none focus:border-primary-medium focus:ring-0 disabled:opacity-50"
         />
         <p className="text-xs text-foreground/50">Entre 1 e 60 minutos.</p>
       </div>

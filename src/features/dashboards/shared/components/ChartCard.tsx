@@ -67,7 +67,7 @@ export function ChartCard({
       id={rootId}
       aria-labelledby={titleId}
       className={clsx(
-        'flex flex-col gap-3 rounded-xl border border-border bg-card p-4 pt-3',
+        'flex flex-col gap-3 rounded-card border border-border bg-card p-4 pt-3',
         className,
       )}
     >
@@ -87,7 +87,7 @@ export function ChartCard({
             className={clsx(
               'text-muted hover:text-foreground transition-colors duration-150',
               'focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded',
-              'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+              'hover:shadow-hover',
             )}
           >
             <svg

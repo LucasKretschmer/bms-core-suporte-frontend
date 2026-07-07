@@ -25,7 +25,7 @@ type KpiCardProps = {
 
 function KpiCard({ label, value, subtle }: KpiCardProps) {
   return (
-    <div className="flex flex-col gap-0.5 px-4 py-3 bg-background rounded-[5px] border border-border min-w-[120px]">
+    <div className="flex flex-col gap-0.5 px-4 py-3 bg-background rounded-control border border-border min-w-[120px]">
       <span className="text-xs text-foreground/60 font-normal">{label}</span>
       <span
         className={
@@ -48,7 +48,7 @@ export function ClientReportHeader({ report }: ClientReportHeaderProps) {
   return (
     <section
       aria-label="Resumo do relatório do cliente"
-      className="mb-4 p-4 bg-card rounded-[5px] border border-border"
+      className="mb-4 p-4 bg-card rounded-control border border-border"
     >
       {/* Informações do cliente */}
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1">

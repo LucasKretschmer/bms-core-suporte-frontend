@@ -1,3 +1,4 @@
+import { Badge as DsBadge } from '@migrate/design-system'
 import { clsx } from 'clsx'
 
 type BadgeProps = {
@@ -20,6 +21,12 @@ type BadgeProps = {
 /**
  * Badge com mapa dinâmico de cores (não switch que quebre em valor novo).
  * Fallback neutro para valores desconhecidos — nunca quebra.
+ *
+ * Wrapper sobre o DS `Badge`: usado só como casca visual (pill, tipografia,
+ * padding) — o mapa de cores continua sendo do app (7 valores conhecidos +
+ * fallback), pois já é dinâmico e correto por design. Não passamos `tone`/
+ * `variant` do DS (usa os defaults); as classes de cor do mapa sobrescrevem
+ * via `cn`/tailwind-merge internos do DS por virem depois no `className`.
  */
 
 type BadgeStyle = { bg: string; fg: string }
@@ -46,20 +53,14 @@ export function Badge({ value, className, truncate = false, style }: BadgeProps)
   const tone = BADGE_MAP[value] ?? FALLBACK
 
   return (
-    <span
+    <DsBadge
       aria-label={value}
       // title só quando truncado: garante o valor completo via tooltip nativo
       title={truncate ? value : undefined}
       style={style}
-      className={clsx(
-        'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-        truncate && 'max-w-full truncate',
-        tone.bg,
-        tone.fg,
-        className,
-      )}
+      className={clsx(truncate && 'max-w-full truncate', tone.bg, tone.fg, className)}
     >
       {value}
-    </span>
+    </DsBadge>
   )
 }

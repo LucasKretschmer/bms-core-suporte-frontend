@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm bg-card rounded-2xl shadow-xl px-7 py-8">
+      <div className="w-full max-w-sm bg-card rounded-card shadow-card px-7 py-8">
         {/* Logo / título */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold text-foreground">{appName}</h1>

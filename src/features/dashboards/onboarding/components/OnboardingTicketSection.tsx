@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react'
+import { clsx } from 'clsx'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import { ErrorState } from '../../../../components/ui/ErrorState'
 import { EmptyState } from '../../../../components/ui/EmptyState'
@@ -86,7 +87,7 @@ function AgentRow({ agent, rank, onClick }: AgentRowProps) {
   const isClickable = !!onClick
   return (
     <tr
-      className="border-b border-border last:border-0 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow"
+      className="border-b border-border last:border-0 hover:shadow-hover transition-shadow"
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={onClick}
@@ -140,42 +141,49 @@ function AgentTable({ agents, onAgentClick }: AgentTableProps) {
     <div className="overflow-x-auto">
       <table className="w-full border-collapse" aria-label="Atendimentos por atendente">
         <thead>
-          <tr
-            className="border-b border-border"
-            style={{ borderRadius: '5px 5px 0 0' }}
-          >
+          <tr className="border-b border-border">
             <th
               scope="col"
-              className="h-9 px-5 text-xs font-medium text-foreground text-center"
-              style={{ borderWidth: '0.7px' }}
+              className={clsx(
+                'h-9 px-5 text-xs font-medium text-foreground text-center',
+                'border-[0.7px] border-border first:rounded-tl-input last:rounded-tr-input',
+              )}
             >
               #
             </th>
             <th
               scope="col"
-              className="h-9 px-5 text-xs font-medium text-foreground text-left"
-              style={{ borderWidth: '0.7px' }}
+              className={clsx(
+                'h-9 px-5 text-xs font-medium text-foreground text-left',
+                'border-[0.7px] border-border first:rounded-tl-input last:rounded-tr-input',
+              )}
             >
               Atendente
             </th>
             <th
               scope="col"
-              className="h-9 px-5 text-xs font-medium text-foreground text-center"
-              style={{ borderWidth: '0.7px' }}
+              className={clsx(
+                'h-9 px-5 text-xs font-medium text-foreground text-center',
+                'border-[0.7px] border-border first:rounded-tl-input last:rounded-tr-input',
+              )}
             >
               Equipe
             </th>
             <th
               scope="col"
-              className="h-9 px-5 text-xs font-medium text-foreground text-center"
-              style={{ borderWidth: '0.7px' }}
+              className={clsx(
+                'h-9 px-5 text-xs font-medium text-foreground text-center',
+                'border-[0.7px] border-border first:rounded-tl-input last:rounded-tr-input',
+              )}
             >
               Atendimentos
             </th>
             <th
               scope="col"
-              className="h-9 px-5 text-xs font-medium text-foreground text-center"
-              style={{ borderWidth: '0.7px' }}
+              className={clsx(
+                'h-9 px-5 text-xs font-medium text-foreground text-center',
+                'border-[0.7px] border-border first:rounded-tl-input last:rounded-tr-input',
+              )}
             >
               Horas
             </th>
@@ -249,8 +257,8 @@ export function OnboardingTicketSection({
       <section aria-label="Tickets — carregando">
         <h2 className="text-[20px] font-medium text-foreground mb-3">Tickets</h2>
         <KpiCardGrid className="mb-4">
-          <Skeleton lines={1} height="h-20" className="rounded-xl" />
-          <Skeleton lines={1} height="h-20" className="rounded-xl" />
+          <Skeleton lines={1} height="h-20" className="rounded-card" />
+          <Skeleton lines={1} height="h-20" className="rounded-card" />
         </KpiCardGrid>
         <Skeleton lines={5} height="h-10" />
       </section>
@@ -315,7 +323,7 @@ export function OnboardingTicketSection({
       </KpiCardGrid>
 
       {/* Tabela por atendente */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-card border border-border bg-card overflow-hidden">
         <div className="flex items-center justify-between gap-3 p-4 pt-3 border-b border-border">
           <h3 className="text-[16px] font-medium text-foreground">
             Atendimentos por atendente

@@ -31,7 +31,7 @@ function SyncStatusRowBadge({ status }: { status: SyncStatus }) {
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium',
+        'inline-flex items-center px-2 py-0.5 rounded-pill text-[11px] font-medium',
         config.bg,
         config.fg,
       )}

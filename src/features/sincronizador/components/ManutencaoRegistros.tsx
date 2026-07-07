@@ -65,7 +65,7 @@ function TipoBadge({ tipo }: { tipo: RegistroTipo }) {
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium',
+        'inline-flex items-center px-2 py-0.5 rounded-pill text-[11px] font-medium',
         tipo === 'ticket'
           ? 'bg-info-bg text-info-fg'
           : 'bg-badge-plano-bg text-badge-plano-fg',
@@ -116,10 +116,10 @@ function RegistroRow({
           aria-label={`Desativar ${registro.tipo} #${registro.hubspotId} — ${registro.assunto}`}
           className={clsx(
             'inline-flex items-center justify-center gap-1.5 h-7 px-2',
-            'rounded-[5px] text-[12px] font-semibold text-error-fg',
+            'rounded-control text-[12px] font-semibold text-error-fg',
             'border border-transparent bg-transparent',
             'transition-shadow duration-150 cursor-pointer',
-            'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+            'hover:shadow-hover',
             'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
           )}
         >
@@ -258,7 +258,7 @@ export function ManutencaoRegistros({ className }: ManutencaoRegistrosProps) {
                       className={clsx(
                         'h-9 px-5 font-medium text-foreground/80 bg-background text-center',
                         'border-[0.7px] border-border',
-                        'first:rounded-tl-[5px] last:rounded-tr-[5px]',
+                        'first:rounded-tl-input last:rounded-tr-input',
                         'border-b border-border',
                       )}
                     >

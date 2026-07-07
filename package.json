@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "5.4.0",
+    "@migrate/design-system": "file:./vendor/migrate-design-system-0.1.0.tgz",
     "@react-pdf/renderer": "4.5.1",
     "@tailwindcss/vite": "4.3.1",
     "@tanstack/react-query": "5.101.0",

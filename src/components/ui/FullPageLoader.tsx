@@ -13,9 +13,9 @@ export function FullPageLoader() {
     >
       <span
         aria-hidden="true"
-        className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"
+        className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary-light"
       />
-      <span className="text-sm text-foreground/60">Carregando…</span>
+      <span className="text-sm text-muted">Carregando…</span>
     </div>
   )
 }

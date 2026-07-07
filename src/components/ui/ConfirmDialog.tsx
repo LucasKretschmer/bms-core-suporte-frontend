@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { Button } from './Button'
 
 type ConfirmDialogVariant = 'default' | 'danger'
 
@@ -19,9 +20,17 @@ type ConfirmDialogProps = {
 
 /**
  * Dialog de confirmação genérico — reutilizável em qualquer feature.
- * variant="danger" → botão confirmar em vermelho, role="alertdialog".
- * Foco preso enquanto aberto. Escape fecha.
+ * variant="danger" → botão confirmar em vermelho (`Button` local `variant="danger"`),
+ * role="alertdialog". Foco preso enquanto aberto. Escape fecha.
  * Foca o botão Cancelar ao abrir (padrão seguro para ações destrutivas).
+ *
+ * Permanece LOCAL (não compõe sobre o DS `Modal`): precisa de `role="alertdialog"`
+ * em `variant="danger"` (o DS `Modal` sempre usa `role="dialog"`, sem opção de
+ * alertdialog) e do foco automático no botão Cancelar — nenhum dos dois é
+ * replicável compondo sobre o DS. Retematizado com os tokens Migrate
+ * (`shadow-card`, `rounded-card`, `text-card`/`text-primary`) para bater com o DS
+ * `Modal` (ver gap G6 do design system). Os botões usam o `Button` local (que já
+ * encaminha ref e mapeia `variant="danger"` para o token `--color-error`).
  */
 export function ConfirmDialog({
   isOpen,
@@ -111,21 +120,21 @@ export function ConfirmDialog({
       <div
         ref={containerRef}
         className={clsx(
-          'relative z-10 w-full max-w-sm bg-card rounded-2xl shadow-xl',
+          'relative z-10 w-full max-w-sm bg-white rounded-card shadow-card',
           'flex flex-col',
           className,
         )}
       >
-        {/* Header */}
-        <div className="px-7 pt-5 pb-4 border-b border-border">
-          <h2 id={titleId} className="text-[16px] font-medium text-foreground">
+        {/* Header — sem divisor (padrão DS: título "flutua") */}
+        <div className="px-7 pt-5 pb-4">
+          <h2 id={titleId} className="text-card font-medium text-primary">
             {title}
           </h2>
         </div>
 
         {/* Body */}
         <div className="px-7 py-5">
-          <p id={descriptionId} className="text-sm text-foreground/70">
+          <p id={descriptionId} className="text-sm text-primary/70">
             {description}
           </p>
         </div>
@@ -133,60 +142,19 @@ export function ConfirmDialog({
         {/* Footer com botões */}
         <div className="flex items-center justify-between gap-3 px-7 pb-5">
           {/* Cancelar — alinhado à esquerda */}
-          <button
-            ref={cancelButtonRef}
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className={clsx(
-              'inline-flex items-center justify-center gap-2.5 h-9 px-3 py-2.5',
-              'rounded-[5px] font-semibold text-sm',
-              'bg-card text-foreground border border-border',
-              'transition-shadow duration-150 cursor-pointer',
-              'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
-              'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-              isLoading && 'opacity-50 cursor-not-allowed pointer-events-none',
-            )}
-          >
+          <Button ref={cancelButtonRef} variant="secondary" onClick={onClose} disabled={isLoading}>
             {cancelLabel}
-          </button>
+          </Button>
 
           {/* Confirmar */}
-          <button
-            type="button"
+          <Button
+            variant={variant === 'danger' ? 'danger' : 'primary'}
             onClick={onConfirm}
             disabled={isLoading}
-            aria-busy={isLoading ? 'true' : undefined}
-            className={clsx(
-              'inline-flex items-center justify-center gap-2.5 h-9 px-3 py-2.5',
-              'rounded-[5px] font-semibold text-sm',
-              'transition-shadow duration-150 cursor-pointer',
-              variant === 'danger'
-                ? 'bg-error-fg text-white border border-error-fg'
-                : 'bg-primary text-white border border-primary',
-              'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
-              'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-              isLoading && 'opacity-50 cursor-not-allowed pointer-events-none',
-            )}
+            isLoading={isLoading}
           >
-            {isLoading ? (
-              <>
-                <svg
-                  aria-hidden="true"
-                  className="animate-spin h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                <span>{confirmLabel}</span>
-              </>
-            ) : (
-              <span>{confirmLabel}</span>
-            )}
-          </button>
+            {confirmLabel}
+          </Button>
         </div>
       </div>
     </div>,

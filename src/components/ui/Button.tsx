@@ -1,11 +1,13 @@
-import { clsx } from 'clsx'
+import { forwardRef } from 'react'
+import type { ReactNode } from 'react'
+import { Button as DsButton, cn } from '@migrate/design-system'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 type ButtonProps = {
-  children?: React.ReactNode
+  children?: ReactNode
   variant?: ButtonVariant
-  icon?: React.ReactNode
+  icon?: ReactNode
   className?: string
   onClick?: () => void
   disabled?: boolean
@@ -14,83 +16,73 @@ type ButtonProps = {
   'aria-label'?: string
 }
 
-const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    'bg-primary text-white border border-primary',
-  secondary:
-    'bg-card text-foreground border border-border',
-  ghost:
-    'bg-transparent text-foreground border border-transparent',
+/**
+ * `variant` local → DS `Button`: `primary`/`secondary` mapeiam direto; `ghost` e `danger`
+ * não existem no DS (G8/G11 — ds-gaps.md) e são simulados por cima da variante DS mais
+ * próxima usando tokens (nunca hex hardcoded).
+ */
+const dsVariantMap: Record<ButtonVariant, 'primary' | 'secondary'> = {
+  primary: 'primary',
+  secondary: 'secondary',
+  ghost: 'secondary',
+  danger: 'primary',
 }
 
-/** Botão do Design System BMS. Hover sempre por sombra — nunca muda cor. */
-export function Button({
-  children,
-  variant = 'primary',
-  icon,
-  className,
-  onClick,
-  disabled,
-  isLoading,
-  type = 'button',
-  'aria-label': ariaLabel,
-}: ButtonProps) {
-  const isDisabled = disabled || isLoading
+// ghost: ação discreta sobre fundo claro — hover por tinta de superfície (bg-surface-hover),
+// não pela sombra do secondary (ficaria estranha sem borda visível).
+const ghostClassName = cn(
+  'border-transparent bg-transparent text-foreground',
+  'hover:border-transparent hover:bg-surface-hover hover:text-foreground hover:shadow-none',
+  'focus-visible:border-transparent',
+)
 
+// danger: ação destrutiva (ConfirmDialog) — fundo do token funcional --color-error,
+// hover mais escuro (brightness, sem hex novo) + hover=sombra (nunca só troca de cor).
+const dangerClassName = cn(
+  'bg-error text-white hover:bg-error hover:brightness-90 hover:shadow-hover',
+  'focus-visible:bg-error focus-visible:brightness-90 focus-visible:shadow-hover',
+)
+
+const variantClassName: Partial<Record<ButtonVariant, string>> = {
+  ghost: ghostClassName,
+  danger: dangerClassName,
+}
+
+/**
+ * Botão do Design System Migrate — wrapper fino sobre o `Button` do
+ * `@migrate/design-system`, preservando a assinatura local (`icon`, `variant` incl.
+ * `ghost`/`danger`, `onClick: () => void`) já usada em toda a app.
+ */
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    children,
+    variant = 'primary',
+    icon,
+    className,
+    onClick,
+    disabled,
+    isLoading,
+    type = 'button',
+    'aria-label': ariaLabel,
+  },
+  ref,
+) {
   return (
-    <button
+    <DsButton
+      ref={ref}
       type={type}
-      onClick={onClick}
-      disabled={isDisabled}
+      variant={dsVariantMap[variant]}
+      leftIcon={icon}
+      // O DS só bloqueia o clique via JS quando isLoading (mantém o <button> "habilitado"
+      // visualmente/para AT). O contrato local sempre desabilitou de fato durante o loading
+      // (dimmed + fora do fluxo de tab) — preservado aqui para não mudar UX/a11y das telas.
+      disabled={disabled || isLoading}
+      isLoading={isLoading}
       aria-label={ariaLabel}
-      aria-busy={isLoading ? 'true' : undefined}
-      className={clsx(
-        // Base
-        'inline-flex items-center justify-center gap-2.5 h-9 px-3 py-2.5',
-        'rounded-[5px] font-semibold text-sm',
-        'transition-shadow duration-150 cursor-pointer',
-        // Variant
-        variantClasses[variant],
-        // Hover: sombra — nunca muda cor (frontend.md)
-        'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
-        // Focus
-        'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-        // Disabled
-        isDisabled && 'opacity-50 cursor-not-allowed pointer-events-none',
-        className,
-      )}
+      onClick={() => onClick?.()}
+      className={cn(variantClassName[variant], className)}
     >
-      {isLoading ? (
-        <>
-          <svg
-            aria-hidden="true"
-            className="animate-spin h-4 w-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            />
-          </svg>
-          {children && <span>{children}</span>}
-        </>
-      ) : (
-        <>
-          {icon && <span aria-hidden="true">{icon}</span>}
-          {children && <span>{children}</span>}
-        </>
-      )}
-    </button>
+      {children}
+    </DsButton>
   )
-}
+})

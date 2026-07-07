@@ -10,6 +10,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    // Evita React duplicado ao consumir @migrate/design-system via dependência file: (R1)
+    dedupe: ['react', 'react-dom'],
+  },
   build: {
     // SEGURANÇA: nunca gerar source maps em produção
     sourcemap: false,

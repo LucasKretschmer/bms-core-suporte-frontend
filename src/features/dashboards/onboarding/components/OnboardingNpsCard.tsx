@@ -32,7 +32,7 @@ export function OnboardingNpsCard() {
         />
         <div className="flex items-center mt-1">
           <span
-            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-border/50 text-foreground/60"
+            className="inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium bg-border/50 text-foreground/60"
             aria-label="Funcionalidade em breve"
           >
             Em breve

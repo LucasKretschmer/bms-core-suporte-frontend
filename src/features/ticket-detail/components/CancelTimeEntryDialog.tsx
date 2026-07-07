@@ -82,7 +82,7 @@ export function CancelTimeEntryDialog({
             disabled={isSubmitting}
             placeholder="Descreva por que este apontamento está sendo cancelado."
             {...register('reason')}
-            className="h-20 rounded-[5px] border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-[#666] resize-none disabled:opacity-50"
+            className="h-20 rounded-input border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-primary-medium resize-none disabled:opacity-50"
           />
           {errors.reason?.message && (
             <p id="cancel-reason-error" className="text-xs text-error-fg" role="alert">

@@ -76,8 +76,8 @@ export function KpiCard({
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-describedby={subtext ? subtextId : undefined}
       className={clsx(
-        'flex flex-col gap-1 min-h-[80px] rounded-xl border border-border bg-card p-4',
-        isClickable && 'cursor-pointer hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
+        'flex flex-col gap-1 min-h-[80px] rounded-card border border-border bg-card p-4',
+        isClickable && 'cursor-pointer hover:shadow-hover transition-shadow duration-150',
         isClickable && 'focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none',
         className,
       )}

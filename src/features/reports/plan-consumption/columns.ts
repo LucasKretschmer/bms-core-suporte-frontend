@@ -27,9 +27,9 @@ export function getPercentClass(value: number | null): PercentClass {
 }
 
 const percentColorClasses: Record<PercentClass, string> = {
-  green: 'text-green-700 font-medium',
-  yellow: 'text-yellow-700 font-medium',
-  red: 'text-red-700 font-medium',
+  green: 'text-success-fg font-medium',
+  yellow: 'text-warning-fg font-medium',
+  red: 'text-error-fg font-medium',
   neutral: 'text-foreground',
 }
 

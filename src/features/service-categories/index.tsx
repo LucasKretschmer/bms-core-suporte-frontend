@@ -159,7 +159,7 @@ export default function ServiceCategoriesPage() {
 
         {/* Estados de UI */}
         {isLoading && (
-          <div className="bg-card rounded-[5px] border border-border p-6">
+          <div className="bg-card rounded-card border border-border p-6">
             <Skeleton lines={6} />
           </div>
         )}
@@ -173,7 +173,7 @@ export default function ServiceCategoriesPage() {
           <EmptyState message="Nenhuma categoria cadastrada." />
         )}
         {!isLoading && !isError && data && data.length > 0 && (
-          <div className="bg-card rounded-[5px] border border-border overflow-hidden">
+          <div className="bg-card rounded-card border border-border overflow-hidden">
             <DataTable tableId="service-categories" columns={columns} data={data} />
           </div>
         )}

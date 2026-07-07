@@ -15,7 +15,7 @@ type SwitchProps = {
 }
 
 /**
- * Toggle (switch) acessível do Design System BMS.
+ * Toggle (switch) acessível — retematizado com tokens do Design System Migrate.
  * role="switch" + aria-checked, operável por teclado (Enter/Espaço).
  * Hover por sombra — nunca muda cor de fundo no hover.
  */
@@ -45,10 +45,10 @@ export function Switch({
       disabled={disabled}
       onClick={handleClick}
       className={clsx(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full',
+        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-pill',
         'transition-shadow duration-150 cursor-pointer',
-        'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-        'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+        'focus-visible:ring-2 focus-visible:ring-primary-light focus-visible:ring-offset-2',
+        'hover:shadow-hover',
         checked ? 'bg-primary' : 'bg-border',
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
         className,

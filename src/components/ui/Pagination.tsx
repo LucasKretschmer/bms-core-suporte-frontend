@@ -12,7 +12,11 @@ type PaginationProps = {
   onPageSizeChange: (size: number) => void
 }
 
-/** Paginação do Design System BMS com seletor de pageSize (combobox abre para cima). */
+/**
+ * Paginação retematizada para o Migrate Design System (110/P3).
+ * Mantém o seletor de pageSize customizado local (`Combobox`, abre para
+ * cima) — decisão do Manager, não substituído pelo `<select>` nativo do DS.
+ */
 export function Pagination({
   page,
   pageSize,
@@ -44,7 +48,7 @@ export function Pagination({
   return (
     <div className="flex items-center justify-between py-2 gap-3 flex-wrap">
       {/* Total de registros */}
-      <span className="text-xs text-foreground/60">
+      <span className="text-xs text-muted">
         {totalCount === 0 ? 'Nenhum registro' : `${totalCount} registro${totalCount !== 1 ? 's' : ''}`}
       </span>
 
@@ -60,7 +64,7 @@ export function Pagination({
 
         {pages.map((p, i) =>
           p === '...' ? (
-            <span key={`ellipsis-${i}`} className="w-6 h-6 flex items-center justify-center text-xs text-foreground/40">
+            <span key={`ellipsis-${i}`} className="flex size-6 items-center justify-center text-xs text-muted">
               …
             </span>
           ) : (
@@ -117,12 +121,10 @@ function PageButton({ children, onClick, disabled, active, ...aria }: PageButton
       disabled={disabled}
       {...aria}
       className={clsx(
-        'w-6 h-6 flex items-center justify-center rounded text-xs font-bold',
+        'flex size-6 items-center justify-center rounded text-xs font-bold',
         'transition-shadow duration-150',
-        active
-          ? 'bg-primary text-white'
-          : 'text-foreground hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
-        disabled && 'opacity-30 cursor-not-allowed pointer-events-none',
+        active ? 'bg-primary text-white' : 'text-primary hover:shadow-hover',
+        'disabled:cursor-not-allowed disabled:opacity-40 disabled:pointer-events-none disabled:hover:shadow-none',
       )}
     >
       {children}

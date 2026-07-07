@@ -178,7 +178,7 @@ export default function TeamsPage() {
         </p>
 
         {isLoading && (
-          <div className="bg-card rounded-[5px] border border-border p-6">
+          <div className="bg-card rounded-card border border-border p-6">
             <Skeleton lines={6} />
           </div>
         )}
@@ -230,7 +230,7 @@ export default function TeamsPage() {
               {sortedAgents.length === 0 ? (
                 <EmptyState message="Nenhum atendente encontrado." />
               ) : (
-                <div className="bg-card rounded-[5px] border border-border overflow-hidden">
+                <div className="bg-card rounded-card border border-border overflow-hidden">
                   <DataTable
                     tableId="teams-agents"
                     columns={columns}
@@ -254,7 +254,7 @@ export default function TeamsPage() {
                 {teams.map((team) => (
                   <div
                     key={team.id ?? team.nome}
-                    className="bg-card rounded-xl border border-border p-4 min-w-[220px] flex-1 max-w-sm"
+                    className="bg-card rounded-card border border-border p-4 min-w-[220px] flex-1 max-w-sm"
                   >
                     <h3 className="text-sm font-medium text-foreground">
                       {team.nome}{' '}

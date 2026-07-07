@@ -258,7 +258,7 @@ export function ClientTicketsPanel({
       </section>
 
       {/* Filtros */}
-      <div className="p-4 bg-card rounded-[5px] border border-border">
+      <div className="p-4 bg-card rounded-card border border-border">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-wrap items-end gap-3">
             <Input
@@ -335,7 +335,7 @@ export function ClientTicketsPanel({
 
       {/* Estados de UI */}
       {isLoading && (
-        <div className="bg-card rounded-[5px] border border-border p-6">
+        <div className="bg-card rounded-card border border-border p-6">
           <Skeleton lines={8} />
         </div>
       )}
@@ -344,7 +344,7 @@ export function ClientTicketsPanel({
         <EmptyState message="Nenhum ticket encontrado para este cliente no período." />
       )}
       {!isLoading && !isError && !isEmpty && (
-        <div className="bg-card rounded-[5px] border border-border overflow-hidden">
+        <div className="bg-card rounded-card border border-border overflow-hidden">
           <DataTable<ClientTicketItemDto>
             tableId={tableId}
             columns={columns}

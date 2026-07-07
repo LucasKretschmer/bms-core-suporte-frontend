@@ -21,11 +21,15 @@ const alignClasses = {
 }
 
 /**
- * DataTable genérica do Design System BMS.
- * - Header: 12px, 500, center, h-36px, canto 5px 5px 0 0, border 0.7px
- * - Cell: 12px, 400
- * - Row: h-38px, padding 9px 20px, border 0.7px, hover sombra
+ * DataTable genérica (retematizada para o Migrate Design System — 110/P3).
+ * - Header: 12px, 500, center, h-36px, borda `border-line`, texto `text-muted`
+ * - Cell: 12px, 400, texto `text-foreground`
+ * - Row: h-38px, padding 9px 20px, borda `border-line`, hover `shadow-hover`
  * - Ordenação server-side por coluna (clique no header alterna asc/desc)
+ *
+ * Nota: a moldura de card (`rounded-card border shadow-card`) **não** vive
+ * aqui — fica a cargo do layout que envolve a tabela (`ReportPageLayout`),
+ * evitando card dentro de card (ver `arquitetura.md` R6/A9 da demanda 110).
  *
  * Nota: a reordenação de colunas por arrastar foi removida (071) — o drag no
  * cabeçalho interceptava o clique do botão de ordenar, impedindo o toggle.
@@ -44,7 +48,7 @@ export function DataTable<TRow>({
 }: DataTableProps<TRow>) {
   return (
     <div className={clsx('w-full overflow-x-auto', className)}>
-      <table className="w-full border-collapse text-[12px]">
+      <table className="w-full border-collapse text-xs">
         <thead>
           <tr>
             {columns.map((col) => {
@@ -66,14 +70,11 @@ export function DataTable<TRow>({
                     // Especificações frontend.md — padding movido para o
                     // conteúdo do header (SortableHeader) para que o clique
                     // preencha a célula inteira quando ordenável (080).
-                    'h-9 p-0 font-medium text-foreground/80 bg-background',
-                    'border-[0.7px] border-border',
-                    'first:rounded-tl-[5px] last:rounded-tr-[5px]',
+                    'h-9 p-0 font-medium text-muted bg-background',
+                    'border border-line',
                     'select-none',
-                    'border-b border-border',
                     // Hover discreto no cabeçalho ordenável (sombra do DS).
-                    canSort &&
-                      'transition-shadow duration-150 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
+                    canSort && 'transition-shadow duration-150 hover:shadow-hover',
                     alignClasses[col.align ?? 'center'],
                   )}
                 >
@@ -109,9 +110,9 @@ export function DataTable<TRow>({
                   : undefined
               }
               className={clsx(
-                'border-[0.7px] border-border border-t-0',
+                'border border-line border-t-0',
                 (isClickable || onRowClick) &&
-                  'cursor-pointer hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset transition-shadow duration-150',
+                  'cursor-pointer hover:shadow-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset transition-shadow duration-150',
               )}
             >
               {columns.map((col) => (

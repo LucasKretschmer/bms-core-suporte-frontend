@@ -72,7 +72,7 @@ export function SupportKpiSection({
     return (
       <KpiCardGrid>
         {Array.from({ length: KPI_CATALOG.length }).map((_, i) => (
-          <Skeleton key={i} lines={1} height="h-20" className="rounded-xl" />
+          <Skeleton key={i} lines={1} height="h-20" className="rounded-card" />
         ))}
       </KpiCardGrid>
     )

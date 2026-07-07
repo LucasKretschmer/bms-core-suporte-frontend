@@ -27,6 +27,8 @@ type MultiSelectComboboxProps<T extends string | number> = {
   error?: string
   openUp?: boolean
   alignRight?: boolean
+  /** Altura do trigger — `default` (42px, padrão) ou `sm` (32px, contextos compactos). */
+  size?: 'default' | 'sm'
 }
 
 /**
@@ -39,7 +41,9 @@ type MultiSelectComboboxProps<T extends string | number> = {
  *   checkbox com aria-checked; navegação por Tab; alterna com Espaço/Enter; Esc fecha.
  * - fecha ao clicar fora.
  *
- * Segue o Design System: altura 36px (h-9), foco #666 ao abrir, hover por sombra.
+ * Segue o Design System Migrate (visual do `Select`): altura 42px (32px em `size="sm"`),
+ * borda `border-primary-medium` (1.5px) ao abrir/focar, hover por espessamento de borda
+ * (campo de formulário — nunca sombra).
  */
 export function MultiSelectCombobox<T extends string | number>({
   id: idProp,
@@ -56,6 +60,7 @@ export function MultiSelectCombobox<T extends string | number>({
   error,
   openUp = false,
   alignRight = false,
+  size = 'default',
 }: MultiSelectComboboxProps<T>) {
   const genId = useId()
   const id = idProp ?? genId
@@ -136,6 +141,8 @@ export function MultiSelectCombobox<T extends string | number>({
     }
   }
 
+  const height = size === 'sm' ? 'h-8' : 'h-[42px]'
+
   return (
     <div ref={containerRef} className={clsx('relative flex flex-col space-y-0.5', className)}>
       {label && (
@@ -155,16 +162,17 @@ export function MultiSelectCombobox<T extends string | number>({
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         onKeyDown={handleTriggerKeyDown}
         className={clsx(
-          'flex items-center justify-between w-full rounded-[5px] border border-border',
-          'px-3 h-9 text-sm bg-card cursor-pointer',
-          isOpen && 'border-[#666]',
+          'flex items-center justify-between w-full rounded-input border-[0.8px] border-border',
+          'px-3 text-sm bg-card cursor-pointer',
+          'transition-[border-color,border-width] duration-150',
+          height,
+          isOpen && 'border-[1.5px] border-primary-medium',
           error && 'border-error-fg',
           disabled && 'opacity-50 cursor-not-allowed',
-          'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
-          'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
+          !disabled && 'hover:border-primary-medium',
         )}
       >
-        <span className={clsx('truncate', value.length === 0 && 'text-foreground/40')}>
+        <span className={clsx('truncate', value.length === 0 && 'text-muted')}>
           {triggerText}
         </span>
         <svg
@@ -192,14 +200,14 @@ export function MultiSelectCombobox<T extends string | number>({
       {isOpen && (
         <div
           className={clsx(
-            'absolute z-50 w-full min-w-[200px] bg-card border border-border rounded-[5px] shadow-sm',
+            'absolute z-50 w-full min-w-[200px] bg-white border border-line rounded-input shadow-panel',
             'origin-top animate-[scaleY_0.1s_ease-out]',
             openUp ? 'bottom-full mb-1' : 'top-full mt-1',
             alignRight && 'right-0 left-auto',
           )}
         >
           {searchable && (
-            <div className="p-2 border-b border-border">
+            <div className="p-2 border-b border-line">
               <input
                 ref={searchRef}
                 type="text"
@@ -210,7 +218,7 @@ export function MultiSelectCombobox<T extends string | number>({
                 }}
                 placeholder="Filtrar…"
                 aria-label="Filtrar opções"
-                className="w-full h-8 px-2 rounded border border-border text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-[#666]"
+                className="w-full h-8 px-2 rounded border-[0.8px] border-border text-sm bg-card text-foreground placeholder:text-muted outline-none focus:border-[1.5px] focus:border-primary-medium"
               />
             </div>
           )}
@@ -223,10 +231,10 @@ export function MultiSelectCombobox<T extends string | number>({
             className="max-h-52 overflow-y-auto py-1"
           >
             {isLoading && (
-              <li className="px-3 py-2 text-sm text-foreground/50 text-center">Carregando…</li>
+              <li className="px-3 py-2 text-sm text-muted text-center">Carregando…</li>
             )}
             {!isLoading && filteredOptions.length === 0 && (
-              <li className="px-3 py-2 text-sm text-foreground/50 text-center italic">
+              <li className="px-3 py-2 text-sm text-muted text-center italic">
                 Nenhum resultado.
               </li>
             )}
@@ -243,16 +251,16 @@ export function MultiSelectCombobox<T extends string | number>({
                     onClick={() => toggleOption(opt.value)}
                     onKeyDown={(e) => handleOptionKeyDown(e, opt.value)}
                     className={clsx(
-                      'flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer text-black',
-                      'hover:bg-[#F8F8F8] transition-colors duration-100',
-                      'focus-visible:bg-[#F8F8F8] focus-visible:outline-none',
+                      'flex items-center gap-2 rounded-input px-3 py-[9px] text-sm cursor-pointer text-ink',
+                      'hover:bg-surface-hover transition-colors duration-100',
+                      'focus-visible:bg-surface-hover focus-visible:outline-none',
                     )}
                   >
                     <span
                       aria-hidden="true"
                       className={clsx(
-                        'flex items-center justify-center h-4 w-4 rounded-[4px] border shrink-0',
-                        checked ? 'bg-primary border-primary' : 'border-border bg-card',
+                        'flex items-center justify-center h-4 w-4 rounded-check border shrink-0',
+                        checked ? 'bg-primary-medium border-primary-medium' : 'border-border bg-card',
                       )}
                     >
                       {checked && (

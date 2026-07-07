@@ -138,7 +138,7 @@ export function ClientReportPdf({ report, filename, fetchAllItems }: ClientRepor
             <iframe
               src={pdfState.previewUrl}
               title="Preview do relatório em PDF"
-              className="w-full flex-1 min-h-0 border border-border rounded-[5px]"
+              className="w-full flex-1 min-h-0 border border-border rounded-control"
               aria-label="Preview do PDF do relatório do cliente"
             />
           </div>

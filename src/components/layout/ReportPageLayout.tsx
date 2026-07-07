@@ -45,14 +45,14 @@ export function ReportPageLayout({
     >
       {/* Barra de filtros */}
       {filters && (
-        <div className="mb-4 p-4 bg-card rounded-[5px] border border-border">
+        <div className="mb-4 p-4 bg-card rounded-card border border-line shadow-card">
           {filters}
         </div>
       )}
 
       {/* Estados de UI */}
       {isLoading && (
-        <div className="bg-card rounded-[5px] border border-border p-6">
+        <div className="bg-card rounded-card border border-line shadow-card p-6">
           <Skeleton lines={8} />
         </div>
       )}
@@ -63,7 +63,7 @@ export function ReportPageLayout({
         <EmptyState message={emptyMessage} />
       )}
       {!isLoading && !isError && !isEmpty && (
-        <div className="bg-card rounded-[5px] border border-border overflow-hidden">
+        <div className="bg-card rounded-card border border-line shadow-card overflow-hidden min-w-0">
           {children}
         </div>
       )}

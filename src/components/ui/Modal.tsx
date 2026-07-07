@@ -22,19 +22,29 @@ type ModalProps = {
 /**
  * 'fullscreen' = quase tela cheia com 4% de margem em cada borda (92vw × 92vh).
  * Usado no preview de PDF (096). O body do modal usa flex-1 para preencher a altura.
+ *
+ * sm/md/lg alinhados ao DS `Modal` (max-w-md/max-w-lg/max-w-2xl). `xl` e
+ * `fullscreen` são extensões locais — o DS não cobre esses tamanhos (gap G10
+ * do design system: falta variante grande/tela cheia + blur configurável).
  */
 const sizeClasses: Record<ModalSize, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
+  sm: 'max-w-md',
+  md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-5xl',
   fullscreen: 'w-[92vw] max-w-[92vw] h-[92vh] max-h-[92vh]',
 }
 
 /**
- * Modal do Design System BMS.
- * Cantos 16px, padding lateral 28px, padding topo/base 20px.
- * Trap de foco, Escape fecha, overlay clica-para-fechar.
+ * Modal genérico do app — retematizado com os tokens Migrate (`shadow-card`,
+ * `rounded-card`, `text-card`/`text-primary`) para bater 1:1 com o DS `Modal`
+ * nos tamanhos sm/md/lg.
+ *
+ * Permanece LOCAL (não é wrapper do DS `Modal`): o DS só tem `sm|md|lg` (até
+ * `max-w-2xl`), overlay sempre `bg-black/40` sem blur configurável, e não
+ * expõe `className` no painel. Produção usa `size="xl"`/`"fullscreen"` +
+ * `backdropBlur="lg"` (preview de PDF quase-tela-cheia) — ver gap G10/G7 do
+ * design system. Trap de foco, Escape fecha, overlay clica-para-fechar.
  */
 export function Modal({
   isOpen,
@@ -91,17 +101,17 @@ export function Modal({
       {/* Conteúdo */}
       <div
         className={clsx(
-          'relative z-10 w-full bg-card rounded-2xl shadow-xl',
+          'relative z-10 w-full bg-white rounded-card shadow-card',
           'flex flex-col',
           size === 'fullscreen' && 'overflow-hidden',
           sizeClasses[size],
           className,
         )}
       >
-        {/* Header */}
+        {/* Header — sem divisor (padrão DS: título "flutua" com px-7 pt-5) */}
         {title && (
-          <div className="flex items-center justify-between px-7 pt-5 pb-4 border-b border-border">
-            <h2 id={titleId} className="text-[16px] font-medium text-foreground">
+          <div className="flex items-center justify-between px-7 pt-5 pb-4">
+            <h2 id={titleId} className="text-card font-medium text-primary">
               {title}
             </h2>
             <button
@@ -109,9 +119,9 @@ export function Modal({
               type="button"
               onClick={onClose}
               aria-label="Fechar modal"
-              className="text-muted hover:text-foreground transition-colors rounded focus-visible:ring-2 focus-visible:ring-primary"
+              className="text-primary/60 hover:text-primary transition-colors rounded focus-visible:ring-2 focus-visible:ring-primary-light focus-visible:ring-offset-2"
             >
-              <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

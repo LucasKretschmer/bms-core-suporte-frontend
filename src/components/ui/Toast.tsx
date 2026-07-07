@@ -60,7 +60,7 @@ function ToastContainer({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss:
           key={t.id}
           role="alert"
           className={clsx(
-            'flex items-center gap-3 px-4 py-3 rounded-[5px] border shadow-sm',
+            'flex items-center gap-3 px-4 py-3 rounded-card border shadow-panel',
             'text-sm font-medium',
             // height conforme frontend.md (alertas): h-[60px]
             'min-h-[60px]',

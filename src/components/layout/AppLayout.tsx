@@ -34,14 +34,14 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-background p-3 gap-3">
+      {/* Sidebar — painel flutuante */}
       <Sidebar isCollapsed={isCollapsed} />
 
       {/* Conteúdo principal */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col gap-3 min-w-0 overflow-hidden">
         <Header onMenuToggle={toggleSidebar} isSidebarCollapsed={isCollapsed} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto rounded-card p-6">
           <Outlet />
         </main>
       </div>

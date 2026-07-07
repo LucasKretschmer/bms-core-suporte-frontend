@@ -83,12 +83,12 @@ export function OnboardingProjectSection({
         <h2 className="text-[20px] font-medium text-foreground mb-3">Projetos</h2>
         <KpiCardGrid>
           {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} lines={1} height="h-20" className="rounded-xl" />
+            <Skeleton key={i} lines={1} height="h-20" className="rounded-card" />
           ))}
         </KpiCardGrid>
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton lines={1} height="h-60" className="rounded-xl" />
-          <Skeleton lines={1} height="h-60" className="rounded-xl" />
+          <Skeleton lines={1} height="h-60" className="rounded-card" />
+          <Skeleton lines={1} height="h-60" className="rounded-card" />
         </div>
       </section>
     )

@@ -93,8 +93,8 @@ export function TimeEntryCard({
 
   // Cancelados: card discreto (opacidade reduzida) para não competir com os ativos.
   const articleClass = isCancelled
-    ? 'rounded-xl border border-border bg-card p-4 opacity-70'
-    : 'rounded-xl border border-border bg-card p-4'
+    ? 'rounded-card border border-border bg-card p-4 opacity-70'
+    : 'rounded-card border border-border bg-card p-4'
 
   return (
     <article className={articleClass}>
@@ -172,8 +172,8 @@ export function TimeEntryCard({
                 <span
                   className={
                     isWork
-                      ? 'inline-flex items-center rounded-full px-2 py-0.5 bg-badge-plano-bg text-badge-plano-fg font-medium'
-                      : 'inline-flex items-center rounded-full px-2 py-0.5 bg-badge-neutro-bg text-badge-neutro-fg font-medium'
+                      ? 'inline-flex items-center rounded-pill px-2 py-0.5 bg-badge-plano-bg text-badge-plano-fg font-medium'
+                      : 'inline-flex items-center rounded-pill px-2 py-0.5 bg-badge-neutro-bg text-badge-neutro-fg font-medium'
                   }
                 >
                   {isWork ? 'Trabalho' : 'Pausa'}
@@ -190,7 +190,7 @@ export function TimeEntryCard({
 
       {/* Motivo do cancelamento + quem cancelou (099) — destacado nos cancelados. */}
       {isCancelled && (
-        <div className="mt-2 rounded-md border border-border bg-badge-neutro-bg px-3 py-2 text-xs text-foreground/70">
+        <div className="mt-2 rounded-input border border-border bg-badge-neutro-bg px-3 py-2 text-xs text-foreground/70">
           <span className="font-semibold">Cancelado</span>
           {entry.canceladoPorNome ? ` por ${entry.canceladoPorNome}` : ''}
           {entry.note ? ` · Motivo: ${entry.note}` : ''}

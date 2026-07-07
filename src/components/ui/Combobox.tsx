@@ -147,7 +147,7 @@ export function Combobox({
     }
   }
 
-  const height = size === 'sm' ? 'h-8' : 'h-9'
+  const height = size === 'sm' ? 'h-8' : 'h-[42px]'
 
   return (
     <div ref={containerRef} className={clsx('relative flex flex-col space-y-0.5', className)}>
@@ -170,17 +170,17 @@ export function Combobox({
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         onKeyDown={handleTriggerKeyDown}
         className={clsx(
-          'flex items-center justify-between w-full rounded-[5px] border border-border',
+          'flex items-center justify-between w-full rounded-input border-[0.8px] border-border',
           'px-3 text-sm bg-card cursor-pointer',
+          'transition-[border-color,border-width] duration-150',
           height,
-          isOpen && 'border-[#666]',
+          isOpen && 'border-[1.5px] border-primary-medium',
           error && 'border-error-fg',
           disabled && 'opacity-50 cursor-not-allowed',
-          'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
-          'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
+          !disabled && 'hover:border-primary-medium',
         )}
       >
-        <span className={clsx('truncate', !selectedLabel && 'text-foreground/40')}>
+        <span className={clsx('truncate', !selectedLabel && 'text-muted')}>
           {selectedLabel ?? placeholder}
         </span>
         <svg
@@ -205,14 +205,14 @@ export function Combobox({
       {isOpen && (
         <div
           className={clsx(
-            'absolute z-50 w-full min-w-[180px] bg-card border border-border rounded-[5px] shadow-sm',
+            'absolute z-50 w-full min-w-[180px] bg-white border border-line rounded-input shadow-panel',
             'origin-top animate-[scaleY_0.1s_ease-out]',
             openUp ? 'bottom-full mb-1' : 'top-full mt-1',
             alignRight && 'right-0 left-auto',
           )}
         >
           {/* Campo de busca */}
-          <div className="p-2 border-b border-border">
+          <div className="p-2 border-b border-line">
             <input
               ref={searchRef}
               type="text"
@@ -223,7 +223,7 @@ export function Combobox({
               }}
               onKeyDown={handleSearchKeyDown}
               placeholder="Filtrar…"
-              className="w-full h-8 px-2 rounded border border-border text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-[#666]"
+              className="w-full h-8 px-2 rounded border-[0.8px] border-border text-sm bg-card text-foreground placeholder:text-muted outline-none focus:border-[1.5px] focus:border-primary-medium"
             />
           </div>
 
@@ -236,12 +236,12 @@ export function Combobox({
             className="max-h-52 overflow-y-auto"
           >
             {isLoading && (
-              <li className="px-3 py-2 text-sm text-foreground/50 text-center">
+              <li className="px-3 py-2 text-sm text-muted text-center">
                 Carregando…
               </li>
             )}
             {!isLoading && filteredOptions.length === 0 && (
-              <li className="px-3 py-2 text-sm text-foreground/50 text-center italic">
+              <li className="px-3 py-2 text-sm text-muted text-center italic">
                 Nenhum resultado.
               </li>
             )}
@@ -254,10 +254,10 @@ export function Combobox({
                   aria-selected={opt.value === value}
                   onClick={() => selectOption(opt.value)}
                   className={clsx(
-                    'px-3 py-1.5 text-sm cursor-pointer text-black',
-                    idx === activeIndex && 'bg-[#F8F8F8]',
+                    'rounded-input px-3 py-[9px] text-sm cursor-pointer text-ink',
+                    idx === activeIndex && 'bg-surface-hover',
                     opt.value === value && 'font-medium',
-                    'hover:bg-[#F8F8F8] transition-colors duration-100',
+                    'hover:bg-surface-hover transition-colors duration-100',
                   )}
                 >
                   {opt.label}

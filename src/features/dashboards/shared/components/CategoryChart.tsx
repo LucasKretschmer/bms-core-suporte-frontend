@@ -50,7 +50,7 @@ function CustomTooltip({
   if (!active || !payload?.length) return null
   const item = payload[0].payload
   return (
-    <div className="bg-card border border-border rounded-[5px] p-3 shadow text-xs max-w-[220px]">
+    <div className="bg-card border border-border rounded-control p-3 shadow text-xs max-w-[220px]">
       <p className="font-medium mb-1 break-words">{item.categoria}</p>
       <p>Chamados: <strong>{item.count}</strong></p>
       <p>Tempo: <strong>{formatSeconds(item.totalSegundos)}</strong></p>

@@ -4,6 +4,7 @@ import {
   consolidateClientReport,
   type ConsolidatedClientReportRow,
 } from '../../client-report/utils/consolidateClientReport'
+import { pdfColors, pdfFonts } from './pdfTheme'
 
 /**
  * Tipo do relatório em PDF (096).
@@ -55,19 +56,20 @@ export async function generateClientReportPdf(
   // Estilos básicos para o PDF em paisagem
   const styles = StyleSheet.create({
     page: {
-      fontFamily: 'Helvetica',
+      fontFamily: pdfFonts.base,
       fontSize: 9,
       padding: 24,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: pdfColors.card,
     },
     title: {
       fontSize: 14,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: pdfFonts.bold,
       marginBottom: 4,
+      color: pdfColors.foreground,
     },
     subtitle: {
       fontSize: 10,
-      color: '#6B7280',
+      color: pdfColors.muted,
       marginBottom: 16,
     },
     section: {
@@ -80,22 +82,22 @@ export async function generateClientReportPdf(
     },
     kpiBox: {
       flex: 1,
-      backgroundColor: '#F5F6FA',
+      backgroundColor: pdfColors.surface,
       borderRadius: 4,
       padding: 8,
     },
     kpiLabel: {
       fontSize: 8,
-      color: '#6B7280',
+      color: pdfColors.muted,
       marginBottom: 2,
     },
     kpiValue: {
       fontSize: 11,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: pdfFonts.bold,
     },
     tableHeader: {
       flexDirection: 'row',
-      backgroundColor: '#E2E8F0',
+      backgroundColor: pdfColors.border,
       borderRadius: 3,
       padding: '4 8',
       marginBottom: 2,
@@ -103,7 +105,7 @@ export async function generateClientReportPdf(
     tableRow: {
       flexDirection: 'row',
       borderBottomWidth: 0.5,
-      borderBottomColor: '#E2E8F0',
+      borderBottomColor: pdfColors.border,
       padding: '3 8',
     },
     tableCell: {
@@ -113,7 +115,7 @@ export async function generateClientReportPdf(
     tableCellHeader: {
       flex: 1,
       fontSize: 8,
-      fontFamily: 'Helvetica-Bold',
+      fontFamily: pdfFonts.bold,
     },
   })
 

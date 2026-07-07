@@ -127,7 +127,7 @@ function StackedTooltip({
   const visible = payload.filter((p) => typeof p.value === 'number' && (p.value as number) > 0)
   if (visible.length === 0) return null
   return (
-    <div className="bg-card border border-border rounded-[5px] p-3 shadow text-xs max-w-[240px]">
+    <div className="bg-card border border-border rounded-control p-3 shadow text-xs max-w-[240px]">
       <p className="font-medium mb-1 break-words">{label}</p>
       {visible.map((p, i) => (
         <p key={i} className="flex items-center gap-1.5">
@@ -292,7 +292,7 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
               <button
                 type="button"
                 onClick={() => onSliceClick(item.statusKey, item.status)}
-                className="inline-flex items-center gap-1.5 rounded-[5px] border border-border px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]"
+                className="inline-flex items-center gap-1.5 rounded-control border border-border px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary hover:shadow-hover"
                 aria-label={`Ver tickets do status ${item.status} (${item.count})`}
               >
                 <span

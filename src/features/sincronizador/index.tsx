@@ -187,7 +187,7 @@ export default function SincronizadorPage() {
       </div>
 
       {/* ── Seção 1: Status ── */}
-      <section aria-labelledby="status-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
+      <section aria-labelledby="status-heading" className="bg-card rounded-card border border-border p-6 space-y-4">
         <h2 id="status-heading" className="text-[20px] font-medium text-foreground">
           Status
         </h2>
@@ -247,7 +247,7 @@ export default function SincronizadorPage() {
       </section>
 
       {/* ── Seção 2: Log de Execuções ── */}
-      <section aria-labelledby="logs-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
+      <section aria-labelledby="logs-heading" className="bg-card rounded-card border border-border p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 id="logs-heading" className="text-[20px] font-medium text-foreground">
             Log de Execuções
@@ -308,7 +308,7 @@ export default function SincronizadorPage() {
       </section>
 
       {/* ── Seção 3: Equipes ── */}
-      <section aria-labelledby="equipes-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
+      <section aria-labelledby="equipes-heading" className="bg-card rounded-card border border-border p-6 space-y-4">
         <h2 id="equipes-heading" className="text-[20px] font-medium text-foreground">
           Equipes
         </h2>
@@ -319,7 +319,7 @@ export default function SincronizadorPage() {
       </section>
 
       {/* ── Seção 4: Empresas (081 — provisório, separado do sync de tickets) ── */}
-      <section aria-labelledby="empresas-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
+      <section aria-labelledby="empresas-heading" className="bg-card rounded-card border border-border p-6 space-y-4">
         <h2 id="empresas-heading" className="text-[20px] font-medium text-foreground">
           Empresas
         </h2>
@@ -332,7 +332,7 @@ export default function SincronizadorPage() {
       </section>
 
       {/* ── Seção 5: Manutenção de Registros ── */}
-      <section aria-labelledby="manutencao-heading" className="bg-card rounded-[5px] border border-border p-6 space-y-4">
+      <section aria-labelledby="manutencao-heading" className="bg-card rounded-card border border-border p-6 space-y-4">
         <h2 id="manutencao-heading" className="text-[20px] font-medium text-foreground">
           Manutenção de Registros
         </h2>

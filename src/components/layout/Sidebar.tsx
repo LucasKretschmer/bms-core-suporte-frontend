@@ -229,16 +229,16 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
     <nav
       aria-label="Menu principal"
       className={clsx(
-        'flex flex-col bg-sidebar h-full transition-all duration-200 shrink-0',
-        isCollapsed ? 'w-[60px]' : 'w-[220px]',
+        'flex flex-col bg-grad-escuro rounded-card shadow-panel h-full p-3 text-white transition-all duration-200 shrink-0',
+        isCollapsed ? 'w-[86px]' : 'w-72',
       )}
     >
       {/* Logo / nome */}
-      <div className="h-14 flex items-center justify-center border-b border-white/10 px-3">
+      <div className="h-14 flex items-center justify-center border-b border-white/15 px-3">
         {isCollapsed ? (
-          <span className="text-sidebar-fg font-bold text-lg">B</span>
+          <span className="text-white font-extrabold text-lg">B</span>
         ) : (
-          <span className="text-sidebar-fg font-semibold text-sm truncate px-2">
+          <span className="text-white font-extrabold text-sm truncate px-2">
             {import.meta.env.VITE_APP_NAME ?? 'BMS Core Suporte'}
           </span>
         )}
@@ -263,10 +263,11 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
               onClick={() => setDashboardsOpen((prev) => !prev)}
               aria-expanded={dashboardsOpen}
               className={clsx(
-                'flex items-center w-full h-10 gap-2 rounded-[4px] mx-2 px-2',
+                'flex items-center w-full h-10 gap-2 rounded-control px-3',
                 isCollapsed ? 'justify-center' : 'justify-between',
-                'text-sidebar-fg/70 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
-                'text-xs font-medium uppercase tracking-wide',
+                'text-white/60 text-aux font-medium uppercase tracking-wide',
+                'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+                'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
               )}
             >
               {!isCollapsed && <span>Dashboards</span>}
@@ -309,10 +310,11 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
             onClick={() => setReportsOpen((prev) => !prev)}
             aria-expanded={reportsOpen}
             className={clsx(
-              'flex items-center w-full h-10 gap-2 rounded-[4px] mx-2 px-2',
+              'flex items-center w-full h-10 gap-2 rounded-control px-3',
               isCollapsed ? 'justify-center' : 'justify-between',
-              'text-sidebar-fg/70 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
-              'text-xs font-medium uppercase tracking-wide',
+              'text-white/60 text-aux font-medium uppercase tracking-wide',
+              'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+              'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
             )}
           >
             {!isCollapsed && <span>Relatórios</span>}
@@ -354,10 +356,11 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
               onClick={() => setAdministracaoOpen((prev) => !prev)}
               aria-expanded={administracaoOpen}
               className={clsx(
-                'flex items-center w-full h-10 gap-2 rounded-[4px] mx-2 px-2',
+                'flex items-center w-full h-10 gap-2 rounded-control px-3',
                 isCollapsed ? 'justify-center' : 'justify-between',
-                'text-sidebar-fg/70 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
-                'text-xs font-medium uppercase tracking-wide',
+                'text-white/60 text-aux font-medium uppercase tracking-wide',
+                'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+                'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
               )}
             >
               {!isCollapsed && <span>Administração</span>}
@@ -419,12 +422,12 @@ function NavLink({ href, icon, isCollapsed, children }: NavLinkProps) {
     <Link
       to={href}
       className={clsx(
-        'flex items-center h-10 gap-2.5 rounded-[4px] mx-2 px-2',
-        'text-sidebar-fg/80 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
-        'text-sm focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar',
+        'flex items-center h-10 gap-2.5 rounded-control px-3',
+        'text-white/80 hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+        'text-sm focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
         isCollapsed ? 'justify-center' : '',
       )}
-      activeProps={{ className: 'bg-sidebar-active text-white shadow-sm' }}
+      activeProps={{ className: 'bg-white/15 text-white font-semibold border-l-2 border-accent' }}
       title={isCollapsed ? String(children) : undefined}
     >
       {icon}
@@ -438,12 +441,12 @@ function SubNavLink({ href, icon, isCollapsed, children }: NavLinkProps) {
     <Link
       to={href}
       className={clsx(
-        'flex items-center h-8 gap-2 rounded-[4px] transition-shadow duration-150',
-        'text-sidebar-fg/70 hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)]',
-        'text-xs focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar',
-        isCollapsed ? 'mx-2 px-2 justify-center' : 'mx-10 px-2',
+        'flex items-center h-9 gap-2 rounded-control text-sm',
+        'text-white/70 hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+        'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+        isCollapsed ? 'px-3 justify-center' : 'ml-6 px-3',
       )}
-      activeProps={{ className: 'text-white font-medium' }}
+      activeProps={{ className: 'text-white font-semibold bg-white/10' }}
       title={isCollapsed ? String(children) : undefined}
     >
       {icon}

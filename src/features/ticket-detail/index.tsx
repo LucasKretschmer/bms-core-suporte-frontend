@@ -137,7 +137,7 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
       <div className="flex flex-col gap-4">
         {/* Header */}
         {headerQuery.isLoading && (
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-card border border-border bg-card p-4">
             <Skeleton lines={3} />
           </div>
         )}
@@ -160,7 +160,7 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
         {/* Lista de apontamentos */}
         <section aria-label="Apontamentos do ticket" className="flex flex-col gap-3">
           {entriesQuery.isLoading && (
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-card border border-border bg-card p-4">
               <Skeleton lines={5} />
             </div>
           )}

@@ -165,7 +165,7 @@ export function DashboardFilters({
                 onPanelSecondsChange(clamped)
               }}
               className={clsx(
-                'h-9 w-[76px] rounded-[5px] border border-border bg-card px-3',
+                'h-9 w-[76px] rounded-input border border-border bg-card px-3',
                 'text-sm text-foreground',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
               )}
@@ -183,9 +183,9 @@ export function DashboardFilters({
           type="button"
           onClick={onPresentar}
           className={clsx(
-            'flex items-center gap-2 h-9 rounded-[5px] border border-border bg-background',
+            'flex items-center gap-2 h-9 rounded-control border border-border bg-background',
             'px-3 text-sm font-semibold text-foreground',
-            'hover:shadow-[0_1px_3px_1px_rgba(0,0,0,0.15)] transition-shadow duration-150',
+            'hover:shadow-hover transition-shadow duration-150',
             'focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none',
           )}
         >
