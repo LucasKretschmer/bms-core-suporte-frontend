@@ -1,0 +1,6 @@
+# Contexto enviado ao Cloud Build — nunca subir .env nem artefatos locais.
+.git
+.env
+node_modules
+dist
+coverage
