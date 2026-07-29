@@ -9,6 +9,18 @@ type PermissionsResult = {
   isGerentePlus: boolean
   /** Apenas Atendente */
   isAtendente: boolean
+  /**
+   * NOVO (118.6). Não-atendente autenticado ("gestor" no modelo binário
+   * atendente × gerente). Usar esta flag — não `isCoordenadorOuAcima` invertida —
+   * para as decisões de RBAC de UI introduzidas na 118.6 (Sidebar, DashboardFilters).
+   */
+  isGestor: boolean
+  /**
+   * NOVO (118.6). Equipe primária do usuário — usada para travar o seletor de
+   * equipe do atendente em DashboardFilters. `null` se o usuário não tiver equipe
+   * primária (edge case fail-closed — ver DashboardFilters/support/index.tsx).
+   */
+  primaryTeamId: number | null
   isAuthenticated: boolean
 }
 
@@ -28,6 +40,8 @@ export function usePermissions(): PermissionsResult {
     isCoordenadorOuAcima: role === 'COORDENADOR' || role === 'GERENTE' || role === 'ADMIN',
     isGerentePlus: role === 'GERENTE' || role === 'ADMIN',
     isAtendente: role === 'ATENDENTE',
+    isGestor: user !== null && role !== 'ATENDENTE',
+    primaryTeamId: user?.primaryTeamId ?? null,
     isAuthenticated: user !== null,
   }
 }

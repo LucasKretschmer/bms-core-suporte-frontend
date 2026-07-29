@@ -3,6 +3,10 @@
  * Reutiliza PeriodFilter, ClientCombobox, PlanCombobox da fundação 002.
  * TeamCombobox customizado: "Global" + equipes filtradas por gerencia.
  * NUNCA hardcoda nome de equipe — a lista vem de TeamDto[].
+ *
+ * RBAC (118.6): para ATENDENTE, o seletor de equipe fica travado (disabled) na
+ * própria equipe primária (nunca "Global" nem outras equipes) — UX apenas, o
+ * backend é a fonte de verdade e filtra por equipe/rejeita no servidor.
  */
 
 import React, { useId } from 'react'
@@ -86,17 +90,26 @@ export function DashboardFilters({
   apresentarButtonRef,
   className,
 }: DashboardFiltersProps) {
-  const { isCoordenadorOuAcima } = usePermissions()
+  const { isCoordenadorOuAcima, isAtendente, primaryTeamId } = usePermissions()
   const teamComboId = useId()
   const panelSecondsId = useId()
 
   const showPanelControls =
     showPresentar && !!onPresentar && isCoordenadorOuAcima
 
-  const teamOptions = [
-    { value: '', label: 'Global' },
-    ...(teams ?? []).map((t) => ({ value: String(t.id), label: t.nome })),
-  ]
+  // Equipe do atendente (118.6) — trava o combobox na própria equipe, nunca "Global"
+  // nem as demais equipes. Fail-closed: se a equipe primária não estiver na lista
+  // (ainda carregando ou primaryTeamId null), nenhuma opção é oferecida.
+  const myTeam = (teams ?? []).find((t) => t.id === primaryTeamId)
+
+  const teamOptions = isAtendente
+    ? myTeam
+      ? [{ value: String(myTeam.id), label: myTeam.nome }]
+      : []
+    : [
+        { value: '', label: 'Global' },
+        ...(teams ?? []).map((t) => ({ value: String(t.id), label: t.nome })),
+      ]
 
   return (
     <div
@@ -115,9 +128,10 @@ export function DashboardFilters({
           value={scopeToComboboxValue(selectedScope)}
           options={teamOptions}
           onChange={(val) => onScopeChange(buildScope(val))}
-          placeholder="Global"
+          placeholder={isAtendente ? (myTeam?.nome ?? 'Sem equipe atribuída') : 'Global'}
           id={teamComboId}
           isLoading={isTeamsLoading}
+          disabled={isAtendente}
           className="w-full sm:w-44 lg:w-56"
         />
       )}

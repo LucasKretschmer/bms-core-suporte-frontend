@@ -10,7 +10,6 @@
 import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usePermissions } from '../../../hooks/usePermissions'
-import { ErrorState } from '../../../components/ui/ErrorState'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
 import { TicketDrillModal } from '../shared/components/TicketDrillModal'
 import { ApontamentoDrillModal } from '../shared/components/ApontamentoDrillModal'
@@ -40,9 +39,19 @@ import { SupportSlaSection } from './components/SupportSlaSection'
 import { SupportPlanHealthSection } from './components/SupportPlanHealthSection'
 
 export default function DashboardSuportePage() {
-  const { isCoordenadorOuAcima } = usePermissions()
+  const { isAtendente, primaryTeamId } = usePermissions()
 
-  const [scope, setScope] = useState<MetricsScope>('management:suporte')
+  // Scope inicial já considera o perfil (118.6) — evita "flash" de dados globais
+  // antes de qualquer interação do atendente. Fail-closed (118.6.2): se o atendente
+  // não tiver equipe primária, usar 'team:0' (nunca corresponde a equipe real) em
+  // vez de 'management:suporte' — nunca vaza dados de todas as equipes.
+  const [scope, setScope] = useState<MetricsScope>(() =>
+    isAtendente
+      ? primaryTeamId != null
+        ? (`team:${primaryTeamId}` as MetricsScope)
+        : 'team:0'
+      : 'management:suporte',
+  )
   // Período default = mês corrente (clearable), via helper compartilhado (053).
   // format() local — evita off-by-one de timezone do toISOString (UTC).
   const [from, setFrom] = useState<string | null>(
@@ -132,11 +141,8 @@ export default function DashboardSuportePage() {
   // SSE — atualizações em tempo real
   const stream = useMetricsStream(scope)
 
-  if (!isCoordenadorOuAcima) {
-    return (
-      <ErrorState message="Acesso restrito. Esta área é exclusiva para coordenadores e gestores." />
-    )
-  }
+  // Guard de role removido (118.6) — Dashboard Suporte passa a ser acessível ao
+  // atendente, com dados filtrados por equipe no backend (scope 'team:{id}' acima).
 
   const handleExitPanel = () => {
     setPanelActive(false)
@@ -199,14 +205,20 @@ export default function DashboardSuportePage() {
         onSegmentDrill={panelActive ? undefined : setActiveDrill}
       />
 
-      {/* Saúde dos Planos (sempre global) — Fase 1B. Drill por faixa (016 B3, família cliente). */}
-      <SupportPlanHealthSection
-        from={from}
-        to={to}
-        clientId={clientId}
-        planId={planId}
-        onFaixaDrill={panelActive ? undefined : setActiveDrill}
-      />
+      {/* Saúde dos Planos (sempre global) — Fase 1B. Drill por faixa (016 B3, família cliente).
+          Oculto para ATENDENTE (118.6): a query é sempre scope 'global' (sem parâmetro de
+          equipe) — exibi-la ao atendente vazaria clientes de todas as equipes (A01).
+          Mitigação só-front; dependência registrada com o backend (U6) para decidir
+          filtrar por equipe ou recusar o endpoint /metrics/plan-health ao atendente. */}
+      {!isAtendente && (
+        <SupportPlanHealthSection
+          from={from}
+          to={to}
+          clientId={clientId}
+          planId={planId}
+          onFaixaDrill={panelActive ? undefined : setActiveDrill}
+        />
+      )}
     </>
   )
 
