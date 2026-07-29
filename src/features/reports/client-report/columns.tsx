@@ -9,9 +9,8 @@
  *   - "Faturamento" abstrai a categoria interna (3 status: Não faturado / Faturado / Plano de Suporte).
  *
  * Nota sobre "Serviço" e "Serviço - Secundário":
- *   - O DTO atual não contém campos `servico` / `servico__secundario` do HubSpot.
- *   - TODO (Manager): quando o backend expor esses campos no ClientReportItemDto,
- *     adicionar as colunas aqui. Por ora, exibimos um placeholder "—" comentado.
+ *   - Campos `servico` / `servicoSecundario` do HubSpot, expostos pelo backend
+ *     no ClientReportItemDto (118.5.2). Fallback "—" quando null.
  *
  * Whitelist de sortBy (backend, GET /reports/client format=rows): inicioem, totalsegundos,
  * hubspotticketid, assunto, origem (057).
@@ -140,27 +139,23 @@ export function buildClientReportColumns(
     },
 
     // ── Coluna 4: Serviço ─────────────────────────────────────────────────────
-    // TODO (Manager): o campo `servico` (propriedade HubSpot) não está no DTO atual.
-    // Quando o backend expor ClientReportItemDto.servico, substituir o accessor abaixo.
-    // Por ora, exibe categorizacaoAtendimento como aproximação mais próxima disponível.
+    // Campo do backend (propriedade HubSpot 'servico', 118.5.2). Fallback "—" quando null.
     {
       key: 'servico',
       header: 'Serviço',
       sortable: false,
       align: 'left',
-      accessor: (row) => row.categorizacaoAtendimento ?? '—',
+      accessor: (row) => row.servico ?? '—',
     },
 
     // ── Coluna 5: Serviço - Secundário ────────────────────────────────────────
-    // TODO (Manager): o campo `servico__secundario` (propriedade HubSpot) não está no DTO atual.
-    // Quando o backend expor ClientReportItemDto.servicoSecundario, substituir abaixo.
-    // Por ora, exibe placeholder "—" para manter a coluna na posição correta.
+    // Campo do backend (propriedade HubSpot 'servico__secundario', 118.5.2). Fallback "—".
     {
       key: 'servicoSecundario',
       header: 'Serviço - Secundário',
       sortable: false,
       align: 'left',
-      accessor: () => '—',
+      accessor: (row) => row.servicoSecundario ?? '—',
     },
 
     // ── Coluna 6: Solicitante ──────────────────────────────────────────────────

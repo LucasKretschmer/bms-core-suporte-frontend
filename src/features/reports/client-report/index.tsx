@@ -15,9 +15,6 @@
  * Linhas clicáveis: ao clicar numa linha, navega para o detalhe interno do ticket
  * (/relatorios/tickets/$ticketId). O detalhe é uso interno — a privacidade do cliente
  * (categoria HubSpot) permanece preservada nesta tela/PDF/export (R5).
- *
- * Serviço / Serviço - Secundário: campos do HubSpot não disponíveis no DTO atual.
- * TODO (Manager): adicionar os campos ao ClientReportItemDto e às colunas quando disponíveis.
  */
 
 import { useCallback, useState } from 'react'
@@ -65,11 +62,8 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket / Projeto', key: 'ticket' },
   { header: 'Nome do ticket', key: 'assunto' },
   { header: 'Equipe', key: 'equipe' },
-  // Serviço mapeado para categorizacaoAtendimento (campo disponível)
-  // TODO (Manager): trocar pela propriedade HubSpot `servico` quando disponível no DTO
+  // Serviço / Serviço - Secundário: propriedades HubSpot expostas pelo backend (118.5.2)
   { header: 'Serviço', key: 'servico' },
-  // Serviço - Secundário: campo não disponível no DTO atual
-  // TODO (Manager): trocar pela propriedade HubSpot `servico__secundario` quando disponível
   { header: 'Serviço - Secundário', key: 'servicoSecundario' },
   { header: 'Solicitante', key: 'solicitante' },
   { header: 'Atendente', key: 'atendente' },
@@ -95,10 +89,8 @@ function itemToExportRow(item: ClientReportItemDto): Record<string, string | num
     // Nome do ticket (ticket) ou stage (projeto)
     assunto: isProjeto ? (item.stage ?? '—') : (item.assunto ?? '—'),
     equipe: item.equipeAtribuida ?? '—',
-    // Serviço mapeado para categorizacaoAtendimento — ver TODO acima
-    servico: item.categorizacaoAtendimento ?? '—',
-    // Serviço - Secundário não está no DTO
-    servicoSecundario: '—',
+    servico: item.servico ?? '—',
+    servicoSecundario: item.servicoSecundario ?? '—',
     solicitante: item.solicitante?.nome ?? '—',
     atendente: item.atendente || '—',
     // categorizacaoAtendimento = ServiceCategory interna (≠ categoria do HubSpot)

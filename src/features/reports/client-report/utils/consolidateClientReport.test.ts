@@ -24,6 +24,8 @@ function makeItem(overrides: Partial<ClientReportItemDto>): ClientReportItemDto 
     atendente: 'Ana',
     donoChamado: 'Dono Padrão',
     categorizacaoAtendimento: 'Consultoria',
+    servico: 'Suporte Técnico',
+    servicoSecundario: 'Configuração',
     faturamento: 'Plano de Suporte',
     aberturaDosChamado: '2024-03-01T10:00:00Z',
     dataApontamento: '2024-03-10T09:00:00Z',
@@ -109,6 +111,34 @@ describe('consolidateClientReport', () => {
       }),
     ])
     expect(rows[0].categorizacaoAtendimento).toBe('Recente')
+  })
+
+  it('servico/servicoSecundario = os do apontamento mais recente (maior dataApontamento)', () => {
+    const rows = consolidateClientReport([
+      makeItem({
+        timeEntryId: 1,
+        ticketId: 100,
+        dataApontamento: '2024-03-01T09:00:00Z',
+        servico: 'Serviço Antigo',
+        servicoSecundario: 'Secundário Antigo',
+      }),
+      makeItem({
+        timeEntryId: 2,
+        ticketId: 100,
+        dataApontamento: '2024-03-20T09:00:00Z',
+        servico: 'Serviço Recente',
+        servicoSecundario: 'Secundário Recente',
+      }),
+      makeItem({
+        timeEntryId: 3,
+        ticketId: 100,
+        dataApontamento: '2024-03-10T09:00:00Z',
+        servico: 'Serviço Meio',
+        servicoSecundario: 'Secundário Meio',
+      }),
+    ])
+    expect(rows[0].servico).toBe('Serviço Recente')
+    expect(rows[0].servicoSecundario).toBe('Secundário Recente')
   })
 
   it('faturamento = valores distintos por vírgula', () => {

@@ -28,6 +28,8 @@ const BASE_ITEM: ClientReportItemDto = {
   solicitante: { nome: 'João Silva', email: 'joao@empresa.com' },
   atendente: 'Ana Lima',
   categorizacaoAtendimento: 'Consultoria',
+  servico: 'Suporte Técnico',
+  servicoSecundario: 'Configuração',
   // faturamento: campo tipado — nunca contém categoria do HubSpot
   faturamento: 'Plano de Suporte',
   aberturaDosChamado: '2024-03-01T10:00:00Z',
@@ -49,6 +51,8 @@ const PROJECT_ITEM: ClientReportItemDto = {
   solicitante: null,
   atendente: 'Bruno',
   categorizacaoAtendimento: 'Consultoria',
+  servico: null,
+  servicoSecundario: null,
   faturamento: 'Faturado',
   aberturaDosChamado: null,
   dataApontamento: '2024-03-20T09:00:00Z',
@@ -169,9 +173,27 @@ describe('buildClientReportColumns — mapeamento do DTO', () => {
     expect(result).toBe('Consultoria')
   })
 
-  it('coluna servicoSecundario retorna "—" (campo não disponível no DTO atual)', () => {
+  it('coluna servico acessa o valor real do campo (118.5.2)', () => {
+    const col = getColumn('servico')
+    const result = col.accessor(BASE_ITEM)
+    expect(result).toBe('Suporte Técnico')
+  })
+
+  it('coluna servico retorna "—" quando servico é null', () => {
+    const col = getColumn('servico')
+    const result = col.accessor({ ...BASE_ITEM, servico: null })
+    expect(result).toBe('—')
+  })
+
+  it('coluna servicoSecundario acessa o valor real do campo (118.5.2)', () => {
     const col = getColumn('servicoSecundario')
     const result = col.accessor(BASE_ITEM)
+    expect(result).toBe('Configuração')
+  })
+
+  it('coluna servicoSecundario retorna "—" quando servicoSecundario é null', () => {
+    const col = getColumn('servicoSecundario')
+    const result = col.accessor({ ...BASE_ITEM, servicoSecundario: null })
     expect(result).toBe('—')
   })
 })

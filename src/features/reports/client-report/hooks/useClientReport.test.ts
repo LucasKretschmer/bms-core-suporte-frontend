@@ -67,6 +67,8 @@ const MOCK_REPORT: ClientReportDto = {
       solicitante: { nome: 'João', email: 'joao@empresa.com' },
       atendente: 'Ana',
       categorizacaoAtendimento: 'Consultoria',
+      servico: 'Suporte Técnico',
+      servicoSecundario: 'Configuração',
       faturamento: 'Plano de Suporte',
       aberturaDosChamado: '2024-03-01T10:00:00Z',
       dataApontamento: '2024-03-15T14:00:00Z',

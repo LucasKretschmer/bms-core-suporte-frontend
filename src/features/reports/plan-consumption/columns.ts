@@ -81,6 +81,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasUsadas',
     header: 'Horas Usadas',
+    headerInfo: 'Horas usadas do plano no período (não inclui horas faturadas fora do plano).',
     sortable: true,
     sortKey: 'horasusadas',
     align: 'right',

@@ -58,6 +58,8 @@ const ITEMS: ClientReportItemDto[] = [
     atendente: 'Ana',
     donoChamado: 'Dono',
     categorizacaoAtendimento: 'Consultoria',
+    servico: 'Suporte Técnico',
+    servicoSecundario: 'Configuração',
     faturamento: 'Faturado',
     aberturaDosChamado: null,
     dataApontamento: '2024-03-10T09:00:00Z',

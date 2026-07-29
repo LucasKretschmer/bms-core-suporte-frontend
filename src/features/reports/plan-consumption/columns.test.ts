@@ -87,7 +87,7 @@ describe('planConsumptionColumns — estrutura', () => {
   })
 
   it('colunas com tooltip ⓘ usam headerInfo (fora do botão de ordenação, 098 r2)', () => {
-    const tooltipCols = ['horasAdicionais', 'horasFaturaveis', 'horasAnalise']
+    const tooltipCols = ['horasUsadas', 'horasAdicionais', 'horasFaturaveis', 'horasAnalise']
     tooltipCols.forEach((key) => {
       const col = planConsumptionColumns.find((c) => c.key === key)
       // O tooltip é declarado como texto em `headerInfo` — não como um

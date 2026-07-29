@@ -136,6 +136,8 @@ export async function generateClientReportPdf(
   const headers = [
     'Origem',
     'Ticket / Projeto',
+    'Serviço',
+    'Serviço - Secundário',
     'Atendente',
     'Categorização',
     'Faturamento',
@@ -151,6 +153,8 @@ export async function generateClientReportPdf(
     key: string
     origem: string
     ticket: string
+    servico: string
+    servicoSecundario: string
     atendente: string
     categorizacao: string
     faturamento: string
@@ -171,6 +175,8 @@ export async function generateClientReportPdf(
               : row.hubspotTicketId
                 ? `#${row.hubspotTicketId}`
                 : '—',
+            servico: row.servico ?? '—',
+            servicoSecundario: row.servicoSecundario ?? '—',
             atendente: row.atendente || '—',
             categorizacao: row.categorizacaoAtendimento ?? '—',
             faturamento: row.faturamento || '—',
@@ -192,6 +198,8 @@ export async function generateClientReportPdf(
               : item.hubspotTicketId
                 ? `#${item.hubspotTicketId}`
                 : '—',
+            servico: item.servico ?? '—',
+            servicoSecundario: item.servicoSecundario ?? '—',
             atendente: item.atendente || '—',
             categorizacao: item.categorizacaoAtendimento ?? '—',
             faturamento: item.faturamento,
@@ -237,6 +245,8 @@ export async function generateClientReportPdf(
           <View key={row.key} style={styles.tableRow}>
             <Text style={styles.tableCell}>{row.origem}</Text>
             <Text style={styles.tableCell}>{row.ticket}</Text>
+            <Text style={styles.tableCell}>{row.servico}</Text>
+            <Text style={styles.tableCell}>{row.servicoSecundario}</Text>
             <Text style={styles.tableCell}>{row.atendente}</Text>
             <Text style={styles.tableCell}>{row.categorizacao}</Text>
             <Text style={styles.tableCell}>{row.faturamento}</Text>

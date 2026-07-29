@@ -10,7 +10,8 @@
  *  - Tempo = SOMA de `totalSegundos`.
  *  - Atendente (coluna) = `donoChamado` (dono do chamado). Se null (ex.: projeto sem
  *    owner, ou backend local sem o campo) → fallback: atendentes distintos por vírgula.
- *  - Categorização / Serviço = a do apontamento MAIS RECENTE (maior `dataApontamento`).
+ *  - Categorização / Serviço / Serviço - Secundário = os do apontamento MAIS RECENTE
+ *    (maior `dataApontamento`).
  *  - Faturamento = valores distintos juntados por vírgula (se todos iguais → único).
  *  - Data do apontamento = intervalo (menor–maior) dos apontamentos do chamado.
  *  - Invariantes (Origem, Ticket/Projeto, Nome, Equipe, Solicitante, Abertura) = do
@@ -47,6 +48,10 @@ export type ConsolidatedClientReportRow = {
   atendente: string
   /** Categorização do apontamento mais recente do chamado. */
   categorizacaoAtendimento: string | null
+  /** Serviço do apontamento mais recente do chamado (118.5.2). */
+  servico: string | null
+  /** Serviço secundário do apontamento mais recente do chamado (118.5.2). */
+  servicoSecundario: string | null
   /** Valores de faturamento distintos juntados por vírgula. */
   faturamento: string
   aberturaDosChamado: string | null
@@ -174,6 +179,8 @@ export function consolidateClientReport(
       solicitante: latest.solicitante,
       atendente,
       categorizacaoAtendimento: latest.categorizacaoAtendimento,
+      servico: latest.servico,
+      servicoSecundario: latest.servicoSecundario,
       faturamento,
       aberturaDosChamado: latest.aberturaDosChamado,
       dataApontamentoInicio,
