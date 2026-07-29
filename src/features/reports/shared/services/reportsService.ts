@@ -7,9 +7,11 @@ import type {
   OrigemFiltro,
   PlanConsumptionItemDto,
   ProjectAppointmentReportItemDto,
+  ServiceCategoryOptionDto,
   SupportPlanDto,
   TeamDto,
   TicketReportItemDto,
+  TicketStatusCategoria,
 } from '../types/reports'
 
 /**
@@ -50,6 +52,11 @@ type TicketsReportParams = {
   teamId?: number[]
   /** Categorias HubSpot para filtrar — enviado como categoria[] (array na query). */
   categoria?: string[]
+  /**
+   * MELH-02 — categorias do TIMER (internas, `TimeEntry.ServiceCategoryId`).
+   * NÃO confundir com `categoria` (HubSpot). AND com os demais filtros; vazio = sem filtro.
+   */
+  serviceCategoryId?: number[]
   from?: string | null
   to?: string | null
   sortBy?: string | null
@@ -72,6 +79,8 @@ export async function listTicketsReport(
 export type TicketStatusOption = {
   value: string
   label: string
+  /** MELH-01 — não consumido nesta entrega (a legenda é fixa, não depende das opções do filtro de Status); mantido por paridade de contrato com o backend. */
+  categoria?: TicketStatusCategoria | null
 }
 
 /**
@@ -100,6 +109,19 @@ export type TicketCategoryOption = {
 export async function getTicketCategories(): Promise<TicketCategoryOption[]> {
   const { data } = await api.get<ApiResponse<TicketCategoryOption[]>>(
     '/api/v1/reports/tickets/categories',
+  )
+  return data.data
+}
+
+/**
+ * Opções de "Categoria do atendimento" (MELH-02 — categoria do TIMER, interna,
+ * distinta da categoria do HubSpot). Envelope `ApiResponse<T[]>` — AP-ARQUITETURA-001:
+ * este endpoint NÃO é `PaginatedResponse` cru (diferente de /reports/tickets).
+ */
+export async function listServiceCategoryOptions(): Promise<ServiceCategoryOptionDto[]> {
+  const { data } = await api.get<ApiResponse<ServiceCategoryOptionDto[]>>(
+    '/api/v1/service-categories',
+    { params: { includeInactive: false } },
   )
   return data.data
 }

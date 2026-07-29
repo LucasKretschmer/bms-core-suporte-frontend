@@ -67,6 +67,13 @@ export type PlanConsumptionItemDto = {
 
 // ── U4 — Apontamentos por Ticket ─────────────────────────────────────────────
 
+/**
+ * Categoria semântica fechada do stage (whitelist do banco, 4 valores + null).
+ * MELH-01 — fonte da cor do badge de Status. NUNCA derivar cor a partir do
+ * texto de `status` (label livre vindo do HubSpot).
+ */
+export type TicketStatusCategoria = 'aberto' | 'emandamento' | 'fechado' | 'cancelado'
+
 export type TicketReportItemDto = {
   ticketId: number
   hubspotTicketId: string
@@ -84,6 +91,28 @@ export type TicketReportItemDto = {
   totalSeconds: number
   apontamentosCount: number
   hubspotUrl: string | null
+
+  // ── NOVOS (aditivos, 119 — CORR-05/MELH-01/MELH-02) — sempre presentes ──────
+  /**
+   * CORR-05 — regra canônica: `DesativadoEm IS NULL` + `Status <> Cancelled`,
+   * SEM recorte de período (distinto de `totalSeconds`, que é do período filtrado).
+   */
+  totalSecondsAllTime: number
+  /** CORR-05 — idem, contagem de apontamentos sem recorte de período. */
+  apontamentosCountAllTime: number
+  /** MELH-01 — nome cru do stage, sem "(Pipeline)". Não usado nesta entrega (o texto do badge vem de `status`); mantido por paridade de contrato. */
+  statusNome: string | null
+  /** MELH-01 — fonte da cor do badge de Status. NUNCA derivar cor de `status` (texto). */
+  statusCategoria: TicketStatusCategoria | null
+  /** MELH-02 — nomes distintos das categorias do TIMER nos apontamentos da mesma janela de `totalSeconds` (período + Completed). Vazio = nenhum apontamento categorizado no período. */
+  categoriasTimer: string[]
+}
+
+/** MELH-02 — opção do filtro "Categoria do atendimento" (categoria do TIMER, interna). */
+export type ServiceCategoryOptionDto = {
+  id: number
+  nome: string
+  isActive: boolean
 }
 
 // ── Origem de apontamento (057) ───────────────────────────────────────────────
@@ -155,6 +184,10 @@ export type ClientReportItemDto = {
    */
   donoChamado?: string | null
   categorizacaoAtendimento: string | null
+  /** Propriedade HubSpot 'servico' (118.5.2) — serviço vinculado ao chamado. */
+  servico: string | null
+  /** Propriedade HubSpot 'servico__secundario' (118.5.2). */
+  servicoSecundario: string | null
   faturamento: FaturamentoStatus
   aberturaDosChamado: string | null  // ISO Z (null p/ projeto)
   dataApontamento: string            // ISO Z

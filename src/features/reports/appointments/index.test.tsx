@@ -33,6 +33,7 @@ vi.mock('../../../components/ui/Toast', () => ({
 vi.mock('../shared/services/reportsService', () => ({
   getTicketStatuses: vi.fn().mockResolvedValue([]),
   getTicketCategories: vi.fn().mockResolvedValue([]),
+  listServiceCategoryOptions: vi.fn().mockResolvedValue([]),
   listTeams: vi.fn().mockResolvedValue([]),
   listTicketsReport: vi.fn().mockResolvedValue({
     items: [],
@@ -75,6 +76,7 @@ beforeEach(() => {
       status: [],
       teamId: [],
       categoria: [],
+      serviceCategoryId: [],
       from: null,
       to: null,
     },
@@ -120,16 +122,29 @@ describe('AppointmentsPage — largura dos filtros multi-select (067/071)', () =
   })
 })
 
-describe('AppointmentsPage — filtro de Categoria (107)', () => {
-  it('renderiza o filtro de Categoria na barra de filtros', () => {
+describe('AppointmentsPage — filtro de Categoria (HubSpot) (107/119 — rótulo renomeado, D6)', () => {
+  it('renderiza o filtro "Categoria (HubSpot)" na barra de filtros', () => {
     renderPage()
-    expect(screen.getByText('Categoria')).toBeInTheDocument()
+    expect(screen.getByText('Categoria (HubSpot)')).toBeInTheDocument()
   })
 })
 
-describe('AppointmentsPage — export sem categoria (107, privacidade)', () => {
-  it('EXPORT_COLUMNS não inclui a coluna categoria', () => {
+describe('AppointmentsPage — filtro de Categoria do atendimento (MELH-02/119)', () => {
+  it('renderiza o filtro "Categoria do atendimento" na barra de filtros', () => {
+    renderPage()
+    expect(screen.getByText('Categoria do atendimento')).toBeInTheDocument()
+  })
+})
+
+describe('AppointmentsPage — export sem categoria HubSpot (107, privacidade)', () => {
+  it('EXPORT_COLUMNS não inclui a coluna categoria (HubSpot)', () => {
     expect(EXPORT_COLUMNS.some((c) => c.key === 'categoria')).toBe(false)
+  })
+
+  it('EXPORT_COLUMNS inclui "categoriaAtendimento" e "tempoTotal" (D7/119)', () => {
+    expect(EXPORT_COLUMNS.some((c) => c.key === 'categoriaAtendimento')).toBe(true)
+    expect(EXPORT_COLUMNS.some((c) => c.key === 'tempoTotal')).toBe(true)
+    expect(EXPORT_COLUMNS.some((c) => c.key === 'apontamentosTotal')).toBe(true)
   })
 
   it('mapToExportRow não expõe a categoria HubSpot na linha exportada', () => {
@@ -145,9 +160,102 @@ describe('AppointmentsPage — export sem categoria (107, privacidade)', () => {
       totalSeconds: 60,
       apontamentosCount: 1,
       hubspotUrl: null,
+      totalSecondsAllTime: 60,
+      apontamentosCountAllTime: 1,
+      statusNome: null,
+      statusCategoria: null,
+      categoriasTimer: [],
     }
     const row = mapToExportRow(item)
     expect(row).not.toHaveProperty('categoria')
     expect(Object.values(row)).not.toContain('Problema - Invoicy')
+  })
+
+  it('mapToExportRow inclui categoriaAtendimento e tempoTotal (D7/119)', () => {
+    const item: TicketReportItemDto = {
+      ticketId: 1,
+      hubspotTicketId: '1001',
+      assunto: 'Erro',
+      clienteNome: 'ACME',
+      equipe: 'BR',
+      ownerNome: 'Ana',
+      status: 'Aberto',
+      categoria: null,
+      totalSeconds: 60,
+      apontamentosCount: 1,
+      hubspotUrl: null,
+      totalSecondsAllTime: 1260,
+      apontamentosCountAllTime: 2,
+      statusNome: null,
+      statusCategoria: null,
+      categoriasTimer: ['Consultoria', 'Plantão'],
+    }
+    const row = mapToExportRow(item)
+    expect(row.categoriaAtendimento).toBe('Consultoria; Plantão')
+    expect(row.tempoTotal).toBe('0h 21m')
+    expect(row.apontamentosTotal).toBe(2)
+  })
+})
+
+describe('AppointmentsPage — legenda de status (MELH-01/D5, 119)', () => {
+  it('não renderiza a legenda em isLoading=true (tabela não está visível)', () => {
+    // Neste mock, isLoading=true → children do ReportPageLayout não são renderizados
+    // (nem a legenda, nem a DataTable) — comportamento correto do layout compartilhado.
+    renderPage()
+    expect(screen.queryByText('Legenda de status:')).not.toBeInTheDocument()
+  })
+
+  it('renderiza as 5 entradas fixas da legenda quando há dados, independente do conteúdo das linhas', () => {
+    const item: TicketReportItemDto = {
+      ticketId: 1,
+      hubspotTicketId: '1001',
+      assunto: 'Erro',
+      clienteNome: 'ACME',
+      equipe: 'BR',
+      ownerNome: 'Ana',
+      status: 'Novo (Pipeline)',
+      categoria: null,
+      totalSeconds: 60,
+      apontamentosCount: 1,
+      hubspotUrl: null,
+      totalSecondsAllTime: 60,
+      apontamentosCountAllTime: 1,
+      statusNome: null,
+      statusCategoria: 'aberto',
+      categoriasTimer: [],
+    }
+    mockedUseAppointments.mockReturnValue({
+      data: { items: [item], totalCount: 1, page: 1, pageSize: 25, totalPages: 1 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+      sortBy: null,
+      sortDirection: 'desc',
+      filters: {
+        scope: 'mine',
+        search: '',
+        status: [],
+        teamId: [],
+        categoria: [],
+        serviceCategoryId: [],
+        from: null,
+        to: null,
+      },
+      page: 1,
+      pageSize: 25,
+      setPage: vi.fn(),
+      setPageSize: vi.fn(),
+      setSort: vi.fn(),
+      setFilters: vi.fn(),
+    } as unknown as ReturnType<typeof useAppointments>)
+
+    renderPage()
+
+    expect(screen.getByText('Legenda de status:')).toBeInTheDocument()
+    expect(screen.getByText('Aberto')).toBeInTheDocument()
+    expect(screen.getByText('Em andamento')).toBeInTheDocument()
+    expect(screen.getByText('Fechado')).toBeInTheDocument()
+    expect(screen.getByText('Cancelado')).toBeInTheDocument()
+    expect(screen.getByText('Fora do consumo (Invoicy)')).toBeInTheDocument()
   })
 })

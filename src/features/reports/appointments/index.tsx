@@ -11,7 +11,7 @@
  * Export: CSV e Excel com as colunas mapeadas (nunca categoria do HubSpot).
  */
 
-import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useId, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
@@ -27,6 +27,7 @@ import { PeriodFilter } from '../shared/components/PeriodFilter'
 import {
   getTicketCategories,
   getTicketStatuses,
+  listServiceCategoryOptions,
   listTeams,
   listTicketsReport,
 } from '../shared/services/reportsService'
@@ -38,6 +39,7 @@ import { usePermissions } from '../../../hooks/usePermissions'
 import { saveReportFilters } from '../../../utils/reportFilters'
 import { useAppointments } from './hooks/useAppointments'
 import { buildAppointmentsColumns } from './columns'
+import { STATUS_LEGEND_ITEMS } from './statusColors'
 import type { TicketReportItemDto } from '../shared/types/reports'
 
 /** Chave de persistência de filtros desta tela (R2) */
@@ -54,29 +56,70 @@ const SCOPE_OPTIONS = [
 // ── Colunas para export (mapeamento de campos simples, sem JSX) ──────────────
 
 // Exportado para teste (107): garante que a categoria HubSpot NUNCA entra no
-// arquivo exportável desta tela (privacidade — só aparece na tela).
+// arquivo exportável desta tela (privacidade — só aparece na tela). D7 (119):
+// "Tempo total"/"Categoria do atendimento" entram (dado interno de gestão).
 export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket', key: 'ticket' },
   { header: 'Assunto', key: 'assunto' },
   { header: 'Cliente', key: 'cliente' },
   { header: 'Equipe', key: 'equipe' },
   { header: 'Atendente', key: 'owner' },
+  { header: 'Categoria do atendimento', key: 'categoriaAtendimento' },
   { header: 'Status', key: 'status' },
-  { header: 'Tempo', key: 'tempo' },
-  { header: 'Apontamentos', key: 'apontamentos' },
+  { header: 'Tempo (período)', key: 'tempo' },
+  { header: 'Tempo total', key: 'tempoTotal' },
+  { header: 'Apontamentos (período)', key: 'apontamentos' },
+  { header: 'Apontamentos (total)', key: 'apontamentosTotal' },
 ]
 
 export function mapToExportRow(item: TicketReportItemDto): ExportRow {
   return {
     ticket: `#${item.hubspotTicketId}`,
     assunto: item.assunto ?? '',
-    cliente: item.clienteNome ?? '',
+    cliente: item.clienteNome?.trim() || '',
     equipe: item.equipe ?? '',
     owner: item.ownerNome ?? '',
+    categoriaAtendimento: item.categoriasTimer.join('; '),
     status: item.status ?? '',
     tempo: formatSeconds(item.totalSeconds),
+    tempoTotal: formatSeconds(item.totalSecondsAllTime),
     apontamentos: item.apontamentosCount,
+    apontamentosTotal: item.apontamentosCountAllTime,
   }
+}
+
+// ── Legenda de status (MELH-01/D5) ────────────────────────────────────────────
+
+/**
+ * Legenda fixa das categorias de status (D5: não depende dos dados da página).
+ * `role="list"` explícito — `list-style: none` remove o papel semântico
+ * implícito de lista em alguns navegadores (Safari/VoiceOver). Texto sempre
+ * presente (nunca só a cor); swatch decorativo `aria-hidden`.
+ */
+function StatusLegend() {
+  const titleId = useId() // AP-FRONTEND-003 — nunca id literal em componente que pode repetir
+  return (
+    <div
+      className="flex flex-wrap items-center gap-4 px-5 py-3 border-b border-line"
+      aria-labelledby={titleId}
+    >
+      <span id={titleId} className="text-xs font-medium text-muted">
+        Legenda de status:
+      </span>
+      <ul role="list" className="flex flex-wrap gap-3 list-none p-0 m-0">
+        {STATUS_LEGEND_ITEMS.map((item) => (
+          <li key={item.key} className="flex items-center gap-1.5 text-xs text-foreground">
+            <span
+              aria-hidden="true"
+              className="inline-block h-2.5 w-2.5 rounded-full border border-line"
+              style={{ backgroundColor: item.tone.backgroundColor }}
+            />
+            <span>{item.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 // ── Componente principal ─────────────────────────────────────────────────────
@@ -119,6 +162,13 @@ export default function AppointmentsPage() {
     queryFn: getTicketCategories,
     staleTime: 5 * 60 * 1000,
   })
+  // Opções de "Categoria do atendimento" (MELH-02 — categoria do TIMER, interna).
+  // Falha/loading não quebram a tela — mesmo padrão dos demais filtros multi-select.
+  const serviceCategoriesQuery = useQuery({
+    queryKey: ['service-categories'],
+    queryFn: listServiceCategoryOptions,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const statusOptions = useMemo<MultiSelectOption<string>[]>(
     () => (statusesQuery.data ?? []).map((s) => ({ value: s.value, label: s.label })),
@@ -131,6 +181,10 @@ export default function AppointmentsPage() {
   const categoriaOptions = useMemo<MultiSelectOption<string>[]>(
     () => (categoriesQuery.data ?? []).map((c) => ({ value: c.value, label: c.label })),
     [categoriesQuery.data],
+  )
+  const serviceCategoryOptions = useMemo<MultiSelectOption<number>[]>(
+    () => (serviceCategoriesQuery.data ?? []).map((c) => ({ value: c.id, label: c.nome })),
+    [serviceCategoriesQuery.data],
   )
 
   // Busca textual com debounce via useDeferredValue
@@ -176,6 +230,8 @@ export default function AppointmentsPage() {
         status: filters.status.length > 0 ? filters.status : undefined,
         teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
         categoria: filters.categoria.length > 0 ? filters.categoria : undefined,
+        serviceCategoryId:
+          filters.serviceCategoryId.length > 0 ? filters.serviceCategoryId : undefined,
         from: filters.from ?? undefined,
         to: filters.to ?? undefined,
         sortBy: sortBy ?? undefined,
@@ -278,11 +334,12 @@ export default function AppointmentsPage() {
         className="min-w-[180px]"
       />
 
-      {/* Filtro de Categoria HubSpot (107) — só na tela, nunca no export */}
+      {/* Filtro de Categoria HubSpot (107) — só na tela, nunca no export.
+          Rótulo renomeado (D6/119) para desambiguar de "Categoria do atendimento". */}
       <MultiSelectCombobox<string>
         id="appointments-categoria"
-        label="Categoria"
-        summaryLabel="Categoria"
+        label="Categoria (HubSpot)"
+        summaryLabel="Categoria (HubSpot)"
         value={filters.categoria}
         options={categoriaOptions}
         onChange={(categoria) => setFilters({ categoria })}
@@ -290,6 +347,25 @@ export default function AppointmentsPage() {
         searchable
         isLoading={categoriesQuery.isLoading}
         error={categoriesQuery.isError ? 'Falha ao carregar categorias.' : undefined}
+        className="min-w-[220px]"
+      />
+
+      {/* Filtro de Categoria do atendimento (MELH-02/119) — categoria do TIMER, interna. */}
+      <MultiSelectCombobox<number>
+        id="appointments-service-category"
+        label="Categoria do atendimento"
+        summaryLabel="Categoria do atendimento"
+        value={filters.serviceCategoryId}
+        options={serviceCategoryOptions}
+        onChange={(serviceCategoryId) => setFilters({ serviceCategoryId })}
+        placeholder="Todas"
+        searchable
+        isLoading={serviceCategoriesQuery.isLoading}
+        error={
+          serviceCategoriesQuery.isError
+            ? 'Falha ao carregar categorias de atendimento.'
+            : undefined
+        }
         className="min-w-[220px]"
       />
 
@@ -325,6 +401,7 @@ export default function AppointmentsPage() {
       onRetry={() => void refetch()}
       emptyMessage="Nenhum ticket encontrado para os filtros selecionados."
     >
+      <StatusLegend />
       <DataTable<TicketReportItemDto>
         tableId="appointments"
         columns={columns}

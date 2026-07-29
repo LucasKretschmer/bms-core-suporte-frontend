@@ -15,6 +15,7 @@ import {
   getTicketCategories,
   listPlanConsumption,
   listProjectAppointments,
+  listServiceCategoryOptions,
   listTicketsReport,
   listProductivity,
 } from './reportsService'
@@ -24,6 +25,7 @@ import type {
   ClientReportDto,
   PlanConsumptionItemDto,
   ProjectAppointmentReportItemDto,
+  ServiceCategoryOptionDto,
   TicketReportItemDto,
   AgentMetricDto,
   ClientDetailDto,
@@ -333,6 +335,11 @@ describe('reportsService', () => {
         totalSeconds: 3600,
         apontamentosCount: 2,
         hubspotUrl: 'https://app.hubspot.com/ticket/10001',
+        totalSecondsAllTime: 3600,
+        apontamentosCountAllTime: 2,
+        statusNome: 'Aberto',
+        statusCategoria: 'aberto',
+        categoriasTimer: ['Consultoria'],
       }
 
       const mockResponse: PaginatedResponse<TicketReportItemDto> = {
@@ -413,6 +420,59 @@ describe('reportsService', () => {
         .params
       expect(params.categoria).toEqual(['Problema - Invoicy', 'Dúvida'])
     })
+
+    it('envia serviceCategoryId como array de números na query (MELH-02/119)', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listTicketsReport({
+        serviceCategoryId: [1, 2],
+        page: 1,
+        pageSize: 25,
+      })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
+        .params
+      expect(params.serviceCategoryId).toEqual([1, 2])
+    })
+  })
+
+  // ── listServiceCategoryOptions (MELH-02/119) ──────────────────────────────────
+
+  describe('listServiceCategoryOptions', () => {
+    it('desempacota data.data do envelope ApiResponse (AP-ARQUITETURA-001 — não é PaginatedResponse cru)', async () => {
+      const options: ServiceCategoryOptionDto[] = [
+        { id: 1, nome: 'Acesso Remoto', isActive: true },
+        { id: 2, nome: 'Consultoria', isActive: true },
+        { id: 3, nome: 'Plantão', isActive: true },
+      ]
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: options } })
+
+      const result = await listServiceCategoryOptions()
+
+      expect(result).toEqual(options)
+      expect(result).toHaveLength(3)
+    })
+
+    it('chama o endpoint correto com includeInactive=false', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [] } })
+
+      await listServiceCategoryOptions()
+
+      expect(api.get).toHaveBeenCalledWith(
+        '/api/v1/service-categories',
+        expect.objectContaining({ params: { includeInactive: false } }),
+      )
+    })
+
+    it('retorna array vazio quando não há categorias', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: [] } })
+
+      const result = await listServiceCategoryOptions()
+
+      expect(result).toEqual([])
+    })
   })
 
   // ── getTicketCategories (107) ─────────────────────────────────────────────────
@@ -455,6 +515,19 @@ describe('reportsService', () => {
       expect(result).toEqual(options)
       expect(result[0].value).toBe('stage-1')
       expect(result[0].label).toBe('Em atendimento (Relacionamento BR)')
+    })
+
+    it('continua desempacotando data.data mesmo com "categoria" presente no item (MELH-01/119)', async () => {
+      const options = [
+        { value: 'stage-1', label: 'Aberto', categoria: 'aberto' },
+        { value: 'stage-2', label: 'Fechado', categoria: 'fechado' },
+      ]
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: options } })
+
+      const result = await getTicketStatuses()
+
+      expect(result).toEqual(options)
+      expect(result[0].categoria).toBe('aberto')
     })
 
     it('chama o endpoint correto', async () => {

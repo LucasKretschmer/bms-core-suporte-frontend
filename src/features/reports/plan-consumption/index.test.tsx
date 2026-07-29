@@ -38,6 +38,11 @@ const stubTicket: ClientTicketItemDto = {
   totalSeconds: 60,
   apontamentosCount: 1,
   hubspotUrl: null,
+  totalSecondsAllTime: 60,
+  apontamentosCountAllTime: 1,
+  statusNome: null,
+  statusCategoria: null,
+  categoriasTimer: [],
 }
 vi.mock('../../client-tickets/components/ClientTicketsPanel', () => ({
   ClientTicketsPanel: ({

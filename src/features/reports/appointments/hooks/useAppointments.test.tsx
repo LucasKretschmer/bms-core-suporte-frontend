@@ -233,12 +233,64 @@ describe('useAppointments', () => {
     const firstArg = mocked.mock.calls[0][0]
     expect(firstArg.categoria).toBeUndefined()
   })
+
+  // ── Filtro de categoria do atendimento (MELH-02/119) ─────────────────────────
+
+  it('serviceCategoryId inicia como array vazio e aceita múltiplos valores', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+    expect(result.current.filters.serviceCategoryId).toEqual([])
+
+    act(() => result.current.setFilters({ serviceCategoryId: [1, 2] }))
+    expect(result.current.filters.serviceCategoryId).toEqual([1, 2])
+  })
+
+  it('ao mudar filtro de serviceCategoryId, reseta para página 1', () => {
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.setPage(2))
+    act(() => result.current.setFilters({ serviceCategoryId: [3] }))
+    expect(result.current.page).toBe(1)
+  })
+
+  it('envia serviceCategoryId ao service quando há categorias selecionadas', async () => {
+    const mocked = vi.mocked(listTicketsReport)
+    mocked.mockClear()
+
+    const { result } = renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => result.current.setFilters({ serviceCategoryId: [1, 2] }))
+
+    await waitFor(() => {
+      expect(mocked).toHaveBeenCalledWith(
+        expect.objectContaining({ serviceCategoryId: [1, 2] }),
+      )
+    })
+  })
+
+  it('não envia serviceCategoryId ao service quando o filtro está vazio (undefined)', async () => {
+    const mocked = vi.mocked(listTicketsReport)
+    mocked.mockClear()
+
+    renderHook(() => useAppointments(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(mocked).toHaveBeenCalled())
+    const firstArg = mocked.mock.calls[0][0]
+    expect(firstArg.serviceCategoryId).toBeUndefined()
+  })
 })
 
 describe('useAppointments — preservação de filtros ao voltar do detalhe (075)', () => {
   const STORAGE_KEY = 'report-filters:appointments'
 
-  it('reidrata filtros salvos em sessionStorage (status/teamId/from/to/scope/search)', () => {
+  it('reidrata filtros salvos em sessionStorage (status/teamId/serviceCategoryId/from/to/scope/search)', () => {
     setRole(true) // Coordenador+: pode ter escolhido scope 'team'
     sessionStorage.setItem(
       STORAGE_KEY,
@@ -247,6 +299,7 @@ describe('useAppointments — preservação de filtros ao voltar do detalhe (075
         search: 'nfe',
         status: ['Aberto', 'Fechado'],
         teamId: [7, 9],
+        serviceCategoryId: [2],
         from: '2026-03-01',
         to: '2026-03-31',
         sortBy: 'totalSeconds',
@@ -260,6 +313,7 @@ describe('useAppointments — preservação de filtros ao voltar do detalhe (075
 
     expect(result.current.filters.scope).toBe('team')
     expect(result.current.filters.search).toBe('nfe')
+    expect(result.current.filters.serviceCategoryId).toEqual([2])
     expect(result.current.filters.status).toEqual(['Aberto', 'Fechado'])
     expect(result.current.filters.teamId).toEqual([7, 9])
     expect(result.current.filters.from).toBe('2026-03-01')
@@ -293,6 +347,7 @@ describe('useAppointments — preservação de filtros ao voltar do detalhe (075
     expect(result.current.filters.search).toBe('')
     expect(result.current.filters.status).toEqual([])
     expect(result.current.filters.teamId).toEqual([])
+    expect(result.current.filters.serviceCategoryId).toEqual([])
     expect(result.current.filters.from).toBe(expectedFrom)
     expect(result.current.filters.to).toBe(expectedTo)
     expect(result.current.sortBy).toBeNull()

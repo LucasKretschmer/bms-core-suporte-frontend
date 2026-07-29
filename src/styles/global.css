@@ -76,6 +76,18 @@
   --color-badge-origem-projeto-fg: #074b7f;
   --color-badge-origem-ticket-bg: #fff3e0;
   --color-badge-origem-ticket-fg: #e07600;
+
+  /* ── Status por categoria — badge da coluna Status de Apontamentos (119, MELH-01/D11) ──
+     NOVOS e ADITIVOS — nunca reutilizar/alterar --color-warning-fg/--color-error-fg aqui:
+     esses tokens compartilhados reprovam AA como texto pequeno (~3.00:1 e ~3.24:1) e são
+     usados em outras telas (Badge.tsx). Os pares abaixo foram medidos (WCAG, luminância
+     relativa) e atingem ≥4.5:1: aberto #a85800/#fffbef = 5.00:1; cancelado #c00000/#ffe0e0
+     = 5.24:1. `emandamento`/`fechado` reaproveitam --color-info-fg/-bg e
+     --color-success-fg/-bg (já passam: 7.82:1 e 4.75:1). */
+  --color-status-aberto-fg: #a85800;
+  --color-status-aberto-bg: #fffbef;
+  --color-status-cancelado-fg: #c00000;
+  --color-status-cancelado-bg: #ffe0e0;
 }
 
 /* ── Reset global ── */

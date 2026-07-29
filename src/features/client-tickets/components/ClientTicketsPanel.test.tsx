@@ -118,6 +118,11 @@ describe('ClientTicketsPanel — estados de UI', () => {
         totalSeconds: 3600,
         apontamentosCount: 2,
         hubspotUrl: null,
+        totalSecondsAllTime: 3600,
+        apontamentosCountAllTime: 2,
+        statusNome: null,
+        statusCategoria: null,
+        categoriasTimer: [],
       },
     ]
     mockedTickets.mockReturnValue(
@@ -177,6 +182,11 @@ describe('ClientTicketsPanel — click no chamado (070)', () => {
         totalSeconds: 1800,
         apontamentosCount: 3,
         hubspotUrl: null,
+        totalSecondsAllTime: 1800,
+        apontamentosCountAllTime: 3,
+        statusNome: null,
+        statusCategoria: null,
+        categoriasTimer: [],
       },
     ]
     mockedTickets.mockReturnValue(
@@ -258,6 +268,11 @@ describe('ClientTicketsPanel — filtro de período (095)', () => {
         totalSeconds: 3600,
         apontamentosCount: 2,
         hubspotUrl: null,
+        totalSecondsAllTime: 3600,
+        apontamentosCountAllTime: 2,
+        statusNome: null,
+        statusCategoria: null,
+        categoriasTimer: [],
       },
     ]
     vi.mocked(listClientTickets).mockResolvedValue({

@@ -15,6 +15,8 @@ export type AppointmentsFilters = {
   teamId: number[]
   /** Categorias HubSpot selecionadas no filtro (107). Vazio = sem filtro de categoria. */
   categoria: string[]
+  /** MELH-02 — categorias do TIMER (internas) selecionadas. Vazio = sem filtro. */
+  serviceCategoryId: number[]
   from: string | null
   to: string | null
 }
@@ -70,6 +72,7 @@ export function useAppointments() {
       status: [],
       teamId: [],
       categoria: [],
+      serviceCategoryId: [],
       from: period.from,
       to: period.to,
     }
@@ -91,6 +94,7 @@ export function useAppointments() {
       status: saved.status ?? defaults.status,
       teamId: saved.teamId ?? defaults.teamId,
       categoria: saved.categoria ?? defaults.categoria,
+      serviceCategoryId: saved.serviceCategoryId ?? defaults.serviceCategoryId,
       from: saved.from !== undefined ? saved.from : defaults.from,
       to: saved.to !== undefined ? saved.to : defaults.to,
     }
@@ -110,6 +114,10 @@ export function useAppointments() {
         status: params.filters.status.length > 0 ? params.filters.status : undefined,
         teamId: params.filters.teamId.length > 0 ? params.filters.teamId : undefined,
         categoria: params.filters.categoria.length > 0 ? params.filters.categoria : undefined,
+        serviceCategoryId:
+          params.filters.serviceCategoryId.length > 0
+            ? params.filters.serviceCategoryId
+            : undefined,
         from: params.filters.from ?? undefined,
         to: params.filters.to ?? undefined,
         sortBy: params.sortBy ?? undefined,
