@@ -15,7 +15,9 @@
  * quando há apontamentos fora do período filtrado (`*AllTime` > valor do período) —
  * "dado sumindo em silêncio" era o cerne da queixa do QA. As colunas "Tempo total"/
  * "Apontamentos (total)" são aditivas e sempre visíveis, alimentadas pela regra
- * canônica (DesativadoEm IS NULL + Status <> Cancelled, sem recorte de período).
+ * canônica (DesativadoEm IS NULL + Status NOT IN (Cancelled, Discarded), sem recorte
+ * de período — 120/D-1 amplia a exclusão para também não contar apontamentos
+ * descartados, por paridade com o KPI do detalhe do ticket).
  */
 
 import { Badge } from '../../../components/ui/Badge'
@@ -219,7 +221,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       key: 'tempo',
       header: 'Tempo',
       headerInfo:
-        'Tempo apontado dentro do período selecionado. Veja "Tempo total" para o tempo sem recorte de período (exclui cancelados).',
+        'Tempo apontado dentro do período selecionado. Veja "Tempo total" para o tempo sem recorte de período (exclui apontamentos cancelados e descartados).',
       sortable: true,
       sortKey: 'tempo',
       align: 'right',
@@ -242,7 +244,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       // CORR-05/D1 — aditiva, sempre visível: regra canônica sem recorte de período.
       key: 'tempoTotal',
       header: 'Tempo total',
-      headerInfo: 'Tempo total de todos os apontamentos do ticket, sem recorte de período. Exclui apontamentos cancelados.',
+      headerInfo: 'Tempo total de todos os apontamentos do ticket, sem recorte de período. Exclui apontamentos cancelados e descartados.',
       sortable: false, // não está na whitelist de sortBy do backend
       align: 'right',
       width: '110px',
@@ -252,7 +254,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       key: 'apontamentos',
       header: 'Apontamentos',
       headerInfo:
-        'Apontamentos dentro do período selecionado. Veja "Apontamentos (total)" para a contagem sem recorte de período (exclui cancelados).',
+        'Apontamentos dentro do período selecionado. Veja "Apontamentos (total)" para a contagem sem recorte de período (exclui apontamentos cancelados e descartados).',
       sortable: true,
       sortKey: 'apontamentos',
       align: 'right',
@@ -275,7 +277,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       // CORR-05/D1 — aditiva, sempre visível: regra canônica sem recorte de período.
       key: 'apontamentosTotal',
       header: 'Apontamentos (total)',
-      headerInfo: 'Total de apontamentos do ticket, sem recorte de período. Exclui apontamentos cancelados.',
+      headerInfo: 'Total de apontamentos do ticket, sem recorte de período. Exclui apontamentos cancelados e descartados.',
       sortable: false, // não está na whitelist de sortBy do backend
       align: 'right',
       width: '150px',

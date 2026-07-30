@@ -1,7 +1,15 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { TicketKpiSummary } from './TicketKpiSummary'
 import type { TicketTimeEntryDto } from '../types/ticketDetail'
+
+/** Escopa a busca ao card de KPI pelo label (evita colisão quando "Pausas" e "Descartado"
+ * mostram o mesmo texto "0 · 0h 0m" — ambos zerados). */
+function kpiCard(label: string): HTMLElement {
+  const card = screen.getByText(label).closest('div.rounded-card')
+  if (!card) throw new Error(`Card "${label}" não encontrado`)
+  return card as HTMLElement
+}
 
 function entry(overrides: Partial<TicketTimeEntryDto> = {}): TicketTimeEntryDto {
   return {
@@ -128,6 +136,84 @@ describe('TicketKpiSummary', () => {
 
     render(<TicketKpiSummary entries={entries} />)
 
-    expect(screen.getByText('0 · 0h 0m')).toBeInTheDocument()
+    expect(within(kpiCard('Pausas')).getByText('0 · 0h 0m')).toBeInTheDocument()
+  })
+
+  describe('120/D-1: status DISCARDED — excluído de Lançamentos/Tempo total, card dedicado', () => {
+    it('entries com COMPLETED + RUNNING + CANCELLED + DISCARDED — Lançamentos/Tempo total contam só os 2 primeiros', () => {
+      const entries: TicketTimeEntryDto[] = [
+        entry({ id: 1, status: 'COMPLETED', totalSeconds: 1800 }), // 30min
+        entry({ id: 2, status: 'RUNNING', totalSeconds: 600 }), // 10min
+        entry({ id: 3, status: 'CANCELLED', totalSeconds: 5000 }),
+        entry({ id: 4, status: 'DISCARDED', totalSeconds: 999999 }),
+      ]
+
+      render(<TicketKpiSummary entries={entries} />)
+
+      // Lançamentos = 2 (só COMPLETED + RUNNING)
+      expect(screen.getByText('Lançamentos')).toBeInTheDocument()
+      expect(screen.getByText('2')).toBeInTheDocument()
+      // Tempo total trabalhado = 1800 + 600 = 2400s = 0h 40m (não soma o DISCARDED)
+      expect(screen.getByText('0h 40m')).toBeInTheDocument()
+    })
+
+    it('novo card "Descartado": 2 entries DISCARDED (1800s + 900s) + 1 COMPLETED → "2 · 0h 45m"', () => {
+      const entries: TicketTimeEntryDto[] = [
+        entry({ id: 1, status: 'COMPLETED', totalSeconds: 1000 }),
+        entry({ id: 2, status: 'DISCARDED', totalSeconds: 1800 }),
+        entry({ id: 3, status: 'DISCARDED', totalSeconds: 900 }),
+      ]
+
+      render(<TicketKpiSummary entries={entries} />)
+
+      expect(screen.getByText('Descartado')).toBeInTheDocument()
+      expect(screen.getByText('2 · 0h 45m')).toBeInTheDocument()
+      // Lançamentos/Tempo total NÃO incluem os 2 descartados
+      expect(screen.getByText('1')).toBeInTheDocument()
+      expect(screen.getByText('0h 16m')).toBeInTheDocument() // 1000s
+    })
+
+    it('entries só com DISCARDED → Lançamentos=0, Tempo total="0h 0m", Descartado="1 · Xh Ym"', () => {
+      const entries: TicketTimeEntryDto[] = [
+        entry({ id: 1, status: 'DISCARDED', totalSeconds: 3661 }), // 1h 1m
+      ]
+
+      render(<TicketKpiSummary entries={entries} />)
+
+      expect(screen.getByText('Lançamentos')).toBeInTheDocument()
+      expect(screen.getByText('0')).toBeInTheDocument()
+      expect(screen.getByText('0h 0m')).toBeInTheDocument()
+      expect(screen.getByText('1 · 1h 1m')).toBeInTheDocument()
+    })
+
+    it('pausas do apontamento DISCARDED são ignoradas no card "Pausas" (mesmo racional de D14)', () => {
+      const entries: TicketTimeEntryDto[] = [
+        entry({ id: 1, status: 'COMPLETED', totalSeconds: 1000, segments: [] }),
+        entry({
+          id: 2,
+          status: 'DISCARDED',
+          totalSeconds: 9999,
+          segments: [
+            { id: 40, type: 'PAUSE', segmentStart: '2026-06-19T09:00:00Z', segmentEnd: '2026-06-19T09:20:00Z' }, // 20min
+          ],
+        }),
+      ]
+
+      render(<TicketKpiSummary entries={entries} />)
+
+      expect(screen.getByText('0 · 0h 0m')).toBeInTheDocument()
+    })
+
+    it('lista vazia → 4 cards, todos zerados', () => {
+      render(<TicketKpiSummary entries={[]} />)
+
+      expect(screen.getByText('Lançamentos')).toBeInTheDocument()
+      expect(screen.getByText('Tempo total trabalhado')).toBeInTheDocument()
+      expect(screen.getByText('Pausas')).toBeInTheDocument()
+      expect(screen.getByText('Descartado')).toBeInTheDocument()
+      expect(screen.getByText('0')).toBeInTheDocument()
+      expect(screen.getByText('0h 0m')).toBeInTheDocument()
+      expect(screen.getAllByText('0 · 0h 0m').length).toBe(2) // Pausas + Descartado
+    })
   })
 })

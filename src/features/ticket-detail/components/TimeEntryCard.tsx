@@ -20,13 +20,15 @@ type TimeEntryCardProps = {
 
 /**
  * Rótulos legíveis em PT para o status do atendimento.
- * Chaves normalizadas em UPPERCASE; cobre RUNNING|PAUSED|COMPLETED|CANCELLED.
+ * Chaves normalizadas em UPPERCASE; cobre RUNNING|PAUSED|COMPLETED|CANCELLED|DISCARDED.
+ * DISCARDED (120, D-1) — novo status aditivo: tempo preservado, não fatura, não some da tela.
  */
 const STATUS_LABELS: Record<string, string> = {
   RUNNING: 'Em andamento',
   PAUSED: 'Pausado',
   COMPLETED: 'Concluído',
   CANCELLED: 'Cancelado',
+  DISCARDED: 'Descartado',
 }
 
 /** Mapeia o status bruto do apontamento para o rótulo PT (fallback: valor original). */
@@ -61,6 +63,15 @@ function RestoreIcon() {
   )
 }
 
+/** Ícone de "arquivar" (descartar) — usado quando o apontamento tem tempo consolidado (120, D-1). */
+function ArchiveIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12M9 11h6" />
+    </svg>
+  )
+}
+
 /**
  * Card de um apontamento (NOVO — referência protótipo L543-552).
  * Header: agente + categorização + (badge "Faturável por fora").
@@ -69,6 +80,10 @@ function RestoreIcon() {
  *
  * Apontamentos CANCELLED permanecem visíveis com estilo discreto (099): badge
  * "Cancelado", motivo (note), quem cancelou (canceladoPorNome) e a ação "Restaurar".
+ * Apontamentos DISCARDED (120, D-1 — cancelamento de apontamento COM tempo consolidado)
+ * permanecem visíveis SEM esmaecer (o tempo é real, só não fatura — diferente do
+ * cancelado, que representa valor zero): badge "Descartado", motivo, quem agiu e
+ * "Restaurar" (D-4 — restaurável, nunca beco sem saída).
  */
 export function TimeEntryCard({
   entry,
@@ -84,6 +99,12 @@ export function TimeEntryCard({
 
   const isCancelled = entry.status.toUpperCase() === 'CANCELLED'
   const isCompleted = entry.status.toUpperCase() === 'COMPLETED'
+  // 120/D-1: DISCARDED preserva tempo real (só não fatura) — distinto de CANCELLED
+  // (valor zero). Restaurável igual ao cancelado (mesmo botão "Restaurar").
+  const isDiscarded = entry.status.toUpperCase() === 'DISCARDED'
+  // Decide o rótulo/resultado da ação a partir do tempo, não do status: a ação sempre
+  // parte de COMPLETED e o servidor decide CANCELLED (sem tempo) vs DISCARDED (com tempo).
+  const hasConsolidatedTime = entry.totalSeconds > 0
 
   const metaTime = end
     ? `${formatDate(entry.startTime)} · ${formatTime(entry.startTime)} → ${crossesDay ? `${formatDate(end)} ` : ''}${formatTime(end)}`
@@ -129,20 +150,23 @@ export function TimeEntryCard({
                 editar
               </button>
             )}
-            {/* Cancelar: só em COMPLETED e com permissão de gestor. */}
+            {/* Cancelar/Descartar: só em COMPLETED e com permissão de gestor. Rótulo dinâmico
+                por totalSeconds (120/D-1): com tempo consolidado o resultado é "Descartado"
+                (preserva tempo, não fatura); sem tempo, "Cancelado" (comportamento atual). */}
             {canManage && onCancel && isCompleted && (
               <button
                 type="button"
                 onClick={() => onCancel(entry)}
-                aria-label="Cancelar apontamento"
+                aria-label={hasConsolidatedTime ? 'Descartar apontamento' : 'Cancelar apontamento'}
                 className="inline-flex items-center gap-1 text-xs text-error-fg hover:underline rounded focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <BanIcon />
-                Cancelar apontamento
+                {hasConsolidatedTime ? <ArchiveIcon /> : <BanIcon />}
+                {hasConsolidatedTime ? 'Descartar apontamento' : 'Cancelar apontamento'}
               </button>
             )}
-            {/* Restaurar: só em CANCELLED e com permissão de gestor. */}
-            {canManage && onRestore && isCancelled && (
+            {/* Restaurar: em CANCELLED ou DISCARDED, com permissão de gestor (120, D-4:
+                Descartado é restaurável — sem beco sem saída). */}
+            {canManage && onRestore && (isCancelled || isDiscarded) && (
               <button
                 type="button"
                 onClick={() => onRestore(entry)}
@@ -188,17 +212,17 @@ export function TimeEntryCard({
         </ul>
       )}
 
-      {/* Motivo do cancelamento + quem cancelou (099) — destacado nos cancelados. */}
-      {isCancelled && (
+      {/* Motivo do cancelamento/descarte + quem agiu (099/120) — destacado nos dois casos. */}
+      {(isCancelled || isDiscarded) && (
         <div className="mt-2 rounded-input border border-border bg-badge-neutro-bg px-3 py-2 text-xs text-foreground/70">
-          <span className="font-semibold">Cancelado</span>
+          <span className="font-semibold">{isDiscarded ? 'Descartado' : 'Cancelado'}</span>
           {entry.canceladoPorNome ? ` por ${entry.canceladoPorNome}` : ''}
           {entry.note ? ` · Motivo: ${entry.note}` : ''}
         </div>
       )}
 
-      {/* Observação (apontamentos ativos — nos cancelados a nota vira o motivo acima). */}
-      {!isCancelled && entry.note && (
+      {/* Observação (apontamentos ativos — nos cancelados/descartados a nota vira o motivo acima). */}
+      {!isCancelled && !isDiscarded && entry.note && (
         <p className="mt-2 text-sm text-foreground/80">
           <span className="font-semibold">Obs:</span> {entry.note}
         </p>

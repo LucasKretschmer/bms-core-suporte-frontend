@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Badge } from './Badge'
+import { contrastRatio } from '../../utils/colorContrast'
 
 describe('Badge', () => {
   it('renderiza o valor como texto', () => {
@@ -38,5 +39,32 @@ describe('Badge', () => {
     render(<Badge value="Categoria X" style={{ backgroundColor: 'tomato' }} />)
     const badge = screen.getByText('Categoria X')
     expect(badge.style.backgroundColor).toBe('tomato')
+  })
+
+  it('aplica as classes do token novo "Descartado" (120, D-1 — 100% aditivo)', () => {
+    render(<Badge value="Descartado" />)
+    const badge = screen.getByText('Descartado')
+    expect(badge.className).toContain('bg-status-descartado-bg')
+    expect(badge.className).toContain('text-status-descartado-fg')
+  })
+
+  it('não altera nenhuma entrada existente do BADGE_MAP (Pausado/Cancelado, débito AP-FRONTEND-018)', () => {
+    render(
+      <>
+        <Badge value="Pausado" />
+        <Badge value="Cancelado" />
+      </>,
+    )
+    expect(screen.getByText('Pausado').className).toContain('bg-warning-bg')
+    expect(screen.getByText('Pausado').className).toContain('text-warning-fg')
+    expect(screen.getByText('Cancelado').className).toContain('bg-error-bg')
+    expect(screen.getByText('Cancelado').className).toContain('text-error-fg')
+  })
+})
+
+describe('Badge — contraste do par novo "Descartado" (120, D-1)', () => {
+  it('par "Descartado" atinge contraste >= 4.5:1 (AA, texto pequeno) — escopado só à entrada nova', () => {
+    // NÃO retrofita 'Pausado'/'Cancelado' — débito conhecido, fora desta unidade (AP-FRONTEND-018).
+    expect(contrastRatio('#6b21a8', '#f3e8ff')).toBeGreaterThanOrEqual(4.5)
   })
 })

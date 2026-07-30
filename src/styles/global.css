@@ -88,6 +88,15 @@
   --color-status-aberto-bg: #fffbef;
   --color-status-cancelado-fg: #c00000;
   --color-status-cancelado-bg: #ffe0e0;
+
+  /* ── Status "Descartado" do apontamento (120, D-1) ──
+     NOVO e ADITIVO — família violeta, não usada por nenhum outro status hoje (verde=fechado,
+     azul=em andamento, laranja=aberto, vermelho=cancelado). Nunca reutilizar/alterar
+     --color-warning-fg/--color-error-fg (reprovam AA — AP-FRONTEND-018) nem as 4 entradas
+     existentes do Badge.tsx BADGE_MAP. Contraste medido (WCAG, luminância relativa,
+     mesma fórmula de statusColors.ts/colorContrast.ts): #6b21a8/#f3e8ff = 7.39:1 (>> 4.5:1 AA). */
+  --color-status-descartado-fg: #6b21a8;
+  --color-status-descartado-bg: #f3e8ff;
 }
 
 /* ── Reset global ── */

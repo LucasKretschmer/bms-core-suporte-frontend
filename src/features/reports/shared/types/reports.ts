@@ -94,8 +94,9 @@ export type TicketReportItemDto = {
 
   // ── NOVOS (aditivos, 119 — CORR-05/MELH-01/MELH-02) — sempre presentes ──────
   /**
-   * CORR-05 — regra canônica: `DesativadoEm IS NULL` + `Status <> Cancelled`,
-   * SEM recorte de período (distinto de `totalSeconds`, que é do período filtrado).
+   * CORR-05 — regra canônica: `DesativadoEm IS NULL` + `Status NOT IN (Cancelled,
+   * Discarded)` (120/D-1 amplia a exclusão para incluir Discarded), SEM recorte de
+   * período (distinto de `totalSeconds`, que é do período filtrado).
    */
   totalSecondsAllTime: number
   /** CORR-05 — idem, contagem de apontamentos sem recorte de período. */

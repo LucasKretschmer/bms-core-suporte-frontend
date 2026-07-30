@@ -96,11 +96,15 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
   function handleConfirmCancel(reason: string) {
     if (!cancelTarget) return
     setCancelError(null)
+    // 120/D-1: mesma mutation/endpoint — o servidor decide CANCELLED (sem tempo) vs
+    // DISCARDED (com tempo consolidado). O toast reflete o resultado esperado usando o
+    // mesmo totalSeconds já calculado antes do submit (a mutation não retorna o status novo).
+    const wasDiscarded = cancelTarget.totalSeconds > 0
     cancel.mutate(
       { id: cancelTarget.id, note: reason },
       {
         onSuccess: () => {
-          toast.success('Apontamento cancelado.')
+          toast.success(wasDiscarded ? 'Apontamento descartado.' : 'Apontamento cancelado.')
           setCancelTarget(null)
         },
         onError: (err) => {
@@ -219,6 +223,7 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
       <CancelTimeEntryDialog
         isOpen={cancelTarget !== null}
         entryLabel={cancelTarget ? entryLabel(cancelTarget) : undefined}
+        hasConsolidatedTime={cancelTarget ? cancelTarget.totalSeconds > 0 : false}
         isSubmitting={cancel.isPending}
         apiError={cancelError}
         onConfirm={handleConfirmCancel}

@@ -324,6 +324,17 @@ describe('buildAppointmentsColumns — coluna Cliente (D2/119, guarda string vaz
   })
 })
 
+describe('buildAppointmentsColumns — headerInfo menciona "descartados" (120/D-1)', () => {
+  it.each(['tempo', 'tempoTotal', 'apontamentos', 'apontamentosTotal'])(
+    'coluna "%s" menciona apontamentos descartados no headerInfo',
+    (key) => {
+      const cols = buildAppointmentsColumns()
+      const col = cols.find((c) => c.key === key)!
+      expect(col.headerInfo).toContain('descartados')
+    },
+  )
+})
+
 describe('buildAppointmentsColumns — ordenação (052/119)', () => {
   it('colunas informativas (categoria, categoriasTimer, tempoTotal, apontamentosTotal) não são ordenáveis', () => {
     const cols = buildAppointmentsColumns()

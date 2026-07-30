@@ -24,13 +24,16 @@ export type TicketTimeEntryDto = {
   serviceCategoryId: number | null
   categorizacaoNome: string | null
   billableOutsidePlan: boolean
-  status: string // RUNNING | PAUSED | COMPLETED | CANCELLED
+  status: string // RUNNING | PAUSED | COMPLETED | CANCELLED | DISCARDED (120, D-1)
   startTime: string // ISO Z
   endTime: string | null // ISO Z
   totalSeconds: number
   note: string | null
   pendingCategory: boolean
-  /** Quem cancelou o apontamento (099) — preenchido quando status = CANCELLED. */
+  /**
+   * Quem cancelou/descartou o apontamento (099/120) — preenchido quando status =
+   * CANCELLED ou DISCARDED (campo de auditoria reaproveitado, mesma ação humana).
+   */
   canceladoPorUserId: number | null
   canceladoPorNome: string | null
   segments: TicketSegmentDto[]
