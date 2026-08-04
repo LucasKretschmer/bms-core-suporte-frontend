@@ -11,6 +11,17 @@ type ReportPageLayoutProps = {
   filters?: React.ReactNode
   /** Slot de botões de export */
   exportActions?: React.ReactNode
+  /**
+   * Slot de aviso/alerta renderizado entre os filtros e a tabela — **fora** da
+   * máquina de estados abaixo, portanto SEMPRE visível (inclusive em loading, erro
+   * e vazio da listagem).
+   *
+   * Existe porque `children` só é renderizado no estado "com dados": um alerta posto
+   * ali desapareceria exatamente quando a listagem estivesse vazia ou falhasse.
+   * Usado pelo card de exceções de faturamento (121/A2), cujo requisito é justamente
+   * não ficar silencioso. Opcional ⇒ zero mudança nas telas que não passam.
+   */
+  banner?: React.ReactNode
   isLoading: boolean
   isError: boolean
   isEmpty: boolean
@@ -30,6 +41,7 @@ export function ReportPageLayout({
   breadcrumbItems,
   filters,
   exportActions,
+  banner,
   isLoading,
   isError,
   isEmpty,
@@ -49,6 +61,9 @@ export function ReportPageLayout({
           {filters}
         </div>
       )}
+
+      {/* Aviso persistente (fora da máquina de estados — sempre visível) */}
+      {banner && <div className="mb-4">{banner}</div>}
 
       {/* Estados de UI */}
       {isLoading && (

@@ -1,17 +1,12 @@
 import { useId } from 'react'
-import { Combobox } from '../../../components/ui/Combobox'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Skeleton } from '../../../components/ui/Skeleton'
 import { Switch } from '../../../components/ui/Switch'
 import {
-  AUTO_STOP_KEY,
-  AUTO_STOP_OPTIONS,
   TEAM_BOOL_KEYS,
   TEAM_RULE_META,
-  asAutoStop,
   asBool,
   resolveRule,
-  type AutoStopOnReply,
   type BusinessRuleDto,
   type RuleValue,
   type TeamRuleKey,
@@ -27,8 +22,18 @@ type TeamRulesCardProps = {
 }
 
 /**
- * Card de regras de uma equipe: 6 toggles + combo "Ao enviar resposta".
+ * Card de regras de uma equipe: 6 toggles booleanos.
  * Cada alteração persiste imediatamente (upsert por chave).
+ *
+ * O combo "Ao enviar resposta" (regra `autoStopOnReply`) foi REMOVIDO em 2026-08-04
+ * (demanda 121, decisão D11): a preferência foi aposentada — mudança de estágio do
+ * chamado encerra o timer de todos os atendentes, sem escolha por equipe. O backend
+ * deixou de aceitar a chave na escrita (`POST`/`PUT /api/v1/business-rules`).
+ *
+ * Regras persistidas que o card não conhece (inclusive linhas antigas de
+ * `autoStopOnReply`, que continuam no banco) são simplesmente IGNORADAS: o card
+ * enumera `TEAM_BOOL_KEYS` e resolve por chave, então chave desconhecida não é
+ * renderizada, não é gravada e não é apagada.
  */
 export function TeamRulesCard({
   teamNome,
@@ -39,7 +44,6 @@ export function TeamRulesCard({
   onSave,
 }: TeamRulesCardProps) {
   const baseId = useId()
-  const autoStop = resolveRule(rules, AUTO_STOP_KEY)
 
   return (
     <section
@@ -56,51 +60,30 @@ export function TeamRulesCard({
       )}
 
       {!isLoading && !isError && (
-        <>
-          <ul className="flex flex-col gap-3">
-            {TEAM_BOOL_KEYS.map((key: TeamRuleKey) => {
-              const resolved = resolveRule(rules, key)
-              const checked = asBool(resolved.value)
-              const meta = TEAM_RULE_META[key]
-              const switchId = `${baseId}-${key}`
-              return (
-                <li key={key} className="flex items-start justify-between gap-3">
-                  <label htmlFor={switchId} className="flex flex-col cursor-pointer">
-                    <span className="text-sm text-foreground">{meta.label}</span>
-                    <span className="text-xs text-foreground/60">{meta.description}</span>
-                  </label>
-                  <Switch
-                    id={switchId}
-                    checked={checked}
-                    disabled={isSaving}
-                    hideLabel={false}
-                    label={meta.label}
-                    onChange={(next) =>
-                      onSave({ ruleId: resolved.ruleId, chave: key, valor: next })
-                    }
-                  />
-                </li>
-              )
-            })}
-          </ul>
-
-          <div className="pt-1">
-            <Combobox
-              id={`${baseId}-autostop`}
-              label="Ao enviar resposta"
-              value={asAutoStop(autoStop.value)}
-              options={AUTO_STOP_OPTIONS}
-              onChange={(value) =>
-                onSave({
-                  ruleId: autoStop.ruleId,
-                  chave: AUTO_STOP_KEY,
-                  valor: value as AutoStopOnReply,
-                })
-              }
-              disabled={isSaving}
-            />
-          </div>
-        </>
+        <ul className="flex flex-col gap-3">
+          {TEAM_BOOL_KEYS.map((key: TeamRuleKey) => {
+            const resolved = resolveRule(rules, key)
+            const checked = asBool(resolved.value)
+            const meta = TEAM_RULE_META[key]
+            const switchId = `${baseId}-${key}`
+            return (
+              <li key={key} className="flex items-start justify-between gap-3">
+                <label htmlFor={switchId} className="flex flex-col cursor-pointer">
+                  <span className="text-sm text-foreground">{meta.label}</span>
+                  <span className="text-xs text-foreground/60">{meta.description}</span>
+                </label>
+                <Switch
+                  id={switchId}
+                  checked={checked}
+                  disabled={isSaving}
+                  hideLabel={false}
+                  label={meta.label}
+                  onChange={(next) => onSave({ ruleId: resolved.ruleId, chave: key, valor: next })}
+                />
+              </li>
+            )
+          })}
+        </ul>
       )}
     </section>
   )

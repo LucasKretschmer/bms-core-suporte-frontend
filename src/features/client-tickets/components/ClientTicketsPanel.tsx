@@ -43,7 +43,7 @@ import { formatHours, formatPercent, formatSeconds } from '../../reports/shared/
 import { getPercentClass } from '../../reports/plan-consumption/columns'
 import { getTicketStatuses, listTeams } from '../../reports/shared/services/reportsService'
 import type { ClientTicketItemDto } from '../types/clientTickets'
-import { buildClientTicketsColumns } from '../columns'
+import { buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO } from '../columns'
 import { listClientTickets, listTicketOwners } from '../services/clientTicketsService'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
@@ -55,9 +55,23 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Equipe', key: 'equipe' },
   { header: 'Atendente', key: 'owner' },
   { header: 'Status', key: 'status' },
-  { header: 'Tempo do plano', key: 'tempo' },
+  // 121/§4.4 — antes "Tempo do plano": o rótulo afirmava algo que a coluna não mede
+  // (é o tempo TOTAL no período, todos os baldes). Mesmo rótulo da tabela visível.
+  { header: HEADER_TEMPO_NO_PERIODO, key: 'tempo' },
+  { header: 'Na fatura', key: 'naFatura' },
   { header: 'Apontamentos', key: 'apontamentos' },
 ]
+
+/**
+ * "Na fatura" no export: 3 ramos, iguais aos da coluna visível (AP-FRONTEND-021).
+ *
+ * `== null` cobre as DUAS formas de ausência do wire (121/F4) — o export mentiria
+ * "Não" igual à tabela, e num CSV a mentira ainda sobrevive à planilha do gestor.
+ */
+function naFaturaTexto(entraNaFatura: boolean | null | undefined): string {
+  if (entraNaFatura == null) return '—'
+  return entraNaFatura ? 'Sim' : 'Não'
+}
 
 function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
   return {
@@ -67,9 +81,25 @@ function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
     owner: item.ownerNome ?? '—',
     status: item.status ?? '—',
     tempo: formatSeconds(item.totalSeconds),
+    naFatura: naFaturaTexto(item.entraNaFatura),
     apontamentos: item.apontamentosCount,
   }
 }
+
+/**
+ * 121/§4.5 (D2) — texto obrigatório do KPI "Em aberto".
+ *
+ * `horasEmAbertoNaoFaturadas` é um **ESTOQUE, all-time**: por definição não reage ao
+ * filtro de período (soma os apontamentos de chamados com `FechadoEm == null`, sem
+ * recorte). Sem esta frase na tela, o próximo QA humano reabre exatamente o relato do
+ * P4 ("o filtro de data não tem efeito") — §12/R12 da arquitetura.
+ *
+ * Redação copiada verbatim de §4.5. AP-FRONTEND-022: não afirma prazo, limite nem
+ * periodicidade, e nenhum número é digitado aqui.
+ */
+const KPI_EM_ABERTO_LABEL = 'Em aberto (não faturável ainda)'
+const KPI_EM_ABERTO_TEXTO =
+  'Total, independe do período — trabalho em chamados ainda sem data de conclusão.'
 
 const PERCENT_SUBTEXT: Record<
   ReturnType<typeof getPercentClass>,
@@ -99,7 +129,6 @@ export function ClientTicketsPanel({
   initialFrom = null,
   initialTo = null,
 }: ClientTicketsPanelProps) {
-  const kpisQuery = useClientKpis(clientId)
   const {
     data,
     isLoading,
@@ -113,6 +142,15 @@ export function ClientTicketsPanel({
     setSort,
     setFilters,
   } = useClientTickets(clientId, { from: initialFrom, to: initialTo })
+
+  /**
+   * 121/C1 — os KPIs leem o período da MESMA fonte da tabela: `filters.from`/`filters.to`
+   * do useServerTable, que é também o que a barra de filtros abaixo escreve (PeriodFilter →
+   * setFilters) e o que `useClientTickets` manda a /reports/tickets. Nunca de
+   * `initialFrom`/`initialTo`, que congelam o período da abertura e voltariam a divergir
+   * da tabela assim que o usuário trocasse a data com o painel aberto.
+   */
+  const kpisQuery = useClientKpis(clientId, { from: filters.from, to: filters.to })
 
   // Busca textual com debounce
   const [searchInput, setSearchInput] = useState(filters.search)
@@ -218,43 +256,76 @@ export function ClientTicketsPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* KPIs do topo */}
+      {/* KPIs do topo — 3 estados: loading (skeleton nos cards), erro (ErrorState com
+          retry) e vazio (valores "—" + aviso "Cliente sem plano no período"). Todos
+          reagem à troca de período, porque a queryKey inclui from/to (121/C1). */}
       <section aria-label="Resumo do plano do cliente">
-        <KpiCardGrid>
-          <KpiCard
-            label="Plano"
-            value={kpis?.nomePlano ?? '—'}
-            isLoading={kpisQuery.isLoading}
+        {kpisQuery.isError ? (
+          <ErrorState
+            message="Não foi possível carregar o resumo do plano no período."
+            onRetry={() => void kpisQuery.refetch()}
           />
-          <KpiCard
-            label="Horas usadas"
-            value={kpis ? formatHours(kpis.horasUsadas) : '—'}
-            isLoading={kpisQuery.isLoading}
-          />
-          <KpiCard
-            label="Horas restantes"
-            value={kpis ? formatHours(kpis.horasRestantes) : '—'}
-            isLoading={kpisQuery.isLoading}
-          />
-          <KpiCard
-            label="Extras (estouro)"
-            value={kpis ? formatHours(kpis.horasAdicionais) : '—'}
-            isLoading={kpisQuery.isLoading}
-            tooltipText="Horas consumidas além do plano contratado."
-          />
-          <KpiCard
-            label="Faturável por fora"
-            value={kpis ? formatHours(kpis.horasFaturaveis) : '—'}
-            isLoading={kpisQuery.isLoading}
-          />
-          <KpiCard
-            label="% do plano"
-            value={formatPercent(kpis?.percentualPlano ?? null)}
-            subtext={kpis ? undefined : 'Cliente sem plano no período'}
-            subtextVariant={PERCENT_SUBTEXT[pctClass]}
-            isLoading={kpisQuery.isLoading}
-          />
-        </KpiCardGrid>
+        ) : (
+          <KpiCardGrid>
+            <KpiCard
+              label="Plano"
+              value={kpis?.nomePlano ?? '—'}
+              isLoading={kpisQuery.isLoading}
+            />
+            <KpiCard
+              label="Horas usadas"
+              value={kpis ? formatHours(kpis.horasUsadas) : '—'}
+              isLoading={kpisQuery.isLoading}
+            />
+            <KpiCard
+              label="Horas restantes"
+              value={kpis ? formatHours(kpis.horasRestantes) : '—'}
+              isLoading={kpisQuery.isLoading}
+            />
+            <KpiCard
+              label="Extras (estouro)"
+              value={kpis ? formatHours(kpis.horasAdicionais) : '—'}
+              isLoading={kpisQuery.isLoading}
+              tooltipText="Horas consumidas além do plano contratado."
+            />
+            <KpiCard
+              label="Faturável por fora"
+              value={kpis ? formatHours(kpis.horasFaturaveis) : '—'}
+              isLoading={kpisQuery.isLoading}
+            />
+            {/* 121/§4.5 — "Em aberto": estoque all-time, NÃO reage ao filtro de
+                período (e a tela diz isso, no subtexto E no tooltip).
+                TRÊS ramos (AP-FRONTEND-021): sem linha de plano → "—"; campo AUSENTE
+                (backend sem FAT-3) → "—"; campo presente com 0 → "0h 0m". Um
+                `?? 0` afirmaria "não há trabalho em aberto" enquanto o backend
+                antigo estiver no ar.
+                ⚠️ `== null` e não `=== undefined` (121/F4): um `decimal?` do C# manda
+                `null`, e aí `formatHours(null)` escrevia "0h 0m" — afirmando ZERO onde
+                o valor é DESCONHECIDO. */}
+            <KpiCard
+              label={KPI_EM_ABERTO_LABEL}
+              value={
+                kpis?.horasEmAbertoNaoFaturadas == null
+                  ? '—'
+                  : formatHours(kpis.horasEmAbertoNaoFaturadas)
+              }
+              subtext={KPI_EM_ABERTO_TEXTO}
+              tooltipText={KPI_EM_ABERTO_TEXTO}
+              isLoading={kpisQuery.isLoading}
+            />
+            <KpiCard
+              label="% do plano"
+              value={formatPercent(kpis?.percentualPlano ?? null)}
+              /* Só depois de carregar: durante o loading o aviso apareceria ao lado do
+                 skeleton afirmando "sem plano" antes de a resposta existir. */
+              subtext={
+                !kpisQuery.isLoading && !kpis ? 'Cliente sem plano no período' : undefined
+              }
+              subtextVariant={PERCENT_SUBTEXT[pctClass]}
+              isLoading={kpisQuery.isLoading}
+            />
+          </KpiCardGrid>
+        )}
       </section>
 
       {/* Filtros */}

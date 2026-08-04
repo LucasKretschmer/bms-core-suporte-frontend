@@ -12,7 +12,8 @@ import type {
  *
  * - listClientTickets → GET /api/v1/reports/tickets?clientId= (PaginatedResponse cru, B1)
  * - getClientKpis     → GET /api/v1/metrics/plan-consumption (PaginatedResponse cru),
- *                       localizando a linha do cliente pelo clientId.
+ *                       localizando a linha do cliente pelo clientId, **no período
+ *                       informado** (from/to — 121/C1).
  * - listTicketOwners  → GET /api/v1/reports/tickets/owners (opções do filtro de atendente, 070)
  */
 
@@ -75,14 +76,36 @@ export async function listTicketOwners(): Promise<TicketOwnerOption[]> {
 }
 
 /**
- * Busca os KPIs (consumo de plano) do cliente.
+ * Período (YYYY-MM-DD) usado no recorte dos KPIs de consumo — 121/C1.
+ *
+ * Os DOIS ramos são explícitos (AP-FRONTEND-021: "ausente" ≠ "vazio"):
+ *  - `string` → vai como `from`/`to` na query e recorta a janela do consumo
+ *    (`MetricsService.ResolvePeriod` → `ReportQueryRepository.GetPlanConsumptionAsync`,
+ *    onde `te.InicioEm >= from && te.InicioEm < toExclusive` entra em TODOS os
+ *    agregados: horasUsadas, horasRestantes, horasAdicionais, faturáveis e análise);
+ *  - `null` → o param é OMITIDO (cleanParams) e o backend aplica o default
+ *    "mês corrente" (`MetricsService.cs` ResolvePeriod). Nunca enviar string vazia:
+ *    `DateTime?` no controller rejeitaria com 400.
+ */
+export type ClientKpisPeriod = {
+  from: string | null
+  to: string | null
+}
+
+/**
+ * Busca os KPIs (consumo de plano) do cliente **no período informado**.
  *
  * O endpoint plan-consumption não filtra por clientId (B1 só adicionou clientId a
  * /reports/tickets), então paginamos a lista e localizamos a linha do cliente.
- * Retorna `null` se o cliente não tiver plano/linha no relatório.
+ * Retorna `null` se o cliente não tiver plano/linha no relatório daquele período.
+ *
+ * 121/C1: antes esta função só mandava paginação, então o card do topo mostrava
+ * SEMPRE o mês corrente (default do backend), ignorando o filtro da tela. O período
+ * é obrigatório na assinatura justamente para que todo call site decida o ramo.
  */
 export async function getClientKpis(
   clientId: number,
+  period: ClientKpisPeriod,
 ): Promise<PlanConsumptionItemDto | null> {
   const PAGE_SIZE = 200
   let page = 1
@@ -90,7 +113,16 @@ export async function getClientKpis(
   for (;;) {
     const { data } = await api.get<PaginatedResponse<PlanConsumptionItemDto>>(
       '/api/v1/metrics/plan-consumption',
-      { params: { page, pageSize: PAGE_SIZE } },
+      {
+        // O período acompanha TODAS as páginas — se saísse só na primeira, a linha
+        // encontrada adiante viria de outra janela.
+        params: cleanParams({
+          page,
+          pageSize: PAGE_SIZE,
+          from: period.from,
+          to: period.to,
+        }),
+      },
     )
     const match = data.items.find((item) => item.clientId === clientId)
     if (match) return match

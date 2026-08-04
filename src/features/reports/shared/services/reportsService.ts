@@ -2,6 +2,9 @@ import { api } from '../../../../services/api'
 import type { ApiResponse, PaginatedResponse } from '../../../../types/api'
 import type {
   AgentMetricDto,
+  BillingExceptionItemDto,
+  BillingExceptionsSummaryDto,
+  BillingExceptionTipo,
   ClientListItemDto,
   ClientReportDto,
   OrigemFiltro,
@@ -230,6 +233,92 @@ export async function listTeams(): Promise<TeamDto[]> {
 export async function listSupportPlans(): Promise<SupportPlanDto[]> {
   // Response: envelope ApiResponse<SupportPlanDto[]> (igual /teams) — desempacotar .data
   const { data } = await api.get<ApiResponse<SupportPlanDto[]>>('/api/v1/support-plans')
+  return data.data
+}
+
+// ── 121/A2 — Exceções de faturamento (D2) ─────────────────────────────────────
+
+/**
+ * Params de `GET /api/v1/reports/billing-exceptions` — contrato §5.2/§8 da
+ * arquitetura da demanda 121, congelado.
+ *
+ * ⚠️ `from`/`to` **não** filtram data de conclusão (por definição ela é nula neste
+ * conjunto): filtram por EXISTÊNCIA de apontamento `Completed` ativo com `InicioEm`
+ * na janela — "exceções com trabalho no mês que estou fechando". Omitidos ⇒ todas.
+ * É por isso que "ignorar período" no cliente é simplesmente **não enviar** os dois.
+ *
+ * `scope` default é `all` no backend (difere dos irmãos, que usam `mine`) — o
+ * relatório existe para não deixar nada passar; não enviamos `scope` daqui.
+ */
+export type BillingExceptionsParams = {
+  scope?: 'mine' | 'team' | 'all'
+  clientId?: string | number | null
+  teamId?: number[]
+  search?: string
+  from?: string | null
+  to?: string | null
+  /**
+   * F-15 — qual das duas seções. `anomalia` (default) = estágio fechado sem data de
+   * conclusão, exige ação. `postergado` = estágio não fechado, informativo.
+   *
+   * É param **opcional com default `anomalia`** justamente para que o contrato de §8
+   * continue valendo verbatim: sem `tipo`, o endpoint responde exatamente o que §8
+   * especificou.
+   */
+  tipo?: BillingExceptionTipo
+  /** Whitelist do backend: hubspotticketid|cliente|equipe|owner|status|ultimaatividade|segundos */
+  sortBy?: string | null
+  sortDirection?: 'asc' | 'desc'
+  page: number
+  pageSize: number
+}
+
+/**
+ * Lista as exceções de faturamento (chamado em estágio fechado sem `FechadoEm`).
+ *
+ * Envelope `PaginatedResponse<T>` **cru** (não `ApiResponse<T>`) — padrão dos
+ * relatórios paginados, conforme §8. Errar isso quebraria o desempacotamento.
+ *
+ * ⚠️ Integração **não verificada ponta-a-ponta**: o endpoint é a unidade FAT-4 e
+ * ainda não existe no backend. Escrito contra o contrato congelado de §8.
+ */
+export async function listBillingExceptions(
+  params: BillingExceptionsParams,
+): Promise<PaginatedResponse<BillingExceptionItemDto>> {
+  const { data } = await api.get<PaginatedResponse<BillingExceptionItemDto>>(
+    '/api/v1/reports/billing-exceptions',
+    { params: cleanParams(params) },
+  )
+  return data
+}
+
+/** Filtros do resumo — os mesmos da listagem, sem paginação nem ordenação. */
+export type BillingExceptionsSummaryParams = {
+  scope?: 'mine' | 'team' | 'all'
+  clientId?: string | number | null
+  teamId?: number[]
+  search?: string
+  from?: string | null
+  to?: string | null
+}
+
+/**
+ * F-15 — agregados das DUAS seções + a contagem de chamados não classificados.
+ *
+ * Envelope `ApiResponse<T>` (recurso único, não paginado) — padrão do repo para este
+ * caso, distinto dos relatórios paginados, que usam `PaginatedResponse` cru.
+ *
+ * ⚠️ Endpoint **proposto por esta unidade** e ainda inexistente: é requisito novo da
+ * FAT-4, registrado em `dev-fat-5-report.md`. Sem ele o card não tem como afirmar o
+ * total de horas do conjunto (o envelope paginado só traz `totalCount`).
+ */
+export async function getBillingExceptionsSummary(
+  params: BillingExceptionsSummaryParams,
+): Promise<BillingExceptionsSummaryDto> {
+  const { data } = await api.get<ApiResponse<BillingExceptionsSummaryDto>>(
+    '/api/v1/reports/billing-exceptions/summary',
+    { params: cleanParams(params) },
+  )
   return data.data
 }
 

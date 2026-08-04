@@ -13,6 +13,7 @@ import type { ExportColumn } from '../shared/utils/exportTable'
 import { listPlanConsumption } from '../shared/services/reportsService'
 import { planConsumptionColumns } from './columns'
 import { usePlanConsumption } from './hooks/usePlanConsumption'
+import { BillingExceptionsCard } from './components/BillingExceptionsCard'
 import { formatClientName, formatHours, formatPercent } from '../shared/utils/formatters'
 import { ClientTicketsPanel } from '../../client-tickets/components/ClientTicketsPanel'
 import type { ClientTicketItemDto } from '../../client-tickets/types/clientTickets'
@@ -171,6 +172,17 @@ export default function PlanConsumptionPage() {
 
   const isEmpty = !isLoading && !isError && (!data || data.items.length === 0)
 
+  /**
+   * 121/A2 (§5.3) — card de exceções de faturamento no slot `banner`, NÃO em
+   * `children`: `ReportPageLayout` só renderiza `children` no estado "com dados", e
+   * este card precisa aparecer também quando a listagem está vazia, carregando ou com
+   * erro — esconder o alerta é exatamente o silêncio que D2 combate.
+   * Usa o MESMO `filters.from`/`filters.to` da tabela (uma fonte só).
+   */
+  const billingExceptionsBanner = (
+    <BillingExceptionsCard from={filters.from} to={filters.to} />
+  )
+
   return (
     <ReportPageLayout
       title="Consumo de Planos"
@@ -205,6 +217,7 @@ export default function PlanConsumptionPage() {
           isExporting={isExporting}
         />
       }
+      banner={billingExceptionsBanner}
       isLoading={isLoading}
       isError={isError}
       isEmpty={isEmpty}

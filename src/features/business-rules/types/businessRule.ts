@@ -6,8 +6,13 @@
  * Chaves e domínios confirmados no backend (BusinessRuleKeys):
  * - bool:   singleActiveTimer, allowEditTimes, allowCrossTeam,
  *           notifyStatusChange, notifyNewInQueue, showProjectActivities
- * - string: autoStopOnReply ∈ { 'prompt' | 'auto' | 'off' }
  * - int:    idleAlertMinutes (1..60)
+ *
+ * `autoStopOnReply` (era string ∈ { 'prompt' | 'auto' | 'off' }) foi REVOGADA em
+ * 2026-08-04 (demanda 121, decisão D11) e saiu daqui junto com o combo
+ * "Ao enviar resposta": mudança de estágio do chamado passou a encerrar o timer de
+ * todos os atendentes. O backend rejeita a chave na escrita; linhas já gravadas
+ * continuam no banco (nenhum dado foi apagado) e são ignoradas por este módulo.
  */
 
 /** Valor cru de uma regra — o backend serializa JSON arbitrário. */
@@ -40,17 +45,17 @@ export const TEAM_BOOL_KEYS: TeamRuleKey[] = [
   'notifyNewInQueue',
 ]
 
-export type AutoStopOnReply = 'prompt' | 'auto' | 'off'
-
 export const GLOBAL_IDLE_KEY = 'idleAlertMinutes'
-export const AUTO_STOP_KEY = 'autoStopOnReply'
 
-/** Valores padrão (espelham os Defaults do backend). */
+/**
+ * Valores padrão das chaves que o painel edita (espelham os Defaults do backend).
+ * `autoStopOnReply` saiu deste mapa em 2026-08-04 (121/D11) — a chave não é mais
+ * exibida nem gravada pelo painel.
+ */
 export const RULE_DEFAULTS: Record<string, RuleValue> = {
   singleActiveTimer: true,
   allowEditTimes: false,
   allowCrossTeam: false,
-  autoStopOnReply: 'prompt',
   notifyStatusChange: true,
   notifyNewInQueue: true,
   showProjectActivities: false,
@@ -85,12 +90,6 @@ export const TEAM_RULE_META: Record<TeamRuleKey, { label: string; description: s
   },
 }
 
-export const AUTO_STOP_OPTIONS: { value: AutoStopOnReply; label: string }[] = [
-  { value: 'prompt', label: 'Perguntar' },
-  { value: 'auto', label: 'Encerrar automático' },
-  { value: 'off', label: 'Desativado' },
-]
-
 /** Estado resolvido de uma regra: valor efetivo + id do registro (null = ainda não persistido). */
 export type ResolvedRule = {
   value: RuleValue
@@ -112,10 +111,6 @@ export function resolveRule(
 
 export function asBool(value: RuleValue): boolean {
   return value === true
-}
-
-export function asAutoStop(value: RuleValue): AutoStopOnReply {
-  return value === 'auto' || value === 'off' ? value : 'prompt'
 }
 
 export function asMinutes(value: RuleValue): number {

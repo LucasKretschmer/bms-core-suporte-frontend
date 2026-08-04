@@ -30,7 +30,10 @@ export default function ClientTicketsPage({
   initialTo = null,
 }: ClientTicketsPageProps) {
   const navigate = useNavigate()
-  const kpisQuery = useClientKpis(clientId)
+  // Só o NOME do cliente vem daqui (título/breadcrumb). O período é o inicial da rota —
+  // o mesmo com que o painel abre, então a 1ª carga compartilha a query dos KPIs do
+  // painel. Trocar o período dentro do painel não muda o nome, apenas os KPIs (121/C1).
+  const kpisQuery = useClientKpis(clientId, { from: initialFrom, to: initialTo })
 
   const clientName = kpisQuery.data ? formatClientName(kpisQuery.data) : 'Cliente'
 

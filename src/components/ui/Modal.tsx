@@ -36,6 +36,38 @@ const sizeClasses: Record<ModalSize, string> = {
 }
 
 /**
+ * Elementos que participam do fluxo de `Tab`. `[tabindex="-1"]` é excluído no próprio
+ * seletor (e não pela propriedade `tabIndex`) porque é o atributo que o React escreve —
+ * é assim que a aba inativa do `Tabs` e o próprio contêiner do dialog ficam fora do
+ * ciclo do trap.
+ */
+const SELETOR_FOCAVEL = [
+  'a[href]:not([tabindex="-1"])',
+  'button:not([disabled]):not([tabindex="-1"])',
+  'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
+  'iframe:not([tabindex="-1"])',
+  'summary:not([tabindex="-1"])',
+  '[contenteditable="true"]:not([tabindex="-1"])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+
+/**
+ * Focáveis DENTRO do dialog, em ordem de documento.
+ *
+ * ⚠️ Nada de `offsetParent`/`getClientRects()` para filtrar invisíveis: em jsdom eles
+ * são sempre nulos/zerados, então o filtro devolveria lista **vazia** e o trap ficaria
+ * inerte justamente nos testes que existem para prová-lo. A exclusão é pelo que é
+ * semântico e observável nos dois ambientes: `[hidden]` e `aria-hidden="true"`.
+ */
+function focaveisDentro(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL)).filter(
+    (el) => el.closest('[hidden], [aria-hidden="true"]') === null,
+  )
+}
+
+/**
  * Modal genérico do app — retematizado com os tokens Migrate (`shadow-card`,
  * `rounded-card`, `text-card`/`text-primary`) para bater 1:1 com o DS `Modal`
  * nos tamanhos sm/md/lg.
@@ -44,7 +76,35 @@ const sizeClasses: Record<ModalSize, string> = {
  * `max-w-2xl`), overlay sempre `bg-black/40` sem blur configurável, e não
  * expõe `className` no painel. Produção usa `size="xl"`/`"fullscreen"` +
  * `backdropBlur="lg"` (preview de PDF quase-tela-cheia) — ver gap G10/G7 do
- * design system. Trap de foco, Escape fecha, overlay clica-para-fechar.
+ * design system.
+ *
+ * O QUE ESTE COMPONENTE FAZ, exatamente (121/F2 — a docstring anterior dizia "trap de
+ * foco" e o trap **não existia**; `Shift+Tab` saía do dialog e pousava no gatilho atrás
+ * do overlay. Docstring que promete o que o código não entrega desliga a verificação —
+ * ninguém confere o que já está escrito):
+ *
+ *  - **foco entra ao abrir**: no botão "Fechar modal" quando há `title`; sem `title`, no
+ *    primeiro focável; sem nenhum focável, no próprio contêiner do dialog;
+ *  - **`Tab` circula DENTRO do dialog**: do último volta ao primeiro, e `Shift+Tab` do
+ *    primeiro vai ao último;
+ *  - **`Escape` fecha** e **clique no overlay fecha**;
+ *  - **scroll do body bloqueado** enquanto aberto.
+ *
+ * O QUE ELE NÃO FAZ:
+ *
+ *  - **não devolve o foco ao gatilho** — isso é de quem abre (guardar o `ref` do botão e
+ *    refocá-lo no `onClose`; ver `BillingExceptionsCard.handleClose`). São dois
+ *    mecanismos com donos diferentes: um teste só dá a impressão de cobrir os dois;
+ *  - **não torna o resto da página inerte** (sem `inert`/`aria-hidden` no `body`): o
+ *    trap é por tecla. Consequência conhecida: conteúdo dentro de `<iframe>` (preview de
+ *    PDF do relatório do cliente) tem navegação própria — o `keydown` acontece no
+ *    documento interno e não chega a este handler, então sair do iframe por `Tab` pode
+ *    alcançar a página de trás. O `Tab` DENTRO do iframe continua funcionando
+ *    normalmente (o trap não interfere nele);
+ *  - **não interfere em conteúdo em portal** renderizado por dentro do modal (tooltip do
+ *    `InfoIcon`, `Toast`, `ConfirmDialog`): o listener é NATIVO e vive no elemento do
+ *    dialog, então só vê eventos de descendentes do DOM. Um `onKeyDown` do React
+ *    capturaria os portais também — pelo caminho do React tree — e brigaria com eles.
  */
 export function Modal({
   isOpen,
@@ -56,25 +116,71 @@ export function Modal({
   backdropBlur = 'sm',
 }: ModalProps) {
   const titleId = 'modal-title'
+  const dialogRef = useRef<HTMLDivElement>(null)
   const firstFocusableRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!isOpen) return
+    const dialog = dialogRef.current
+    if (!dialog) return
 
-    // Foca o botão de fechar ao abrir
-    firstFocusableRef.current?.focus()
+    // Foco ENTRA no modal ao abrir: botão de fechar (quando há título) → primeiro
+    // focável → o próprio dialog (`tabIndex={-1}` existe só para este caso).
+    const alvoInicial = firstFocusableRef.current ?? focaveisDentro(dialog)[0] ?? dialog
+    alvoInicial.focus()
 
-    // Fecha com Escape
-    function handleKeyDown(e: KeyboardEvent) {
+    // Escape continua no DOCUMENTO, de propósito: se o foco escorregar para o `body`
+    // (clique no overlay, elemento removido no meio do fluxo), um listener preso ao
+    // dialog deixaria de fechar o modal — regressão em todos os consumidores.
+    const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
 
-    document.addEventListener('keydown', handleKeyDown)
+    /**
+     * TRAP DE FOCO — listener NATIVO no elemento do dialog (nunca `document`, nunca
+     * `onKeyDown` do React): assim ele só vê teclas de descendentes do DOM, e conteúdo
+     * em portal (tooltip, toast, `ConfirmDialog`) segue com a navegação própria.
+     *
+     * Arrow function (e não `function`): declaração de função é hoistada, e o TS
+     * descarta o estreitamento de `dialog` para não-nulo dentro dela.
+     */
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+
+      const focaveis = focaveisDentro(dialog)
+      if (focaveis.length === 0) {
+        // Modal sem nada focável: o foco fica no contêiner em vez de vazar.
+        e.preventDefault()
+        dialog.focus()
+        return
+      }
+
+      const primeiro = focaveis[0]
+      const ultimo = focaveis[focaveis.length - 1]
+      const ativo = document.activeElement
+
+      if (e.shiftKey) {
+        if (ativo === primeiro || ativo === dialog) {
+          e.preventDefault()
+          ultimo.focus()
+        }
+        return
+      }
+      if (ativo === ultimo || ativo === dialog) {
+        e.preventDefault()
+        primeiro.focus()
+      }
+    }
+
+
+    document.addEventListener('keydown', handleEscape)
+    dialog.addEventListener('keydown', handleTab)
     // Bloqueia scroll do body
     document.body.style.overflow = 'hidden'
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keydown', handleEscape)
+      dialog.removeEventListener('keydown', handleTab)
       document.body.style.overflow = ''
     }
   }, [isOpen, onClose])
@@ -83,7 +189,11 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      ref={dialogRef}
+      /* `-1`: alvo de foco de último recurso (modal sem nada focável) e âncora do
+         trap. Fica fora do ciclo do `Tab` — o seletor exclui `[tabindex="-1"]`. */
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 focus:outline-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}

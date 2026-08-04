@@ -97,6 +97,26 @@
      mesma fórmula de statusColors.ts/colorContrast.ts): #6b21a8/#f3e8ff = 7.39:1 (>> 4.5:1 AA). */
   --color-status-descartado-fg: #6b21a8;
   --color-status-descartado-bg: #f3e8ff;
+
+  /* ── Faturamento — "Na fatura" e card de exceções (121/FAT-5, A2/D2) ──
+     NOVOS e ADITIVOS. Nenhum token compartilhado foi alterado: `--color-warning-fg`
+     (#e07600 sobre #fffbef = 3.00:1) e `--color-error-fg` REPROVAM AA como texto
+     (AP-FRONTEND-018) e são usados por 5+ telas via Badge.tsx.
+     Contrastes medidos (WCAG 2.x, luminância relativa — mesma fórmula de
+     `src/utils/colorContrast.ts`), travados pelo teste
+     `features/reports/shared/utils/faturamentoTheme.test.ts`, que LÊ estes valores
+     deste arquivo e reprova abaixo de 4.5:1:
+       #046b04 sobre #ddffdd = 6.25:1  (badge "Na fatura: Sim")
+       #4a5a68 sobre #f0f4f7 = 6.43:1  (badge "Na fatura: Não")
+       #8a3d00 sobre #fffbef = 7.39:1  (card de exceções de faturamento)
+     `#fffbef` é o mesmo fundo de alerta-aviso do DS (--color-alert-warning); só o
+     TEXTO foi escurecido, preservando o fundo (rules/frontend.md § Contraste). */
+  --color-fatura-sim-fg: #046b04;
+  --color-fatura-sim-bg: #ddffdd;
+  --color-fatura-nao-fg: #4a5a68;
+  --color-fatura-nao-bg: #f0f4f7;
+  --color-excecao-fatura-fg: #8a3d00;
+  --color-excecao-fatura-bg: #fffbef;
 }
 
 /* ── Reset global ── */

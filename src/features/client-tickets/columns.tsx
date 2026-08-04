@@ -12,28 +12,14 @@
  */
 
 import { Badge } from '../../components/ui/Badge'
+import { ExternalLinkIcon } from '../../components/ui/ExternalLinkIcon'
 import type { ColumnDef } from '../../components/ui/DataTable/types'
 import type { ClientTicketItemDto } from './types/clientTickets'
 import { formatSeconds } from '../reports/shared/utils/formatters'
+import { NA_FATURA_CLASSES } from '../reports/shared/utils/faturamentoTheme'
 
-function ExternalLinkIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="inline-block ml-1 h-3 w-3 text-foreground/50 shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-      />
-    </svg>
-  )
-}
+/** Rótulo da coluna de tempo — ver o comentário do cabeçalho (121/§4.4). */
+export const HEADER_TEMPO_NO_PERIODO = 'Tempo no período'
 
 export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
   return [
@@ -103,13 +89,58 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
         ),
     },
     {
+      /**
+       * 121/§4.4 — renomeada de "Tempo do plano" para "Tempo no período".
+       *
+       * O rótulo antigo AFIRMAVA algo que a coluna não mede: o valor é
+       * `totalSeconds`, o tempo TOTAL dos apontamentos com início no período
+       * filtrado — todos os baldes, não só o do plano de suporte. O tempo por balde
+       * de fatura são campos distintos (`faturaPlanoSegundos` &c.) e não estão
+       * nesta coluna. AP-FRONTEND-022: rótulo é asserção, não copy.
+       */
       key: 'tempo',
-      header: 'Tempo do plano',
+      header: HEADER_TEMPO_NO_PERIODO,
+      headerInfo:
+        'Tempo total dos apontamentos com início no período filtrado — todos os tipos de faturamento, não apenas o plano.',
       sortable: true,
       sortKey: 'tempo',
       align: 'right',
-      width: '120px',
+      width: '130px',
       accessor: (row) => formatSeconds(row.totalSeconds),
+    },
+    {
+      /**
+       * 121/§4.4 — "Na fatura": `entraNaFatura` (calculado no backend como
+       * `FechadoEm != null && FechadoEm ∈ [from, toExclusive)`).
+       *
+       * NÃO é sortável: `nafatura` não está na whitelist de `sortBy` de
+       * `/reports/tickets` — o backend cairia no default e a seta mentiria.
+       *
+       * TRÊS ramos, não dois (AP-FRONTEND-021): campo AUSENTE = o backend ainda não
+       * expõe (FAT-3 não subiu) ⇒ "—", nunca "Não". Renderizar "Não" para campo
+       * ausente afirmaria que o chamado está fora da fatura.
+       *
+       * ⚠️ O guard é `== null`, não `=== undefined` (121/F4): "ausente" tem duas formas
+       * na fronteira HTTP e não controlamos o serializador do outro lado — um `bool?`
+       * no DTO manda `null`, e `null === undefined` é `false`, então a tela caía no
+       * ramo `false` e afirmava "Não" para dado desconhecido.
+       */
+      key: 'naFatura',
+      header: 'Na fatura',
+      headerInfo:
+        'Sim = o chamado tem data de conclusão dentro do período, então as horas dele entram na fatura desta competência. Não = ainda em aberto ou fechado em outra competência. "—" = informação ainda não disponível.',
+      align: 'center',
+      width: '110px',
+      accessor: (row) => {
+        if (row.entraNaFatura == null) {
+          return <span className="text-foreground/40">—</span>
+        }
+        return row.entraNaFatura ? (
+          <Badge value="Sim" className={NA_FATURA_CLASSES.sim} />
+        ) : (
+          <Badge value="Não" className={NA_FATURA_CLASSES.nao} />
+        )
+      },
     },
     {
       key: 'apontamentos',
