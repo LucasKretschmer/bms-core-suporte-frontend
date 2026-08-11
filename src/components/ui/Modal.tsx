@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { focaveisDentro } from './focusableElements'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen'
 
@@ -36,38 +37,6 @@ const sizeClasses: Record<ModalSize, string> = {
 }
 
 /**
- * Elementos que participam do fluxo de `Tab`. `[tabindex="-1"]` é excluído no próprio
- * seletor (e não pela propriedade `tabIndex`) porque é o atributo que o React escreve —
- * é assim que a aba inativa do `Tabs` e o próprio contêiner do dialog ficam fora do
- * ciclo do trap.
- */
-const SELETOR_FOCAVEL = [
-  'a[href]:not([tabindex="-1"])',
-  'button:not([disabled]):not([tabindex="-1"])',
-  'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
-  'select:not([disabled]):not([tabindex="-1"])',
-  'textarea:not([disabled]):not([tabindex="-1"])',
-  'iframe:not([tabindex="-1"])',
-  'summary:not([tabindex="-1"])',
-  '[contenteditable="true"]:not([tabindex="-1"])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(', ')
-
-/**
- * Focáveis DENTRO do dialog, em ordem de documento.
- *
- * ⚠️ Nada de `offsetParent`/`getClientRects()` para filtrar invisíveis: em jsdom eles
- * são sempre nulos/zerados, então o filtro devolveria lista **vazia** e o trap ficaria
- * inerte justamente nos testes que existem para prová-lo. A exclusão é pelo que é
- * semântico e observável nos dois ambientes: `[hidden]` e `aria-hidden="true"`.
- */
-function focaveisDentro(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(SELETOR_FOCAVEL)).filter(
-    (el) => el.closest('[hidden], [aria-hidden="true"]') === null,
-  )
-}
-
-/**
  * Modal genérico do app — retematizado com os tokens Migrate (`shadow-card`,
  * `rounded-card`, `text-card`/`text-primary`) para bater 1:1 com o DS `Modal`
  * nos tamanhos sm/md/lg.
@@ -96,11 +65,15 @@ function focaveisDentro(container: HTMLElement): HTMLElement[] {
  *    refocá-lo no `onClose`; ver `BillingExceptionsCard.handleClose`). São dois
  *    mecanismos com donos diferentes: um teste só dá a impressão de cobrir os dois;
  *  - **não torna o resto da página inerte** (sem `inert`/`aria-hidden` no `body`): o
- *    trap é por tecla. Consequência conhecida: conteúdo dentro de `<iframe>` (preview de
- *    PDF do relatório do cliente) tem navegação própria — o `keydown` acontece no
- *    documento interno e não chega a este handler, então sair do iframe por `Tab` pode
- *    alcançar a página de trás. O `Tab` DENTRO do iframe continua funcionando
- *    normalmente (o trap não interfere nele);
+ *    trap é por tecla. Consequência conhecida: conteúdo dentro de `<iframe>` tem
+ *    navegação própria — o `keydown` acontece no documento interno e não chega a este
+ *    handler, então sair do iframe por `Tab` alcança a página de trás. O `Tab` DENTRO do
+ *    iframe continua funcionando normalmente (o trap não interfere nele).
+ *    **Isto continua verdade para este componente**: quem embute `<iframe>` fecha o ciclo
+ *    do seu lado, com uma **sentinela de foco** logo depois do iframe (121/D21) — ver
+ *    `ClientReportPdf`, que é o único consumidor com iframe, e `focusableElements.ts`,
+ *    cuja noção de focável ele reusa. A alternativa (`inert` no `body`) foi **recusada**:
+ *    deixaria inertes os portais de `Toast` e `ConfirmDialog`, que vivem fora do dialog;
  *  - **não interfere em conteúdo em portal** renderizado por dentro do modal (tooltip do
  *    `InfoIcon`, `Toast`, `ConfirmDialog`): o listener é NATIVO e vive no elemento do
  *    dialog, então só vê eventos de descendentes do DOM. Um `onKeyDown` do React

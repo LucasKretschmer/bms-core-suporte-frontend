@@ -62,10 +62,6 @@ vi.mock('./components/SupportPlanHealthSection', () => ({
   SupportPlanHealthSection: () => <div data-testid="plan-section" />,
 }))
 
-vi.mock('../shared/components/DrillDownModal', () => ({
-  DrillDownModal: () => null,
-}))
-
 // Mock do PanelMode — ao clicar no botão de saída, chama onExit
 vi.mock('../panel/PanelMode', () => ({
   PanelMode: ({ onExit, children }: { isActive: boolean; onExit: () => void; children: React.ReactNode }) => (
@@ -84,21 +80,6 @@ vi.mock('../panel/PanelMode', () => ({
 // Mock dos hooks de dados dos dashboards
 vi.mock('../shared/hooks/useMetricsOverview', () => ({
   useMetricsOverview: () => ({ data: null, isLoading: false, isError: false, refetch: vi.fn() }),
-}))
-
-vi.mock('../shared/hooks/useDrillDownRows', () => ({
-  useDrillDownRows: () => ({
-    data: null,
-    isLoading: false,
-    isError: false,
-    setPage: vi.fn(),
-    setPageSize: vi.fn(),
-    setSortBy: vi.fn(),
-    setSortDirection: vi.fn(),
-    enable: vi.fn(),
-    page: 1,
-    pageSize: 25,
-  }),
 }))
 
 vi.mock('../shared/hooks/useMetricsStream', () => ({

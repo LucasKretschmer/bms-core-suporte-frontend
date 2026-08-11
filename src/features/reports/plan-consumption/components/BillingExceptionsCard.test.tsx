@@ -345,8 +345,20 @@ describe('BillingExceptionsCard — período e modal', () => {
    * Travessia REAL, ancorada no foco inicial do dialog, com a asserção de contenção em
    * TODA parada (AP-QA-007). Medição do QA antes da correção:
    * `["Fechar modal", "Conferir exceções de faturamento", "BODY"]`.
+   *
+   * ⏱️ `timeout` explícito — 122/FLAKY-1. O custo deste caso é ESTRUTURAL, não acidental:
+   * o anel tem **14 paradas** e é percorrido nas duas direções ⇒ **28 `userEvent.tab()`**,
+   * a ~65 ms cada em jsdom (cada `tab` reavalia os focáveis do documento inteiro, com
+   * `getComputedStyle` por elemento). Medido: ~2,0 s só na travessia, 2,3–2,9 s o caso
+   * inteiro — menos de 2× de folga no `testTimeout` padrão de 5 s, e por isso ele
+   * **estourava sob carga** (1 de 6 execuções isoladas, em 5110 ms). Não é espera
+   * mal-feita: não há `setTimeout`, relógio de parede nem `waitFor` sem condição, e uma
+   * instância única de `userEvent.setup()` foi medida e não muda nada (2048 ms vs 1953 ms).
+   * O timeout é DESTE caso, nunca do projeto: subir o global esconderia regressão de
+   * lentidão em toda a suíte. O laço de `percorrerAnel` continua com o próprio limite de
+   * 60 passos — quem falha por anel aberto falha com mensagem, não por estouro de relógio.
    */
-  it('foco PRESO no modal: o anel de Tab fecha dentro do dialog e nunca alcança "Conferir" nem o BODY', async () => {
+  it('foco PRESO no modal: o anel de Tab fecha dentro do dialog e nunca alcança "Conferir" nem o BODY', { timeout: 15_000 }, async () => {
     mockedSummary.mockResolvedValue(summary({ anomaliasCount: 1, anomaliasSegundos: 3600 }))
     // Com a listagem VAZIA o modal teria 3 focáveis e o anel seria trivial: a lista real
     // (tabela + ordenação + paginação) é o que faz a travessia valer alguma coisa.

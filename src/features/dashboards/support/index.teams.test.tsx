@@ -27,14 +27,10 @@ vi.mock('./components/SupportStatusSection', () => ({ SupportStatusSection: () =
 vi.mock('./components/SupportCategorySection', () => ({ SupportCategorySection: () => null }))
 vi.mock('./components/SupportSlaSection', () => ({ SupportSlaSection: () => null }))
 vi.mock('./components/SupportPlanHealthSection', () => ({ SupportPlanHealthSection: () => null }))
-vi.mock('../shared/components/DrillDownModal', () => ({ DrillDownModal: () => null }))
 vi.mock('../panel/PanelMode', () => ({ PanelMode: () => null }))
 
 vi.mock('../shared/hooks/useMetricsOverview', () => ({
   useMetricsOverview: () => ({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() }),
-}))
-vi.mock('../shared/hooks/useDrillDownRows', () => ({
-  useDrillDownRows: () => ({ enable: vi.fn(), disable: vi.fn() }),
 }))
 vi.mock('../shared/hooks/useMetricsStream', () => ({
   useMetricsStream: () => ({ status: 'idle', pause: vi.fn(), resume: vi.fn() }),

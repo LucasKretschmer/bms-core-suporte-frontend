@@ -7,9 +7,9 @@ type StreamStatus = 'connecting' | 'open' | 'error' | 'closed'
 
 type UseMetricsStreamReturn = {
   status: StreamStatus
-  /** Pausa invalidações (chamar ao abrir DrillDownModal) */
+  /** Pausa invalidações (chamado pelo MetricDrillModal ao abrir) */
   pause: () => void
-  /** Retoma invalidações (chamar ao fechar DrillDownModal) */
+  /** Retoma invalidações (chamado pelo MetricDrillModal ao fechar) */
   resume: () => void
 }
 
@@ -23,7 +23,9 @@ const RELEVANT_EVENTS: MetricsStreamEventType[] = [
 /**
  * Conecta ao SSE /api/v1/metrics/stream.
  * Ao receber evento relevante → invalida queries de métricas com debounce 2s.
- * pause()/resume(): chamados pelo DrillDownModal ao abrir/fechar.
+ * pause()/resume(): chamados pelo MetricDrillModal ao abrir/fechar (via
+ * onStreamPause/onStreamResume). O DrillDownModal que estes comentários citavam foi
+ * REMOVIDO (era órfão desde a substituição pelo MetricDrillModal).
  *
  * ATENÇÃO (Risco R8): EventSource nativo não suporta header Authorization.
  * O backend aceita ?token= como alternativa. Token vem do tokenStore (memória).

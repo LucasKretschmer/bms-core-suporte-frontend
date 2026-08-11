@@ -210,26 +210,17 @@ export type OnboardingMetricsDto = {
   nps: OnboardingNpsPlaceholderDto
 }
 
-// ── Drill-down rows (overview?format=rows) ───────────────────────────────────
-
-export type TimeEntryRowDto = {
-  timeEntryId: number
-  ticketId: number
-  hubspotTicketId: string
-  assunto: string | null
-  atendente: string
-  equipe: string | null
-  totalSegundos: number
-  dataApontamento: string
-}
-
 // ── Drill-down paramétrico — família APONTAMENTO (016 B1) ─────────────────────
 
 /**
  * Linha da família APONTAMENTO (espelha o TimeEntryRowDto do backend em /metrics/rows).
- * Difere do TimeEntryRowDto legado (overview?format=rows) por carregar
- * `categorizacaoAtendimento` (categorização interna — Plantão etc.). `ticketId` é o id
- * INTERNO usado para navegar à tela do ticket do apontamento.
+ * Carrega `categorizacaoAtendimento` (categorização interna — Plantão etc.), que a linha
+ * do endpoint legado `overview?format=rows` não trazia. `ticketId` é o id INTERNO usado
+ * para navegar à tela do ticket do apontamento.
+ *
+ * 122/CONSOL-1: o tipo `TimeEntryRowDto` (linha do `overview?format=rows`) vivia aqui e
+ * foi removido junto com seu único cliente, `metricsService.getDrillDownRows` — órfão
+ * desde a remoção do `DrillDownModal`. O endpoint do backend segue existindo.
  */
 export type TimeEntryDrillRowDto = {
   timeEntryId: number

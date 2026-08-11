@@ -6,7 +6,7 @@
  * PanelMode: teams=[] (sem rotação, tela única com auto-scroll).
  */
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { defaultCurrentMonthPeriod } from '../../reports/shared/utils/defaultPeriod'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { ErrorState } from '../../../components/ui/ErrorState'
@@ -16,6 +16,7 @@ import { ApontamentoDrillModal } from '../shared/components/ApontamentoDrillModa
 import { ProjectDrillModal } from '../shared/components/ProjectDrillModal'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
 import { useMetricDrill } from '../shared/hooks/useMetricDrill'
+import { useReturnFocus } from '../../../hooks/useReturnFocus'
 import { useOnboardingMetrics } from './hooks/useOnboardingMetrics'
 import { OnboardingProjectSection } from './components/OnboardingProjectSection'
 import { OnboardingTicketSection } from './components/OnboardingTicketSection'
@@ -48,6 +49,26 @@ export default function DashboardOnboardingPage() {
 
   // Ref para devolver o foco ao botão Apresentar ao sair do painel
   const apresentarButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  // §5.3 — o modal prende o foco (Modal.tsx) E devolve ao gatilho (aqui: quem abre é o
+  // dono). Gatilhos heterogêneos (KpiCard, linha de atendente, fatia de donut) → o
+  // gatilho é o elemento focado no instante da abertura. Hooks antes do early return.
+  const drillFocus = useReturnFocus()
+
+  /** Abre o drill guardando o gatilho — usar SEMPRE no lugar de `setActiveDrill(spec)`. */
+  const openDrill = useCallback(
+    (spec: DrillSpec) => {
+      drillFocus.capture()
+      setActiveDrill(spec)
+    },
+    [drillFocus],
+  )
+
+  /** Fecha o drill e devolve o foco ao gatilho — usar SEMPRE no `onClose` dos modais. */
+  const closeDrill = useCallback(() => {
+    setActiveDrill(null)
+    drillFocus.restore()
+  }, [drillFocus])
 
   const { data, isLoading, isError, refetch } = useOnboardingMetrics({ from, to })
 
@@ -95,7 +116,7 @@ export default function DashboardOnboardingPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
-        onProjectDrill={panelActive ? undefined : setActiveDrill}
+        onProjectDrill={panelActive ? undefined : openDrill}
       />
 
       {/* Tickets — KPIs de ticket clicáveis (016) + linha de atendente → apontamentos (B1). */}
@@ -104,8 +125,8 @@ export default function DashboardOnboardingPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
-        onTicketDrill={panelActive ? undefined : setActiveDrill}
-        onAgentDrill={panelActive ? undefined : setActiveDrill}
+        onTicketDrill={panelActive ? undefined : openDrill}
+        onAgentDrill={panelActive ? undefined : openDrill}
       />
 
       {/* NPS — placeholder fixo */}
@@ -142,7 +163,7 @@ export default function DashboardOnboardingPage() {
       {!panelActive && activeDrill && drillFamily === 'ticket' && (
         <TicketDrillModal
           activeDrill={activeDrill}
-          onClose={() => setActiveDrill(null)}
+          onClose={closeDrill}
           drill={ticketDrill}
           baseParams={{ scope: 'management:onboarding', from, to }}
           onStreamPause={stream.pause}
@@ -153,7 +174,7 @@ export default function DashboardOnboardingPage() {
       {!panelActive && activeDrill && drillFamily === 'apontamento' && (
         <ApontamentoDrillModal
           activeDrill={activeDrill}
-          onClose={() => setActiveDrill(null)}
+          onClose={closeDrill}
           drill={apontamentoDrill}
           baseParams={{ scope: 'management:onboarding', from, to }}
           onStreamPause={stream.pause}
@@ -165,7 +186,7 @@ export default function DashboardOnboardingPage() {
       {!panelActive && activeDrill && drillFamily === 'projeto' && (
         <ProjectDrillModal
           activeDrill={activeDrill}
-          onClose={() => setActiveDrill(null)}
+          onClose={closeDrill}
           drill={projectDrill}
           baseParams={{ from, to }}
           onStreamPause={stream.pause}

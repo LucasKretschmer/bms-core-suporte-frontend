@@ -14,7 +14,6 @@ import type {
   ByCategoryDto,
   PlanHealthResponseDto,
   ByAgentDto,
-  TimeEntryRowDto,
   TicketRowDto,
   MetricRowsParams,
 } from '../types/metrics'
@@ -86,24 +85,6 @@ export async function getByAgent(
 ): Promise<ByAgentDto> {
   const { data } = await api.get<ByAgentDto>(
     '/api/v1/metrics/by-agent',
-    { params: cleanParams(params as Record<string, unknown>) },
-  )
-  return data
-}
-
-export type DrillDownParams = MetricsBaseParams & {
-  format: 'rows'
-  page: number
-  pageSize: number
-  sortBy?: string | null
-  sortDirection?: 'asc' | 'desc'
-}
-
-export async function getDrillDownRows(
-  params: DrillDownParams,
-): Promise<PaginatedResponse<TimeEntryRowDto>> {
-  const { data } = await api.get<PaginatedResponse<TimeEntryRowDto>>(
-    '/api/v1/metrics/overview',
     { params: cleanParams(params as Record<string, unknown>) },
   )
   return data

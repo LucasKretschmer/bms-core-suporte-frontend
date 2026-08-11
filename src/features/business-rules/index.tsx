@@ -12,11 +12,16 @@ import { GLOBAL_IDLE_KEY } from './types/businessRule'
 
 /**
  * F8 — Configurações / Regras de negócio.
- * Regra global (alerta de inatividade) + 1 card por equipe com toggles + combo.
+ * Regra global (alerta de inatividade) + 1 card por equipe com toggles.
  * Visível para CoordenadorPlus (UX); backend é a fonte de verdade.
+ *
+ * 122/REG-1-FE (decisão D16): a ESCRITA da regra global (`teamId: null`) passou a exigir
+ * `GerentePlus`. O card global fica **somente-leitura** para coordenador — visível, com o
+ * motivo na tela. A leitura de `GET /api/v1/teams` continua aberta (decisão D19), então a
+ * lista de equipes e os cards por equipe não mudam: coordenador segue editando os dois.
  */
 export default function BusinessRulesPage() {
-  const { isCoordenadorOuAcima } = usePermissions()
+  const { isCoordenadorOuAcima, isGerentePlus } = usePermissions()
 
   const globalQuery = useGlobalRules()
   const teamsQuery = useTeamsList()
@@ -66,6 +71,7 @@ export default function BusinessRulesPage() {
             <GlobalRulesCard
               rules={globalQuery.data ?? []}
               isSaving={saveMutation.isPending}
+              canEdit={isGerentePlus}
               onSaveIdle={({ ruleId, minutes }) =>
                 saveMutation.mutate({
                   ruleId,

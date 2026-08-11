@@ -7,7 +7,7 @@
  * shared/, rotas, routeTree e Sidebar não são tocados.
  */
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usePermissions } from '../../../hooks/usePermissions'
 import { DashboardFilters } from '../shared/components/DashboardFilters'
@@ -17,6 +17,7 @@ import { ClientDrillModal } from '../shared/components/ClientDrillModal'
 import { useMetricsOverview } from '../shared/hooks/useMetricsOverview'
 import { useMetricDrill } from '../shared/hooks/useMetricDrill'
 import { useMetricsStream } from '../shared/hooks/useMetricsStream'
+import { useReturnFocus } from '../../../hooks/useReturnFocus'
 import { listTeams } from '../../reports/shared/services/reportsService'
 import { defaultCurrentMonthPeriod } from '../../reports/shared/utils/defaultPeriod'
 import { metricFamily } from '../shared/types/metrics'
@@ -69,6 +70,26 @@ export default function DashboardSuportePage() {
 
   // Ref para devolver o foco ao botão Apresentar ao sair do painel (acessibilidade)
   const apresentarButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  // §5.3 — o modal prende o foco (Modal.tsx) E devolve ao gatilho (aqui: quem abre é o
+  // dono). Os gatilhos do drill são heterogêneos (KpiCard, botão de status, fatia de
+  // gráfico Recharts), então o gatilho é o elemento focado no instante da abertura.
+  const drillFocus = useReturnFocus()
+
+  /** Abre o drill guardando o gatilho — usar SEMPRE no lugar de `setActiveDrill(spec)`. */
+  const openDrill = useCallback(
+    (spec: DrillSpec) => {
+      drillFocus.capture()
+      setActiveDrill(spec)
+    },
+    [drillFocus],
+  )
+
+  /** Fecha o drill e devolve o foco ao gatilho — usar SEMPRE no `onClose` dos modais. */
+  const closeDrill = useCallback(() => {
+    setActiveDrill(null)
+    drillFocus.restore()
+  }, [drillFocus])
 
   // Todas as equipes vindas do backend (incl. equipes sincronizadas com gerencia=null).
   // listTeams() retorna reports.ts#TeamDto, estruturalmente compatível com metrics.ts#TeamDto.
@@ -162,7 +183,7 @@ export default function DashboardSuportePage() {
         to={to}
         clientId={clientId}
         planId={planId}
-        onDrillSpec={panelActive ? undefined : setActiveDrill}
+        onDrillSpec={panelActive ? undefined : openDrill}
       />
 
       {/* Movimentação Diária — Fase 1A */}
@@ -182,7 +203,7 @@ export default function DashboardSuportePage() {
         to={to}
         clientId={clientId}
         planId={planId}
-        onStatusDrill={panelActive ? undefined : setActiveDrill}
+        onStatusDrill={panelActive ? undefined : openDrill}
       />
 
       {/* Chamados por Categoria — Fase 1B. Drill por categoria (016 B1, família apontamento). */}
@@ -192,7 +213,7 @@ export default function DashboardSuportePage() {
         to={to}
         clientId={clientId}
         planId={planId}
-        onCategoryDrill={panelActive ? undefined : setActiveDrill}
+        onCategoryDrill={panelActive ? undefined : openDrill}
       />
 
       {/* 1ª Resposta vs SLA — Fase 1B (dados vêm do overview). Fatia clicável (016). */}
@@ -202,7 +223,7 @@ export default function DashboardSuportePage() {
         isLoading={overviewQuery.isLoading}
         isError={overviewQuery.isError}
         onRetry={overviewQuery.refetch}
-        onSegmentDrill={panelActive ? undefined : setActiveDrill}
+        onSegmentDrill={panelActive ? undefined : openDrill}
       />
 
       {/* Saúde dos Planos (sempre global) — Fase 1B. Drill por faixa (016 B3, família cliente).
@@ -216,7 +237,7 @@ export default function DashboardSuportePage() {
           to={to}
           clientId={clientId}
           planId={planId}
-          onFaixaDrill={panelActive ? undefined : setActiveDrill}
+          onFaixaDrill={panelActive ? undefined : openDrill}
         />
       )}
     </>
@@ -260,7 +281,7 @@ export default function DashboardSuportePage() {
       {!panelActive && activeDrill && drillFamily === 'ticket' && (
         <TicketDrillModal
           activeDrill={activeDrill}
-          onClose={() => setActiveDrill(null)}
+          onClose={closeDrill}
           drill={ticketDrill}
           baseParams={{ scope, from, to, clientId }}
           onStreamPause={stream.pause}
@@ -271,7 +292,7 @@ export default function DashboardSuportePage() {
       {!panelActive && activeDrill && drillFamily === 'apontamento' && (
         <ApontamentoDrillModal
           activeDrill={activeDrill}
-          onClose={() => setActiveDrill(null)}
+          onClose={closeDrill}
           drill={apontamentoDrill}
           baseParams={{ scope, from, to, clientId, supportPlanId: planId }}
           onStreamPause={stream.pause}
@@ -282,7 +303,7 @@ export default function DashboardSuportePage() {
       {!panelActive && activeDrill && drillFamily === 'cliente' && (
         <ClientDrillModal
           activeDrill={activeDrill}
-          onClose={() => setActiveDrill(null)}
+          onClose={closeDrill}
           drill={clientDrill}
           baseParams={{ from, to, clientId }}
           onStreamPause={stream.pause}
