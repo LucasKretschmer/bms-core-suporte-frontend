@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { clsx } from 'clsx'
 import { getChartTokens } from '../utils/chartTokens'
+import { ChartDrillLegend, type ChartDrillLegendItem } from './ChartDrillLegend'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import type { PlanHealthSummaryDto } from '../types/metrics'
@@ -36,6 +37,17 @@ const FAIXA_LABEL: Record<FaixaSaude, string> = {
   verde: '< 80% (ok)',
   amarelo: '80–95% (atenção)',
   vermelho: '≥ 95% (crítico)',
+}
+
+/**
+ * Nome acessível da faixa: `<` e `≥` são lidos de forma inconsistente por leitor de tela
+ * (e às vezes ignorados), por isso o texto do `aria-label` é por extenso — o rótulo
+ * visível continua sendo o `FAIXA_LABEL`, igual ao da legenda do gráfico.
+ */
+const FAIXA_LABEL_ACESSIVEL: Record<FaixaSaude, string> = {
+  verde: 'consumo abaixo de 80%',
+  amarelo: 'consumo entre 80% e 95%',
+  vermelho: 'consumo de 95% ou mais',
 }
 
 export const PlanHealthChart = React.memo(function PlanHealthChart({
@@ -98,6 +110,29 @@ export const PlanHealthChart = React.memo(function PlanHealthChart({
           />
         </BarChart>
       </ResponsiveContainer>
+
+      {/* WCAG 2.1.1 (WCAG-1): mesmo drill das barras (a faixa), alcançável por Tab. */}
+      {onFaixaClick && (
+        <ChartDrillLegend
+          label="Abrir clientes por faixa de saúde do plano"
+          items={(['verde', 'amarelo', 'vermelho'] as const).map<ChartDrillLegendItem>((faixa) => {
+            const total =
+              faixa === 'verde'
+                ? summary.totalVerde
+                : faixa === 'amarelo'
+                  ? summary.totalAmarelo
+                  : summary.totalVermelho
+            return {
+              key: faixa,
+              label: FAIXA_LABEL[faixa],
+              value: total,
+              color: tokens[`chart-${faixa}`],
+              actionLabel: `Ver clientes com ${FAIXA_LABEL_ACESSIVEL[faixa]} do plano (${total})`,
+              onSelect: () => onFaixaClick(faixa),
+            }
+          })}
+        />
+      )}
     </div>
   )
 })

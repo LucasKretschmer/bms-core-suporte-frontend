@@ -30,6 +30,7 @@ import {
 import type { BarRectangleItem } from 'recharts/types/cartesian/Bar'
 import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent'
 import { getChartPalette } from '../utils/chartTokens'
+import { ChartDrillLegend, type ChartDrillLegendItem } from './ChartDrillLegend'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import type {
   StatusDistributionDto,
@@ -112,6 +113,26 @@ export function buildStatusKeyByStatus(data: StatusDistributionDto): Record<stri
   return map
 }
 
+/**
+ * Total por status somando TODAS as equipes (modo global). É o número que corresponde ao
+ * alvo do clique numa série empilhada — o clique conhece só o status, não a equipe —, e é
+ * por isso que o botão de teclado do modo global exibe o total, não o valor de uma barra.
+ *
+ * NÃO exportada de propósito: `react-refresh/only-export-components` reprova export não-componente
+ * neste arquivo (as 4 funções puras já exportadas são o vermelho pré-existente do lint — não somo
+ * a quinta). É coberta pelo comportamento, no `chart-keyboard-drill.test.tsx`.
+ */
+function buildTotalByStatus(data: StatusDistributionDto): Record<string, number> {
+  const items: StatusDistributionItemDto[] = data.byTeam
+    ? data.data.flatMap((team) => team.porStatus)
+    : data.data
+  const map: Record<string, number> = {}
+  for (const item of items) {
+    map[item.status] = (map[item.status] ?? 0) + item.count
+  }
+  return map
+}
+
 // ── Tooltip do modo empilhado (global) ───────────────────────────────────────
 
 function StackedTooltip({
@@ -161,6 +182,7 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
     [statuses, palette],
   )
   const statusKeyByStatus = useMemo(() => buildStatusKeyByStatus(data), [data])
+  const totalByStatus = useMemo(() => buildTotalByStatus(data), [data])
 
   const stackedRows = useMemo(
     () => (data.byTeam ? toStackedRows(data.data) : []),
@@ -230,6 +252,25 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
             ))}
           </BarChart>
         </ResponsiveContainer>
+
+        {/* WCAG 2.1.1 — as séries empilhadas também só eram alcançáveis pelo mouse.
+            Um botão por status (o clique na série empilhada conhece só o status, não a
+            equipe), disparando o MESMO `onSliceClick(statusKey, status)`. */}
+        {onSliceClick && (
+          <ChartDrillLegend
+            label="Abrir tickets por status"
+            items={statuses
+              .filter((status) => Boolean(statusKeyByStatus[status]))
+              .map<ChartDrillLegendItem>((status) => ({
+                key: statusKeyByStatus[status],
+                label: status,
+                value: totalByStatus[status] ?? 0,
+                color: colorByStatus[status],
+                actionLabel: `Ver tickets do status ${status} (${totalByStatus[status] ?? 0})`,
+                onSelect: () => onSliceClick(statusKeyByStatus[status], status),
+              }))}
+          />
+        )}
       </div>
     )
   }
@@ -284,28 +325,21 @@ export const StatusDistributionChart = React.memo(function StatusDistributionCha
 
       {/* OBS-1 (QA 016): Recharts não expõe as barras ao teclado. Alternativa acessível
           — botões focáveis (Tab/Enter) que disparam o mesmo drill por statusKey.
-          Visualmente discretos abaixo do gráfico; presentes só quando há drill habilitado. */}
+          Visualmente discretos abaixo do gráfico; presentes só quando há drill habilitado.
+          Markup extraído para `ChartDrillLegend` (WCAG-1), que é o mesmo padrão replicado
+          nos demais gráficos com drill — os rótulos e a marcação são idênticos aos de antes. */}
       {onSliceClick && (
-        <ul className="mt-2 flex flex-wrap gap-2" aria-label="Abrir tickets por status">
-          {teamRows.map((item) => (
-            <li key={item.statusKey}>
-              <button
-                type="button"
-                onClick={() => onSliceClick(item.statusKey, item.status)}
-                className="inline-flex items-center gap-1.5 rounded-control border border-border px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary hover:shadow-hover"
-                aria-label={`Ver tickets do status ${item.status} (${item.count})`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="inline-block w-2 h-2 rounded-[2px]"
-                  style={{ backgroundColor: colorByStatus[item.status] }}
-                />
-                <span className="break-words">{item.status}</span>
-                <strong>{item.count}</strong>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ChartDrillLegend
+          label="Abrir tickets por status"
+          items={teamRows.map<ChartDrillLegendItem>((item) => ({
+            key: item.statusKey,
+            label: item.status,
+            value: item.count,
+            color: colorByStatus[item.status],
+            actionLabel: `Ver tickets do status ${item.status} (${item.count})`,
+            onSelect: () => onSliceClick(item.statusKey, item.status),
+          }))}
+        />
       )}
     </div>
   )

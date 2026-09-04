@@ -237,6 +237,9 @@ export function OnboardingProjectSection({
                   }
                 : undefined
             }
+            // WCAG-1: o DonutChart é genérico — quem sabe o que a fatia significa é a seção.
+            drillListLabel="Abrir projetos por estágio"
+            drillItemLabel={(item) => `Ver projetos do estágio ${item.name} (${item.value})`}
           />
         </ChartCard>
 
@@ -256,6 +259,8 @@ export function OnboardingProjectSection({
                   }
                 : undefined
             }
+            drillListLabel="Abrir projetos por tipo"
+            drillItemLabel={(item) => `Ver projetos do tipo ${item.name} (${item.value})`}
           />
         </ChartCard>
       </div>

@@ -17,6 +17,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { getChartTokens } from '../utils/chartTokens'
+import { ChartDrillLegend, type ChartDrillLegendItem } from './ChartDrillLegend'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 
@@ -90,6 +91,31 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
           />
         </BarChart>
       </ResponsiveContainer>
+
+      {/* WCAG 2.1.1 (WCAG-1): mesmo drill das barras ('on' | 'late'), alcançável por Tab. */}
+      {onSegmentClick && (
+        <ChartDrillLegend
+          label="Abrir tickets por SLA de primeira resposta"
+          items={[
+            {
+              key: 'on',
+              label: 'No prazo',
+              value: respondidosNoPrazo,
+              color: tokens['chart-verde'],
+              actionLabel: `Ver tickets respondidos no prazo (${respondidosNoPrazo})`,
+              onSelect: () => onSegmentClick('on'),
+            },
+            {
+              key: 'late',
+              label: 'Fora do prazo',
+              value: respondidosForaDoPrazo,
+              color: tokens['chart-vermelho'],
+              actionLabel: `Ver tickets respondidos fora do prazo (${respondidosForaDoPrazo})`,
+              onSelect: () => onSegmentClick('late'),
+            },
+          ] satisfies ChartDrillLegendItem[]}
+        />
+      )}
     </div>
   )
 })

@@ -21,6 +21,7 @@ import {
 } from 'recharts'
 import type { BarRectangleItem } from 'recharts/types/cartesian/Bar'
 import { getChartTokens } from '../utils/chartTokens'
+import { ChartDrillLegend, type ChartDrillLegendItem } from './ChartDrillLegend'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { formatSeconds } from '../../../reports/shared/utils/formatters'
@@ -115,6 +116,23 @@ export const CategoryChart = React.memo(function CategoryChart({
           />
         </BarChart>
       </ResponsiveContainer>
+
+      {/* WCAG 2.1.1 (WCAG-1): as barras do Recharts não estão na ordem de tabulação —
+          sem isto o drill por categoria só existia para quem usa mouse. Mesmo alvo do
+          clique: a string `categoria`. */}
+      {onBarClick && (
+        <ChartDrillLegend
+          label="Abrir chamados por categoria"
+          items={data.map<ChartDrillLegendItem>((item) => ({
+            key: item.categoria,
+            label: item.categoria,
+            value: item.count,
+            color: tokens['chart-1'],
+            actionLabel: `Ver chamados da categoria ${item.categoria} (${item.count})`,
+            onSelect: () => onBarClick(item.categoria),
+          }))}
+        />
+      )}
     </div>
   )
 })
