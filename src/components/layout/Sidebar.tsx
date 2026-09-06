@@ -159,6 +159,32 @@ const administracaoItems: NavItem[] = [
     ),
   },
   {
+    // 124/F1 — cadastro de planos de suporte (horas/mês, meta de 1º atendimento,
+    // calendário e identificador do HubSpot). `GET /support-plans` exige CoordenadorPlus
+    // (`SupportPlansController.cs:29`), coberto por `requiresGestor` no modelo binário.
+    label: 'Planos',
+    href: '/planos',
+    requiresGestor: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    // 124/F2+F3 — calendário comercial: expediente versionado por vigência e feriados
+    // (a origem do tempo útil do SLA). `GET /calendars` exige CoordenadorPlus
+    // (`CalendarsController.cs`), coberto por `requiresGestor` no modelo binário.
+    label: 'Calendário',
+    href: '/calendario',
+    requiresGestor: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
+  {
     label: 'Equipes e Atendentes',
     href: '/equipes',
     requiresGestor: true,

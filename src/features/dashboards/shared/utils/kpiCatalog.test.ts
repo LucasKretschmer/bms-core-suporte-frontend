@@ -212,3 +212,115 @@ describe('kpiCatalog — ordenação por cliente nos cards (123/D1)', () => {
     expect(keys).not.toContain('clienteNome')
   })
 })
+
+/**
+ * 124/FE-TXT — os dois `tooltipText` que ficaram FALSOS quando `BE-F4F5` trocou a FONTE
+ * do SLA de 1ª resposta e do FCR.
+ *
+ * Estes testes existem para que a volta do texto antigo REPROVE. Todo valor esperado é
+ * literal escrito à mão — nenhuma constante importada do catálogo (`rules/tests.md` §
+ * expectativa derivada da própria resposta é tautologia).
+ */
+describe('kpiCatalog — a fonte do SLA e do FCR é LOCAL, e o tooltip diz isso (124/FE-TXT)', () => {
+  function tooltipDe(key: string): string {
+    const kpi = KPI_CATALOG.find((k) => k.key === key)
+    expect(kpi, `KPI "${key}" deve existir no catálogo`).toBeDefined()
+    expect(kpi!.tooltipText, `KPI "${key}" deve ter tooltipText`).toBeDefined()
+    return kpi!.tooltipText!
+  }
+
+  it('respondidosNoPrazo: aponta para expediente no calendário + meta no plano OU no calendário', () => {
+    expect(tooltipDe('respondidosNoPrazo')).toBe(
+      'Requer expediente no calendário e meta de 1ª resposta no plano ou no calendário',
+    )
+  })
+
+  it('respondidosNoPrazo: NÃO manda mais ao Service Hub — e diz o que exige, na mesma execução', () => {
+    const texto = tooltipDe('respondidosNoPrazo')
+    // POSITIVA primeiro: sem ela, a negativa abaixo passaria com tooltip vazio.
+    expect(texto).toMatch(/meta de 1ª resposta/)
+    expect(texto).toMatch(/expediente/)
+    expect(texto).toMatch(/calendário/)
+    expect(texto).not.toMatch(/service hub/i)
+  })
+
+  it('respondidosNoPrazo: a meta tem DUAS moradas — não só o plano', () => {
+    // `MetricsService.cs:691` → `fonte.PlanoSlaMinutos ?? metaDoCalendario`. Quem preencheu
+    // só a meta padrão do calendário está configurado; mandá-lo ao plano é trabalho à toa.
+    const texto = tooltipDe('respondidosNoPrazo')
+    expect(texto).toMatch(/no plano ou no calendário/)
+    // A redação incompleta, que conhecia só uma das duas.
+    expect(texto).not.toMatch(/meta de 1ª resposta no plano e expediente/)
+  })
+
+  it('fcr: descreve o histórico de movimentação, a fonte real desde AUTO-124-12', () => {
+    expect(tooltipDe('fcr')).toBe('Calculado do histórico de movimentação do chamado')
+  })
+
+  it('fcr: a propriedade abandonada do HubSpot sumiu — e a fonte real está nomeada', () => {
+    const texto = tooltipDe('fcr')
+    expect(texto).toMatch(/histórico de movimentação/)
+    expect(texto).not.toMatch(/one_touch/i)
+    expect(texto).not.toMatch(/hs_/i)
+    expect(texto).not.toMatch(/service hub/i)
+  })
+
+  it('CSAT NÃO foi tocado: ele CONTINUA vindo do Service Hub (texto verdadeiro)', () => {
+    // `HubSpotClient.cs:1054` lê `props.HsLastCsatRating` e `:1100` grava em `tickets.csat`;
+    // `MetricsQueryRepository.cs:294` agrega direto da coluna. Corrigir texto correto seria
+    // regressão. Este teste é também o CONTROLE POSITIVO do detector de "Service Hub":
+    // se o `/service hub/i` das linhas acima morresse, esta linha ficaria vermelha.
+    expect(tooltipDe('csat')).toBe('Requer Service Hub configurado')
+    expect(tooltipDe('csat')).toMatch(/service hub/i)
+  })
+})
+
+/**
+ * Invariante sobre TODO o catálogo — derivado em runtime de `KPI_CATALOG`, para que KPI
+ * novo nasça dentro da varredura em vez de fora dela (`rules/security.md` § enumeração
+ * que dá poder a um invariante).
+ */
+describe('kpiCatalog — invariante: tooltip não cita fonte abandonada (124/FE-TXT)', () => {
+  /** Derivado do catálogo, nunca mantido à mão. */
+  const comTooltip = KPI_CATALOG.filter((k) => k.tooltipText !== undefined)
+
+  /**
+   * ALLOWLIST NOMINAL, item por item, com a justificativa ao lado — nunca padrão de nome.
+   * Só entra aqui o KPI cuja fonte É, de fato, o Service Hub.
+   */
+  const PODEM_CITAR_SERVICE_HUB: Record<string, string> = {
+    // O CSAT é a propriedade `hs_last_csat_rating`, lida na ingestão e gravada em
+    // `tickets.csat`. Nada nesta demanda mudou isso.
+    csat: 'CSAT segue lido de hs_last_csat_rating (HubSpotClient.cs:1054)',
+  }
+
+  it('a identidade do conjunto com tooltip é esta — não só a cardinalidade', () => {
+    // Trava a IDENTIDADE: um KPI entrando e outro saindo manteria a contagem e passaria.
+    expect(new Set(comTooltip.map((k) => String(k.key)))).toEqual(
+      new Set(['respondidosNoPrazo', 'csat', 'fcr', 'horasAnalise']),
+    )
+  })
+
+  it('nenhum tooltip fora da allowlist cita o Service Hub', () => {
+    const infratores = comTooltip
+      .filter((k) => /service hub/i.test(k.tooltipText!))
+      .map((k) => String(k.key))
+      .filter((key) => !(key in PODEM_CITAR_SERVICE_HUB))
+
+    expect(infratores).toEqual([])
+    // Discriminador: a varredura ESTÁ viva — ela enxerga o caso permitido.
+    expect(comTooltip.filter((k) => /service hub/i.test(k.tooltipText!)).map((k) => String(k.key)))
+      .toEqual(['csat'])
+  })
+
+  it('nenhum tooltip cita nome interno de propriedade do HubSpot (`hs_...`)', () => {
+    const infratores = comTooltip
+      .filter((k) => /\bhs_[a-z_]+/i.test(k.tooltipText!))
+      .map((k) => String(k.key))
+
+    expect(infratores).toEqual([])
+    // Controle positivo do detector: ele ainda pega a forma que existe para pegar.
+    expect(/\bhs_[a-z_]+/i.test('Requer hs_is_one_touch_ticket configurado')).toBe(true)
+    expect(/\bhs_[a-z_]+/i.test('Calculado do histórico de movimentação do chamado')).toBe(false)
+  })
+})

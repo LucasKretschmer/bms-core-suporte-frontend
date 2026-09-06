@@ -28,6 +28,7 @@ import {
 } from '../../../reports/shared/utils/fetchAllPaginated'
 import { useToast } from '../../../../components/ui/Toast'
 import { getMetricRows } from '../services/metricsService'
+import { mensagemDeJanelaGrandeDemais } from '../utils/metricsErrorMessage'
 import type { SortState, ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { DrillSpec, MetricsBaseParams } from '../types/metrics'
 import type { UseMetricDrillReturn } from '../hooks/useMetricDrill'
@@ -154,7 +155,18 @@ export function MetricDrillModal<T>({
       return <Skeleton lines={8} height="h-[38px]" />
     }
     if (drill.isError) {
-      return <ErrorState onRetry={drill.refetch} />
+      // 124/FE-P3b (`N-1` do QA) — o drill de `tickets-sla`/`tickets-fcr` também recebe o
+      // `422 DATE_RANGE_TOO_LARGE` de `S-1`: com `keepPreviousData` no overview
+      // (`useMetricsOverview.ts:29`), os KPIs seguem clicáveis enquanto o período novo
+      // está em voo, e daqui o usuário chegava a um "Ocorreu um erro ao carregar os
+      // dados." A mensagem é a MESMA da seção de KPIs e do card de SLA — uma redação só
+      // para o mesmo erro. Qualquer outro erro continua no genérico.
+      return (
+        <ErrorState
+          message={mensagemDeJanelaGrandeDemais(drill.error) ?? undefined}
+          onRetry={drill.refetch}
+        />
+      )
     }
     if (items.length === 0) {
       return <EmptyState message="Nenhum registro encontrado para o período." />

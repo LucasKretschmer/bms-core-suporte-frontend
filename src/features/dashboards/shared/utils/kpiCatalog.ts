@@ -8,6 +8,31 @@
  *
  * O campo horasAnalise é KPI de "Horas de análise" — label operacional, não expõe
  * a categoria interna do HubSpot.
+ *
+ * ## 124/FE-TXT — tooltip que descreve a FONTE do número é código, não copy
+ *
+ * `AP-FRONTEND-022`: texto de UI que afirma comportamento do sistema envelhece junto com
+ * o sistema. `BE-F4F5` trocou a FONTE do SLA de 1ª resposta e do FCR — os dois deixaram
+ * de ser lidos de colunas do HubSpot e passaram a ser CALCULADOS a partir da configuração
+ * local (plano + calendário) e do histórico de estágio. Os dois `tooltipText` que
+ * mandavam o usuário ao Service Hub ficaram FALSOS no mesmo commit, e foram corrigidos
+ * aqui. A evidência, no repositório do backend:
+ *
+ * | Fato | Onde |
+ * |---|---|
+ * | a ingestão grava `frsla` e `isonetouch` SEMPRE `null`, de propósito | `HubSpotClient.cs:1096` e `:1099` |
+ * | as duas colunas SAÍRAM do overview; os campos saem `null` do repositório | `MetricsQueryRepository.cs:300-320` |
+ * | SLA e FCR passam a vir da fonte calculada, no serviço | `MetricsService.cs:860-878` |
+ * | a dependência dos tempos úteis do HubSpot foi abandonada | `decisoes.md` § `AUTO-124-12` |
+ *
+ * ⚠️ O `tooltipText` do **CSAT** continua VERDADEIRO e NÃO foi tocado: o CSAT segue lido
+ * da propriedade do Service Hub `hs_last_csat_rating` na ingestão
+ * (`HubSpotClient.cs:1054` → `:1100`), gravado em `tickets.csat` e agregado direto da
+ * coluna (`MetricsQueryRepository.cs:294`). Corrigir texto correto seria regressão.
+ *
+ * O vocabulário ("meta de 1ª resposta", "expediente", "calendário", "histórico de
+ * movimentação") é o MESMO fixado por `supportSlaStates.ts` (124/FE-F4) — dois nomes para
+ * a mesma coisa confundem mais do que o texto errado.
  */
 
 import type { DrillSpec, MetricsOverviewDto } from '../types/metrics'
@@ -143,7 +168,12 @@ export const KPI_CATALOG: KpiDefinition[] = [
     label: 'Respondidos no prazo (SLA)',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: true,
-    tooltipText: 'Requer SLA configurado no Service Hub',
+    // 124/FE-TXT — era 'Requer SLA configurado no Service Hub'. A meta nunca veio do
+    // Service Hub neste produto (`HubSpotClient.cs:1096` grava `FrSla: null`), e desde
+    // `BE-F4F5` a apuração é local. A meta tem DUAS moradas, com precedência conferida em
+    // `MetricsService.cs:691` (`PlanoSlaMinutos ?? metaDoCalendario`): dizer só "no plano"
+    // mandaria preencher plano a plano quem já tem a meta padrão do calendário.
+    tooltipText: 'Requer expediente no calendário e meta de 1ª resposta no plano ou no calendário',
     drill: {
       metric: 'tickets-sla',
       title: 'Respondidos no prazo (SLA)',
@@ -182,7 +212,11 @@ export const KPI_CATALOG: KpiDefinition[] = [
     label: 'FCR (1º contato)',
     formatter: formatPercent,
     toleratesNull: true,
-    tooltipText: 'Requer hs_is_one_touch_ticket configurado',
+    // 124/FE-TXT — era 'Requer hs_is_one_touch_ticket configurado'. A propriedade foi
+    // ABANDONADA (`AUTO-124-12`): ela nunca retornou valor e `HubSpotClient.cs:1099`
+    // grava `IsOneTouch: null`. O FCR é contado das idas ao cliente no histórico de
+    // estágio do chamado (`MetricsService.ApurarFcrAsync`) — não há o que configurar.
+    tooltipText: 'Calculado do histórico de movimentação do chamado',
     drill: { metric: 'tickets-fcr', title: 'Tickets — resolução no 1º contato (FCR)' },
   },
   {

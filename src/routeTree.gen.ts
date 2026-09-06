@@ -13,9 +13,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as AuthSincronizadorRouteImport } from './routes/_auth/sincronizador'
+import { Route as AuthPlanosRouteImport } from './routes/_auth/planos'
 import { Route as AuthEquipesRouteImport } from './routes/_auth/equipes'
 import { Route as AuthConfiguracoesRouteImport } from './routes/_auth/configuracoes'
 import { Route as AuthCategoriasRouteImport } from './routes/_auth/categorias'
+import { Route as AuthCalendarioRouteImport } from './routes/_auth/calendario'
 import { Route as AuthRelatoriosProdutividadeRouteImport } from './routes/_auth/relatorios/produtividade'
 import { Route as AuthRelatoriosMovimentacaoDiariaRouteImport } from './routes/_auth/relatorios/movimentacao-diaria'
 import { Route as AuthRelatoriosConsumoPlanosRouteImport } from './routes/_auth/relatorios/consumo-planos'
@@ -46,6 +48,11 @@ const AuthSincronizadorRoute = AuthSincronizadorRouteImport.update({
   path: '/sincronizador',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthPlanosRoute = AuthPlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthEquipesRoute = AuthEquipesRouteImport.update({
   id: '/equipes',
   path: '/equipes',
@@ -59,6 +66,11 @@ const AuthConfiguracoesRoute = AuthConfiguracoesRouteImport.update({
 const AuthCategoriasRoute = AuthCategoriasRouteImport.update({
   id: '/categorias',
   path: '/categorias',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCalendarioRoute = AuthCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthRelatoriosProdutividadeRoute =
@@ -123,9 +135,11 @@ const AuthRelatoriosClientesClientIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthIndexRoute
   '/login': typeof LoginRoute
+  '/calendario': typeof AuthCalendarioRoute
   '/categorias': typeof AuthCategoriasRoute
   '/configuracoes': typeof AuthConfiguracoesRoute
   '/equipes': typeof AuthEquipesRoute
+  '/planos': typeof AuthPlanosRoute
   '/sincronizador': typeof AuthSincronizadorRoute
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
   '/dashboards/suporte': typeof AuthDashboardsSuporteRoute
@@ -140,9 +154,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/calendario': typeof AuthCalendarioRoute
   '/categorias': typeof AuthCategoriasRoute
   '/configuracoes': typeof AuthConfiguracoesRoute
   '/equipes': typeof AuthEquipesRoute
+  '/planos': typeof AuthPlanosRoute
   '/sincronizador': typeof AuthSincronizadorRoute
   '/': typeof AuthIndexRoute
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
@@ -160,9 +176,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRoute
+  '/_auth/calendario': typeof AuthCalendarioRoute
   '/_auth/categorias': typeof AuthCategoriasRoute
   '/_auth/configuracoes': typeof AuthConfiguracoesRoute
   '/_auth/equipes': typeof AuthEquipesRoute
+  '/_auth/planos': typeof AuthPlanosRoute
   '/_auth/sincronizador': typeof AuthSincronizadorRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
@@ -181,9 +199,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/calendario'
     | '/categorias'
     | '/configuracoes'
     | '/equipes'
+    | '/planos'
     | '/sincronizador'
     | '/dashboards/onboarding'
     | '/dashboards/suporte'
@@ -198,9 +218,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/calendario'
     | '/categorias'
     | '/configuracoes'
     | '/equipes'
+    | '/planos'
     | '/sincronizador'
     | '/'
     | '/dashboards/onboarding'
@@ -217,9 +239,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_auth'
     | '/login'
+    | '/_auth/calendario'
     | '/_auth/categorias'
     | '/_auth/configuracoes'
     | '/_auth/equipes'
+    | '/_auth/planos'
     | '/_auth/sincronizador'
     | '/_auth/'
     | '/_auth/dashboards/onboarding'
@@ -269,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSincronizadorRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/planos': {
+      id: '/_auth/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof AuthPlanosRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/equipes': {
       id: '/_auth/equipes'
       path: '/equipes'
@@ -288,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/categorias'
       fullPath: '/categorias'
       preLoaderRoute: typeof AuthCategoriasRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/calendario': {
+      id: '/_auth/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof AuthCalendarioRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/relatorios/produtividade': {
@@ -364,9 +402,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteChildren {
+  AuthCalendarioRoute: typeof AuthCalendarioRoute
   AuthCategoriasRoute: typeof AuthCategoriasRoute
   AuthConfiguracoesRoute: typeof AuthConfiguracoesRoute
   AuthEquipesRoute: typeof AuthEquipesRoute
+  AuthPlanosRoute: typeof AuthPlanosRoute
   AuthSincronizadorRoute: typeof AuthSincronizadorRoute
   AuthIndexRoute: typeof AuthIndexRoute
   AuthDashboardsOnboardingRoute: typeof AuthDashboardsOnboardingRoute
@@ -382,9 +422,11 @@ interface AuthRouteChildren {
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthCalendarioRoute: AuthCalendarioRoute,
   AuthCategoriasRoute: AuthCategoriasRoute,
   AuthConfiguracoesRoute: AuthConfiguracoesRoute,
   AuthEquipesRoute: AuthEquipesRoute,
+  AuthPlanosRoute: AuthPlanosRoute,
   AuthSincronizadorRoute: AuthSincronizadorRoute,
   AuthIndexRoute: AuthIndexRoute,
   AuthDashboardsOnboardingRoute: AuthDashboardsOnboardingRoute,

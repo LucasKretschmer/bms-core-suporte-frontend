@@ -44,3 +44,6 @@ vitest.qa*.config.ts
 
 # Diretório de trabalho do driver de navegador usado em QA headed
 .playwright-cli/
+
+# Artefatos temporarios do plugin do TanStack Router
+.tanstack/

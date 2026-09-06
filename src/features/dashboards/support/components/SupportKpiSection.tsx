@@ -12,6 +12,7 @@ import { KpiCard } from '../../shared/components/KpiCard'
 import { KpiCardGrid } from '../../shared/components/KpiCardGrid'
 import { ErrorState } from '../../../../components/ui/ErrorState'
 import { Skeleton } from '../../../../components/ui/Skeleton'
+import { mensagemDeJanelaGrandeDemais } from '../../shared/utils/metricsErrorMessage'
 import type { DrillSpec, MetricsScope } from '../../shared/types/metrics'
 
 type SupportKpiSectionProps = {
@@ -60,7 +61,7 @@ export function SupportKpiSection({
   planId,
   onDrillSpec,
 }: SupportKpiSectionProps) {
-  const { data, isLoading, isError, refetch } = useMetricsOverview({
+  const { data, error, isLoading, isError, refetch } = useMetricsOverview({
     scope,
     from,
     to,
@@ -79,9 +80,15 @@ export function SupportKpiSection({
   }
 
   if (isError) {
+    // 124/FE-P3 — o `422 DATE_RANGE_TOO_LARGE` que `S-1` introduziu tem causa e conserto
+    // conhecidos (o período pedido é maior que o teto do servidor), e o servidor os
+    // escreve por extenso. Cair no texto genérico aqui obrigaria o usuário a descobrir o
+    // limite por tentativa. Qualquer outro erro continua no genérico de sempre.
     return (
       <ErrorState
-        message="Não foi possível carregar os KPIs."
+        message={
+          mensagemDeJanelaGrandeDemais(error) ?? 'Não foi possível carregar os KPIs.'
+        }
         onRetry={refetch}
       />
     )

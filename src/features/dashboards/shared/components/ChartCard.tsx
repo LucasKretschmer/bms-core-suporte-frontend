@@ -19,6 +19,16 @@ type ChartCardProps = {
   subtitle?: React.ReactNode
   isLoading?: boolean
   isError?: boolean
+  /**
+   * Texto do estado de erro. Ausente = o default do `ErrorState`
+   * ("Ocorreu um erro ao carregar os dados.").
+   *
+   * 124/FE-P3 — existe para o card poder dizer **o que** o servidor recusou quando o
+   * erro tem causa e conserto conhecidos (hoje: `422 DATE_RANGE_TOO_LARGE`, período maior
+   * que o teto). Sem esta prop o `ChartCard` não tinha como exibir nada além do genérico,
+   * e o motivo real morria no envelope.
+   */
+  errorMessage?: string
   isEmpty?: boolean
   emptyMessage?: string
   onRetry?: () => void
@@ -41,6 +51,7 @@ export function ChartCard({
   subtitle,
   isLoading = false,
   isError = false,
+  errorMessage,
   isEmpty = false,
   emptyMessage,
   onRetry,
@@ -59,7 +70,7 @@ export function ChartCard({
       return <Skeleton lines={1} height={`h-[${height}px]`} className="w-full" />
     }
     if (isError) {
-      return <ErrorState onRetry={onRetry} className="py-8" />
+      return <ErrorState message={errorMessage} onRetry={onRetry} className="py-8" />
     }
     if (isEmpty) {
       return (

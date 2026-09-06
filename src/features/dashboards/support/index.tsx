@@ -21,6 +21,7 @@ import { useReturnFocus } from '../../../hooks/useReturnFocus'
 import { listTeams } from '../../reports/shared/services/reportsService'
 import { defaultCurrentMonthPeriod } from '../../reports/shared/utils/defaultPeriod'
 import { metricFamily } from '../shared/types/metrics'
+import { mensagemDeJanelaGrandeDemais } from '../shared/utils/metricsErrorMessage'
 import type {
   ClientRowDto,
   DrillSpec,
@@ -220,8 +221,21 @@ export default function DashboardSuportePage() {
       <SupportSlaSection
         respondidosNoPrazo={overviewQuery.data?.respondidosNoPrazo ?? null}
         respondidosForaDoPrazo={overviewQuery.data?.respondidosForaDoPrazo ?? null}
+        // 124/F4 — discriminador dos DOIS vazios ("não configurado" × "sem chamado no
+        // período"): `ticketsAbertos` tem o MESMO recorte e o MESMO escopo do universo
+        // de elegibilidade do SLA. Ver o cabeçalho de `supportSlaStates.ts`.
+        chamadosNoPeriodo={overviewQuery.data?.ticketsAbertos ?? null}
+        // 124/F5 (R-3) — o limite de confiabilidade do FCR e o início do período que
+        // ele qualifica. `from` null = mês corrente (default do backend), tratado lá.
+        fcr={overviewQuery.data?.fcr ?? null}
+        fcrHistoricoDesde={overviewQuery.data?.fcrHistoricoDesde ?? null}
+        periodoInicio={from}
         isLoading={overviewQuery.isLoading}
         isError={overviewQuery.isError}
+        // 124/FE-P3 — o `422 DATE_RANGE_TOO_LARGE` de `S-1` chega aqui pelo MESMO
+        // `/metrics/overview` que alimenta os KPIs. `null` (→ undefined) devolve o card
+        // ao texto genérico de sempre para qualquer outro erro.
+        errorMessage={mensagemDeJanelaGrandeDemais(overviewQuery.error) ?? undefined}
         onRetry={overviewQuery.refetch}
         onSegmentDrill={panelActive ? undefined : openDrill}
       />

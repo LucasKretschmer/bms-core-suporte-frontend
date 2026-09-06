@@ -47,6 +47,8 @@ const drillVazio: UseMetricDrillReturn<never> = {
   data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
   isLoading: false,
   isError: false,
+  // 124/FE-P3b — campo novo de `UseMetricDrillReturn`: dublê sem erro.
+  error: null,
   refetch: vi.fn(),
   page: 1,
   pageSize: 25,

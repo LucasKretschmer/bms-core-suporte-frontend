@@ -430,6 +430,48 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
     porque: 'botão "Desativar" (ação destrutiva em texto) sobre o fundo geral da página.',
   },
   {
+    arquivo: 'src/features/support-plans/components/SupportPlanFormModal.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'erro de API do formulário de plano de suporte (124/F1) — inclui a mensagem do ' +
+      '`422 PLAN_RENAME_UNSAFE`. Mesmo caso do irmão `EditCategoryModal`: a mensagem de ' +
+      'VALIDAÇÃO dos campos vem do `Input` do DS (`text-error`) e por isso não está aqui. ' +
+      'O aviso PREVENTIVO de rename inseguro, do mesmo arquivo, NÃO usa a família de erro: ' +
+      'é `text-foreground` sobre `bg-warning-bg` (13.36:1), porque `text-warning-fg` sobre ' +
+      'esse fundo mede 3.00:1 e reprova AA (AP-FRONTEND-018).',
+  },
+  {
+    arquivo: 'src/features/business-calendar/components/CalendarFormModal.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'erro de API do formulário de calendário comercial (124/F2) — inclui o ' +
+      '`409 CALENDAR_LAST_DEFAULT`. A mensagem de VALIDAÇÃO dos campos vem do `Input` do ' +
+      'DS (`text-error`) e por isso não está aqui.',
+  },
+  {
+    arquivo: 'src/features/business-calendar/components/HolidayFormModal.tsx',
+    classes: ['text-error-fg'],
+    porque: 'erro de API do formulário de feriado (124/F3), sobre a superfície do modal.',
+  },
+  {
+    arquivo: 'src/features/business-calendar/components/HolidayImportModal.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'importação de feriados (124/F3): erro de arquivo, situação de cada linha inválida na ' +
+      'tabela de pré-visualização e o relatório linha a linha do `422 IMPORT_INVALID_ROWS`. ' +
+      'O aviso de arquivo com DD/MM misturado NÃO usa a família de erro: é `text-foreground` ' +
+      'sobre `bg-warning-bg` (13.36:1), porque `text-warning-fg` ali mede 3.00:1 e reprova AA ' +
+      '(AP-FRONTEND-018).',
+  },
+  {
+    arquivo: 'src/features/business-calendar/components/ScheduleSection.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'grade de expediente (124/F2): resumo das janelas inválidas antes do envio (DD-5) e o ' +
+      '`422 SCHEDULE_WINDOW_OVERLAP` traduzido por janela. O erro de CADA campo de hora vem ' +
+      'do `Input` do DS (`text-error`), não daqui.',
+  },
+  {
     arquivo: 'src/features/ticket-detail/components/CancelTimeEntryDialog.tsx',
     classes: ['bg-error-fg', 'border-error-fg', 'text-error-fg'],
     porque:

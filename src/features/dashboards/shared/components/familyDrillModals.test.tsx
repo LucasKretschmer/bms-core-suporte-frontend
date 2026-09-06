@@ -46,6 +46,8 @@ function makeDrill<T>(items: T[]): UseMetricDrillReturn<T> {
     data: page,
     isLoading: false,
     isError: false,
+    // 124/FE-P3b — campo novo de `UseMetricDrillReturn`: dublê sem erro.
+    error: null,
     refetch: vi.fn(),
     page: 1,
     pageSize: 25,

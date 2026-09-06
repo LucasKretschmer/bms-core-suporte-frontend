@@ -25,6 +25,16 @@ export type UseMetricDrillReturn<T> = {
   data: PaginatedResponse<T> | undefined
   isLoading: boolean
   isError: boolean
+  /**
+   * 124/FE-P3b (`N-1` do QA) — o objeto de erro da última requisição, não só o booleano.
+   *
+   * Sem ele o modal de drill sabia **que** falhou e nunca **por quê**: o
+   * `422 DATE_RANGE_TOO_LARGE` que `S-1` introduziu em
+   * `/metrics/rows?metric=tickets-sla|tickets-fcr` caía no `ErrorState` genérico, com o
+   * motivo e o limite morrendo no envelope. Campo **obrigatório** de propósito — quem
+   * construir este objeto (inclusive dublê de teste) é obrigado a decidir o que põe aqui.
+   */
+  error: unknown
   refetch: () => void
   page: number
   pageSize: number
@@ -71,7 +81,7 @@ export function useMetricDrill<T>(
     setSortDirection('desc')
   }, [drillKey])
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, error, isLoading, isError, refetch } = useQuery({
     queryKey: [
       'metric-rows',
       activeDrill?.metric,
@@ -147,6 +157,7 @@ export function useMetricDrill<T>(
     data,
     isLoading,
     isError,
+    error,
     refetch,
     page,
     pageSize,

@@ -50,6 +50,20 @@ export type MetricsOverviewDto = {
   ticketsReabertos: number | null
   csat: number | null
   fcr: number | null
+  /**
+   * 124/F5 (`R-3`) — `MIN(ticketstatushistory.mudouem)` em ISO-8601 UTC: o instante da
+   * transição de estágio mais antiga que o sistema registrou.
+   *
+   * **AUSENTE do JSON quando null** (`WhenWritingNull` no backend) — por isso é
+   * opcional, e todo consumidor guarda com `== null`, nunca `=== undefined`
+   * (`AP-FRONTEND-021`/`028`: ausente e nulo são o mesmo fato para quem consome).
+   *
+   * Serve para qualificar o `fcr`: o histórico de estágio é incompleto por construção
+   * (só grava quando o estágio DIFERE no instante da sincronização, e chamado anterior
+   * ao início da ingestão não tem histórico algum), então o FCR é sistematicamente
+   * OTIMISTA para período que começa antes desta data. Ver `SupportSlaSection`.
+   */
+  fcrHistoricoDesde?: string | null
   horasPlantao: number
   horasPlano: number
   horasFaturadoPorFora: number
