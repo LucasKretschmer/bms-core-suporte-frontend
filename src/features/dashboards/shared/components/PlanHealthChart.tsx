@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { clsx } from 'clsx'
 import { getChartTokens } from '../utils/chartTokens'
+import { hasPlanHealthData } from '../utils/planHealth'
 import { ChartDrillLegend, type ChartDrillLegendItem } from './ChartDrillLegend'
 import { Skeleton } from '../../../../components/ui/Skeleton'
 import { EmptyState } from '../../../../components/ui/EmptyState'
@@ -63,16 +64,18 @@ export const PlanHealthChart = React.memo(function PlanHealthChart({
     return <Skeleton lines={3} height="h-[60px]" className={className} />
   }
 
-  if (!summary) {
+  // 123/D4: `!summary` não bastava — o objeto pode existir sem total utilizável (chave de
+  // wire divergente ou zero cliente com plano), e aí o Recharts desenhava moldura vazia.
+  if (!hasPlanHealthData(summary)) {
     return <EmptyState message="Sem dados de planos para o período." className={className} />
   }
 
   const chartData = [
     {
       name: 'Planos',
-      verde: summary.totalVerde,
-      amarelo: summary.totalAmarelo,
-      vermelho: summary.totalVermelho,
+      verde: summary.verde,
+      amarelo: summary.amarelo,
+      vermelho: summary.vermelho,
     },
   ]
 
@@ -116,12 +119,7 @@ export const PlanHealthChart = React.memo(function PlanHealthChart({
         <ChartDrillLegend
           label="Abrir clientes por faixa de saúde do plano"
           items={(['verde', 'amarelo', 'vermelho'] as const).map<ChartDrillLegendItem>((faixa) => {
-            const total =
-              faixa === 'verde'
-                ? summary.totalVerde
-                : faixa === 'amarelo'
-                  ? summary.totalAmarelo
-                  : summary.totalVermelho
+            const total = summary[faixa]
             return {
               key: faixa,
               label: FAIXA_LABEL[faixa],

@@ -35,3 +35,12 @@ coverage
 
 # Estado local de agentes/worktrees do Claude Code
 .claude/
+
+# Ferramentas temporárias de QA/mutação — nunca commitar
+# Harness de mutação por transform em memória, criado por agentes de QA. O próprio arquivo
+# traz "NÃO COMMITAR" no cabeçalho; ignorar é a trava estrutural (demanda 123, AUTO-2).
+vitest.*-mut.config.ts
+vitest.qa*.config.ts
+
+# Diretório de trabalho do driver de navegador usado em QA headed
+.playwright-cli/

@@ -38,7 +38,7 @@ vi.mock('../../shared/hooks/usePlanHealth', () => ({
   usePlanHealth: () => ({
     data: {
       data: [],
-      summary: { totalVerde: 1, totalAmarelo: 1, totalVermelho: 1 },
+      summary: { totalClientes: 3, verde: 1, amarelo: 1, vermelho: 1 },
     },
     isLoading: false,
     isError: false,

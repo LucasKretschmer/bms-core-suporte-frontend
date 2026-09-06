@@ -35,6 +35,7 @@ vi.mock('../../reports/shared/utils/exportTable', () => ({
 }))
 
 import { ClientTicketsPanel } from './ClientTicketsPanel'
+import { buildClientTicketsColumns } from '../columns'
 import { ToastProvider } from '../../../components/ui/Toast'
 import { getClientKpis, listClientTickets } from '../services/clientTicketsService'
 import { exportToCsv } from '../../reports/shared/utils/exportTable'
@@ -106,6 +107,24 @@ function renderPanel(ui: ReactElement) {
 /** Escopo obrigatório: sem ele um "3h 30m" de célula da tabela satisfaria a asserção. */
 function resumo(): HTMLElement {
   return screen.getByLabelText('Resumo do plano do cliente')
+}
+
+/**
+ * 123/FAT-1 — o escopo de "Na fatura" passou de LINHA para CÉLULA.
+ *
+ * Motivo: a tabela ganhou "Concluído em" e os 3 baldes de fatura, que também rendem "—"
+ * quando o campo falta. Um `within(linha).getByText('—')` deixou de discriminar (casa 4
+ * elementos e lança). Escopo de linha só funcionava enquanto "Na fatura" era a única
+ * coluna capaz de escrever "—" — premissa que uma coluna nova invalida em silêncio.
+ *
+ * O índice é DERIVADO do próprio `buildClientTicketsColumns()`, nunca digitado: uma
+ * reordenação de colunas moveria a asserção para a célula errada e o teste passaria a
+ * medir outra coluna. O controle positivo abaixo garante que a derivação não é vacuosa.
+ */
+const IDX_NA_FATURA = buildClientTicketsColumns().findIndex((c) => c.key === 'naFatura')
+
+function celulaNaFatura(linha: HTMLElement): HTMLElement {
+  return within(linha).getAllByRole('cell')[IDX_NA_FATURA]
 }
 
 beforeEach(() => {
@@ -185,6 +204,13 @@ describe('KPI "Em aberto (não faturável ainda)" (121/§4.5)', () => {
 })
 
 describe('Coluna "Na fatura" no painel', () => {
+  it('o índice derivado da coluna existe (controle positivo do escopo de célula)', () => {
+    // Sem isto, um `key` renomeado daria `-1`, `getAllByRole('cell')[-1]` seria
+    // `undefined`, e os asserts abaixo falhariam por motivo errado (ou, num
+    // `queryByText`, passariam vacuamente).
+    expect(IDX_NA_FATURA).toBeGreaterThanOrEqual(0)
+  })
+
   it('renderiza "Sim"/"Não" a partir de entraNaFatura, e "—" quando o campo falta', async () => {
     mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 3.5 }))
     mockedTickets.mockResolvedValue({
@@ -202,9 +228,9 @@ describe('Coluna "Na fatura" no painel', () => {
 
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
     const linhas = screen.getAllByRole('row')
-    expect(within(linhas[1]).getByText('Sim')).toBeInTheDocument()
-    expect(within(linhas[2]).getByText('Não')).toBeInTheDocument()
-    expect(within(linhas[3]).getByText('—')).toBeInTheDocument()
+    expect(celulaNaFatura(linhas[1])).toHaveTextContent('Sim')
+    expect(celulaNaFatura(linhas[2])).toHaveTextContent('Não')
+    expect(celulaNaFatura(linhas[3])).toHaveTextContent('—')
   })
 
   it('entraNaFatura `null` na LINHA rende "—", nunca "Não" (121/F4, na tabela real)', async () => {
@@ -228,10 +254,10 @@ describe('Coluna "Na fatura" no painel', () => {
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
     const linhas = screen.getAllByRole('row')
     // Companheira positiva: o "Sim" da linha 1 prova que a coluna está viva.
-    expect(within(linhas[1]).getByText('Sim')).toBeInTheDocument()
-    expect(within(linhas[2]).getByText('—')).toBeInTheDocument()
-    expect(within(linhas[2]).queryByText('Não')).not.toBeInTheDocument()
-    expect(within(linhas[3]).getByText('—')).toBeInTheDocument()
+    expect(celulaNaFatura(linhas[1])).toHaveTextContent('Sim')
+    expect(celulaNaFatura(linhas[2])).toHaveTextContent('—')
+    expect(celulaNaFatura(linhas[2])).not.toHaveTextContent('Não')
+    expect(celulaNaFatura(linhas[3])).toHaveTextContent('—')
     // Em NENHUMA linha aparece "Não": nenhuma delas recebeu `false` do backend.
     expect(screen.queryByText('Não')).not.toBeInTheDocument()
   })

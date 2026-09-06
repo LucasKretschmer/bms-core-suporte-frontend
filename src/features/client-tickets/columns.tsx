@@ -9,17 +9,52 @@
  *   hubspotticketid, assunto, cliente, equipe, owner, status, tempo, apontamentos
  *
  * Coluna "Ticket": link HubSpot com rel="noopener noreferrer" + stopPropagation.
+ *
+ * 123/FAT-1 — quatro colunas novas, todas de campos que o backend JÁ emitia e o painel
+ * descartava (grep de `fechadoEm`/`faturaPlanoSegundos` em `src/` dava zero usos fora dos
+ * tipos):
+ *   · "Concluído em"  (`fechadoEm`)              — a data que decide a competência de fatura;
+ *   · "Plano (chamado)" / "Cobrado por fora (chamado)" / "Análise (chamado)"
+ *     (`faturaPlanoSegundos` / `faturaFaturadoSegundos` / `faturaAnaliseSegundos`) — os 3
+ *     baldes ALL-TIME do chamado, que são o que compõe a fatura.
+ * Nenhuma é sortável: `fechadoem` e os baldes NÃO estão na whitelist de `sortBy` de
+ * `/reports/tickets` (`ReportQueryRepository.cs:1044-1113`) — o backend cairia no default e
+ * a seta mentiria, exatamente como já documentado em "Na fatura".
  */
 
 import { Badge } from '../../components/ui/Badge'
 import { ExternalLinkIcon } from '../../components/ui/ExternalLinkIcon'
 import type { ColumnDef } from '../../components/ui/DataTable/types'
 import type { ClientTicketItemDto } from './types/clientTickets'
-import { formatSeconds } from '../reports/shared/utils/formatters'
+import { formatDate, formatSeconds } from '../reports/shared/utils/formatters'
 import { NA_FATURA_CLASSES } from '../reports/shared/utils/faturamentoTheme'
+import {
+  HEADER_BALDE_ANALISE,
+  HEADER_BALDE_FATURADO,
+  HEADER_BALDE_PLANO,
+  HEADER_CONCLUIDO_EM,
+  TOOLTIP_BALDE_ANALISE,
+  TOOLTIP_BALDE_FATURADO,
+  TOOLTIP_BALDE_PLANO,
+  TOOLTIP_CONCLUIDO_EM,
+} from '../reports/shared/utils/competenciaTexts'
 
 /** Rótulo da coluna de tempo — ver o comentário do cabeçalho (121/§4.4). */
 export const HEADER_TEMPO_NO_PERIODO = 'Tempo no período'
+
+/**
+ * 123/FAT-1 — formatação dos 3 baldes de fatura do chamado.
+ *
+ * TRÊS ramos, não dois (AP-FRONTEND-021/028). Os campos são `long` não-anuláveis no DTO
+ * (`ReportsDtos.cs:267-269`, default `0`), logo o backend NOVO sempre manda um número —
+ * mas o backend ANTIGO não manda a chave, e `formatSeconds(undefined)` escreveria
+ * **"0h 0m"**, afirmando "nenhuma hora neste balde" onde o valor é DESCONHECIDO. `== null`
+ * cobre as duas formas de ausência do wire.
+ */
+export function baldeTexto(segundos: number | null | undefined): string {
+  if (segundos == null) return '—'
+  return formatSeconds(segundos)
+}
 
 export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
   return [
@@ -101,12 +136,47 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
       key: 'tempo',
       header: HEADER_TEMPO_NO_PERIODO,
       headerInfo:
-        'Tempo total dos apontamentos com início no período filtrado — todos os tipos de faturamento, não apenas o plano.',
+        'Tempo total dos apontamentos com início no período filtrado — todos os tipos de faturamento, não apenas o plano. Esta NÃO é a data que decide a fatura: para isso veja "Concluído em".',
       sortable: true,
       sortKey: 'tempo',
       align: 'right',
       width: '130px',
       accessor: (row) => formatSeconds(row.totalSeconds),
+    },
+    {
+      key: 'apontamentos',
+      header: 'Apontamentos',
+      sortable: true,
+      sortKey: 'apontamentos',
+      align: 'right',
+      width: '130px',
+      accessor: (row) => row.apontamentosCount,
+    },
+    {
+      /**
+       * 123/FAT-1 — "Concluído em": `Ticket.FechadoEm` em ISO-8601
+       * (`ReportQueryRepository.cs:1263` → `r.FechadoEm?.ToString("o")`).
+       *
+       * É o campo que EXPLICA o relato do QA: um apontamento de 20/07 numa fatura de agosto
+       * deixa de ser inexplicável quando a linha mostra que o chamado fechou em agosto.
+       *
+       * ⚠️ Guard `== null`, não `=== undefined` (AP-FRONTEND-028): a chave tem DUAS formas de
+       * ausência no wire — o backend serializa com `DefaultIgnoreCondition =
+       * WhenWritingNull` (`Program.cs:107-108`), então chamado sem data de conclusão vem como
+       * chave AUSENTE; um serializador diferente mandaria `null`. Os dois significam
+       * "chamado sem data de conclusão" e os dois têm de cair em "—".
+       */
+      key: 'concluidoEm',
+      header: HEADER_CONCLUIDO_EM,
+      headerInfo: TOOLTIP_CONCLUIDO_EM,
+      align: 'center',
+      width: '120px',
+      accessor: (row) =>
+        row.fechadoEm == null ? (
+          <span className="text-foreground/40">—</span>
+        ) : (
+          formatDate(row.fechadoEm)
+        ),
     },
     {
       /**
@@ -143,13 +213,28 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
       },
     },
     {
-      key: 'apontamentos',
-      header: 'Apontamentos',
-      sortable: true,
-      sortKey: 'apontamentos',
+      key: 'baldePlano',
+      header: HEADER_BALDE_PLANO,
+      headerInfo: TOOLTIP_BALDE_PLANO,
       align: 'right',
       width: '130px',
-      accessor: (row) => row.apontamentosCount,
+      accessor: (row) => baldeTexto(row.faturaPlanoSegundos),
+    },
+    {
+      key: 'baldeFaturado',
+      header: HEADER_BALDE_FATURADO,
+      headerInfo: TOOLTIP_BALDE_FATURADO,
+      align: 'right',
+      width: '150px',
+      accessor: (row) => baldeTexto(row.faturaFaturadoSegundos),
+    },
+    {
+      key: 'baldeAnalise',
+      header: HEADER_BALDE_ANALISE,
+      headerInfo: TOOLTIP_BALDE_ANALISE,
+      align: 'right',
+      width: '140px',
+      accessor: (row) => baldeTexto(row.faturaAnaliseSegundos),
     },
   ]
 }

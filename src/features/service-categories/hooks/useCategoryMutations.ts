@@ -1,23 +1,52 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '../../../components/ui/Toast'
 import { handleApiError } from '../../../utils/handleApiError'
+import { getCategoryMutationErrorMessage } from '../utils/categoryErrorMessage'
 import {
   createServiceCategory,
   deleteServiceCategory,
   toggleServiceCategory,
+  updateServiceCategory,
 } from '../services/serviceCategoriesService'
 import { SERVICE_CATEGORIES_QUERY_KEY } from './useServiceCategories'
 
 /**
- * Mutations de categoria: criar, alternar ativação (PATCH) e excluir.
- * Toda mutation invalida a lista no sucesso e dispara toast.
+ * Chaves de query que dependem da lista de categorias — levantadas por varredura
+ * (`grep service-categories|category-options` em `src/`), não por memória:
+ *
+ * | Chave                                          | Onde                                                       |
+ * |------------------------------------------------|------------------------------------------------------------|
+ * | `['service-categories', {includeInactive:true}]` | esta tela — `hooks/useServiceCategories.ts:4`            |
+ * | `['service-categories']`                        | filtro do relatório de Apontamentos — `features/reports/appointments/index.tsx:168` |
+ * | `['category-options-active']`                    | combo do modal de apontamento — `features/ticket-detail/hooks/useModalOptions.ts:20` |
+ *
+ * ⚠️ Invalidar a chave da tela **não** alcança as outras duas: o casamento do TanStack
+ * Query é por **prefixo**, e `['service-categories']` não começa com
+ * `['service-categories', {includeInactive:true}]` — é o contrário. Por isso a lista
+ * usa o PREFIXO `['service-categories']` (que cobre as duas primeiras) mais a chave
+ * própria do combo. Antes de 123/FE-2 renomear/criar/desativar deixava o filtro de
+ * Apontamentos e o combo do modal exibindo o nome antigo até um reload.
+ */
+const CHAVES_DEPENDENTES = [
+  ['service-categories'] as const,
+  ['category-options-active'] as const,
+]
+
+/**
+ * Mutations de categoria: criar, renomear (PUT), alternar ativação (PATCH) e excluir.
+ * Toda mutation invalida as listas dependentes no sucesso e dispara toast.
  */
 export function useCategoryMutations() {
   const queryClient = useQueryClient()
   const toast = useToast()
 
   function invalidate() {
+    // Mantida explicitamente além do prefixo: se a chave desta tela deixar de começar
+    // por 'service-categories', a invalidação da própria tela não some junto.
     queryClient.invalidateQueries({ queryKey: SERVICE_CATEGORIES_QUERY_KEY })
+    for (const queryKey of CHAVES_DEPENDENTES) {
+      queryClient.invalidateQueries({ queryKey })
+    }
   }
 
   const create = useMutation({
@@ -26,7 +55,17 @@ export function useCategoryMutations() {
       toast.success('Categoria adicionada.')
       invalidate()
     },
-    onError: (error: unknown) => toast.error(handleApiError(error)),
+    // 409 (nome duplicado) também acontece na criação — mesma mensagem acionável.
+    onError: (error: unknown) => toast.error(getCategoryMutationErrorMessage(error)),
+  })
+
+  const update = useMutation({
+    mutationFn: ({ id, nome }: { id: number; nome: string }) => updateServiceCategory(id, nome),
+    onSuccess: () => {
+      toast.success('Categoria renomeada.')
+      invalidate()
+    },
+    onError: (error: unknown) => toast.error(getCategoryMutationErrorMessage(error)),
   })
 
   const toggleActive = useMutation({
@@ -48,5 +87,5 @@ export function useCategoryMutations() {
     onError: (error: unknown) => toast.error(handleApiError(error)),
   })
 
-  return { create, toggleActive, remove }
+  return { create, update, toggleActive, remove }
 }

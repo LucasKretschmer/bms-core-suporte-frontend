@@ -20,11 +20,14 @@ export type StatusTone = { color: string; backgroundColor: string }
  * Mapa fixo por categoria — 4 valores fechados (whitelist do banco).
  *
  * `aberto`/`cancelado` usam tokens NOVOS e aditivos (`--color-status-*`, ver
- * `src/styles/global.css`) — D11: os tokens compartilhados `--color-warning-fg`
- * (~3.00:1) e `--color-error-fg` (~3.24:1) reprovam AA (4.5:1) como texto
- * pequeno (12px) sobre o próprio `-bg`; não podiam ser alterados (compartilhados
- * por `Badge.tsx` em outras telas, ex. status "Pausado"/"Cancelado"). `info`
- * (7.82:1) e `success` (4.75:1) já passam — reaproveitam os tokens existentes.
+ * `src/styles/global.css`) — D11: o token compartilhado `--color-warning-fg`
+ * (#e07600 sobre #fffbef = 3.00:1) reprova AA (4.5:1) como texto pequeno (12px)
+ * sobre o próprio `-bg` e não pode ser alterado (compartilhado por `Badge.tsx`
+ * em outras telas, ex. status "Pausado"). `--color-error-fg` reprovava junto
+ * (3.24:1) quando este mapa foi escrito; em 123/FE-A2 ele foi escurecido de
+ * `#ff0000` para `#c00000` e hoje passa (5.24:1 sobre `--color-error-bg`) — os
+ * tokens `--color-status-*` continuam, porque carregam fundo próprio por status.
+ * `info` (7.82:1) e `success` (4.75:1) já passam — reaproveitam os existentes.
  */
 const STATUS_TONE_MAP: Record<TicketStatusCategoria, StatusTone> = {
   aberto: {

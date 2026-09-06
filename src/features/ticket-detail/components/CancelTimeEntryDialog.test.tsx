@@ -89,6 +89,32 @@ describe('CancelTimeEntryDialog — hasConsolidatedTime (120, D-1)', () => {
     expect(screen.getByText(/faturamento/i)).toBeInTheDocument()
   })
 
+  /**
+   * 123/FE-FIX3 — companheira COMPORTAMENTAL da trava derivada de `alertTokenContrast`.
+   *
+   * A varredura de `arquivo::classe` prova que o FONTE deste arquivo diz `bg-error-fg`;
+   * este caso prova que a classe chega ao BOTÃO RENDERIZADO — o fonte poderia carregar a
+   * string num ramo morto. Juntas fecham a mutação `QMA2d` do QA em duas classes de prova.
+   *
+   * O que deixa isto vermelho: trocar `bg-error-fg`/`border-error-fg` por
+   * `bg-error`/`border-error` (a migração para o token irmão) — exatamente a QMA2d.
+   * A comparação é por TOKEN de `classList`, nunca por substring: `bg-error-fg` contém
+   * `bg-error` como texto, e um `toContain` passaria nos dois mundos.
+   */
+  it('o botão destrutivo pinta com --color-error-fg (bg-error-fg), não com o token irmão --color-error', () => {
+    render(
+      <CancelTimeEntryDialog isOpen hasConsolidatedTime onConfirm={vi.fn()} onClose={vi.fn()} />,
+    )
+    const botao = screen.getByRole('button', { name: /confirmar descarte/i })
+    const classes = Array.from(botao.classList)
+
+    expect(classes).toContain('bg-error-fg')
+    expect(classes).toContain('border-error-fg')
+    // Controle negativo: o token irmão não pode estar aqui.
+    expect(classes).not.toContain('bg-error')
+    expect(classes).not.toContain('border-error')
+  })
+
   it('hasConsolidatedTime=true → botão de submit "Confirmar descarte"', () => {
     render(
       <CancelTimeEntryDialog isOpen hasConsolidatedTime onConfirm={vi.fn()} onClose={vi.fn()} />,

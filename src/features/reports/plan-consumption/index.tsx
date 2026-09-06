@@ -14,6 +14,7 @@ import { listPlanConsumption } from '../shared/services/reportsService'
 import { planConsumptionColumns } from './columns'
 import { usePlanConsumption } from './hooks/usePlanConsumption'
 import { BillingExceptionsCard } from './components/BillingExceptionsCard'
+import { CompetenciaNota } from '../shared/components/CompetenciaNota'
 import { formatClientName, formatHours, formatPercent } from '../shared/utils/formatters'
 import { ClientTicketsPanel } from '../../client-tickets/components/ClientTicketsPanel'
 import type { ClientTicketItemDto } from '../../client-tickets/types/clientTickets'
@@ -179,8 +180,26 @@ export default function PlanConsumptionPage() {
    * erro — esconder o alerta é exatamente o silêncio que D2 combate.
    * Usa o MESMO `filters.from`/`filters.to` da tabela (uma fonte só).
    */
+  /**
+   * 123/FAT-1 — a nota de competência entra no MESMO slot `banner`, acima do card de
+   * exceções, e pelo mesmo motivo: ela precisa estar visível justamente quando a listagem
+   * volta zerada, que é o momento em que o usuário conclui que o filtro "perdeu" a hora
+   * dele. Usa `filters.from`/`filters.to` — a mesma fonte da tabela e do export.
+   *
+   * `incluiProjeto`: nesta tela a coluna "Horas Usadas" soma ticket (por data de conclusão)
+   * e projeto (por data do apontamento) — `ReportQueryRepository.cs:762-763` × `:769`.
+   *
+   * 123/FE-PER (D-14) — `comparaSaudePlanos`: esta é a tela de FATURA do mesmo conceito que o
+   * gráfico "Saúde dos Planos" do painel mede AO VIVO (por `TimeEntry.InicioEm`,
+   * `MetricsQueryRepository.cs:1264-1265`). As duas estão certas por decisão do usuário; a
+   * frase existe para que a diferença seja lida como desenho, não como erro. Só o TEXTO muda —
+   * nenhuma consulta trocou de campo de data nesta unidade.
+   */
   const billingExceptionsBanner = (
-    <BillingExceptionsCard from={filters.from} to={filters.to} />
+    <div className="flex flex-col gap-4">
+      <CompetenciaNota from={filters.from} to={filters.to} incluiProjeto comparaSaudePlanos />
+      <BillingExceptionsCard from={filters.from} to={filters.to} />
+    </div>
   )
 
   return (

@@ -82,6 +82,7 @@ vi.mock('../../client-tickets/components/ClientTicketsPanel', () => ({
 }))
 
 import PlanConsumptionPage from './index'
+import { TEXTO_COMPETENCIA_VS_SAUDE_PLANOS } from '../shared/utils/competenciaTexts'
 import { usePlanConsumption } from './hooks/usePlanConsumption'
 import {
   getBillingExceptionsSummary,
@@ -295,5 +296,110 @@ describe('PlanConsumptionPage — card de exceções de faturamento (121/A2)', (
     expect(screen.getByTestId('excecoes-postergado')).toHaveTextContent(
       'Postergado: 12 chamados ainda abertos · 15h 0m entram na fatura de quando o chamado fechar (não exige ação).',
     )
+  })
+})
+
+// ── 123/FAT-1 — nota de competência na tela ──────────────────────────────────
+
+/**
+ * O relato B2 ("o apontamento correto do consumo aparece apenas fora da tela") é o recorte
+ * por data de CONCLUSÃO, vigente desde a 121, sem nada na UI declarando-o. A nota existe
+ * para fechar essa lacuna, e precisa de duas propriedades:
+ *  1. usar o período REAL da tela (a mesma fonte da tabela e do export), não um congelado;
+ *  2. sobreviver aos estados da LISTAGEM — a lista volta zerada justamente quando o chamado
+ *     fechou em outra competência, que é o momento em que a explicação é necessária. Foi
+ *     por isso que ela foi para o slot `banner`, e não para `children`.
+ *
+ * O que deixa cada asserção VERMELHA: mover a nota para `children` (some no vazio/erro/
+ * loading), passar `initialFrom`/data fixa em vez de `filters`, ou remover a nota.
+ */
+describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
+  it('declara o recorte por data de conclusão, com o período FILTRADO', () => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    expect(
+      screen.getByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'O chamado conta no período em que foi concluído — não no período em que as horas foram apontadas.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('a frase acompanha OUTRO período (não é um literal fixo na tela)', () => {
+    // Dois períodos distintos, com números diferentes: um texto hardcoded passaria no
+    // primeiro caso e cairia aqui.
+    mockListagem({ from: '2026-08-01', to: '2026-08-31' })
+    renderPage()
+
+    expect(
+      screen.getByText('Mostrando os chamados concluídos entre 01/08/2026 e 31/08/2026.'),
+    ).toBeInTheDocument()
+  })
+
+  it('declara a exceção de PROJETO (a coluna de horas mistura as duas bases)', () => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    expect(
+      screen.getByText(
+        'Apontamento de projeto não tem chamado e, por isso, continua contando pela data do próprio apontamento.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it.each([
+    ['VAZIA', { vazio: true }],
+    ['em ERRO', { isError: true }],
+    ['CARREGANDO', { isLoading: true }],
+  ])('continua visível com a listagem %s', (_estado, flags) => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' }, flags)
+    renderPage()
+
+    expect(
+      screen.getByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
+    ).toBeInTheDocument()
+  })
+
+  it('sem datas filtradas, diz que o período é o mês atual — nunca "todos"', () => {
+    // O backend não abre a janela: `FusoSaoPaulo.Resolver:152-159` fecha as duas pontas no
+    // mês local. "Mostrando todos" seria uma afirmação falsa sobre o recorte.
+    mockListagem({ from: null, to: null })
+    renderPage()
+
+    expect(
+      screen.getByText('Sem datas preenchidas: mostrando os chamados concluídos no mês atual.'),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('PlanConsumptionPage — rótulo × Saúde dos Planos (123/D-14)', () => {
+  // 123/FE-FIX3 (F-4): a frase era copiada à mão aqui e ficou defasada quando o texto
+  // ganhou a SEGUNDA causa da divergência. Passa a vir da constante — uma fonte só.
+  // O irmão com LITERAL escrito à mão vive em `competenciaTexts.test.ts`, que asserta o
+  // conteúdo da frase; aqui o que se prova é que a PÁGINA a renderiza.
+  const FRASE_SAUDE = TEXTO_COMPETENCIA_VS_SAUDE_PLANOS
+
+  it('explica por que o gráfico do painel mostra outro número', () => {
+    // Vermelho se a página parar de passar `comparaSaudePlanos` — e é a página, não a nota,
+    // quem decide (o Relatório do Cliente usa a MESMA nota e não deve trazer esta frase).
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    expect(screen.getByText(FRASE_SAUDE)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['VAZIA', { vazio: true }],
+    ['em ERRO', { isError: true }],
+    ['CARREGANDO', { isLoading: true }],
+  ])('a explicação sobrevive à listagem %s', (_estado, flags) => {
+    // É justamente quando a tela volta zerada que o usuário conclui "os números não batem".
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' }, flags)
+    renderPage()
+
+    expect(screen.getByText(FRASE_SAUDE)).toBeInTheDocument()
   })
 })

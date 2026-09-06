@@ -55,6 +55,13 @@ export type ConsolidatedClientReportRow = {
   /** Valores de faturamento distintos juntados por vírgula. */
   faturamento: string
   aberturaDosChamado: string | null
+  /**
+   * 123/FAT-1 — data de conclusão do CHAMADO (`fechadoEmChamado`). É **invariante do
+   * chamado**, não do apontamento: todos os apontamentos do grupo trazem o mesmo valor, e
+   * por isso vem do apontamento mais recente como as demais invariantes. `null` em linha de
+   * projeto e em chamado sem data de conclusão.
+   */
+  fechadoEmChamado: string | null
   /** Data do apontamento mais antigo (ISO). Null se o chamado não tiver apontamentos. */
   dataApontamentoInicio: string | null
   /** Data do apontamento mais recente (ISO). */
@@ -183,6 +190,9 @@ export function consolidateClientReport(
       servicoSecundario: latest.servicoSecundario,
       faturamento,
       aberturaDosChamado: latest.aberturaDosChamado,
+      // `?? null` normaliza a chave AUSENTE do wire para `null` — o tipo consolidado declara
+      // um campo obrigatório nullable, então quem consome tem um único ramo a tratar.
+      fechadoEmChamado: latest.fechadoEmChamado ?? null,
       dataApontamentoInicio,
       dataApontamentoFim,
       totalSegundos,

@@ -192,3 +192,51 @@ describe('consolidateClientReport', () => {
     expect(consolidateClientReport([])).toEqual([])
   })
 })
+
+// ── 123/FAT-1 — `fechadoEmChamado` na linha consolidada ──────────────────────
+
+/**
+ * O que deixa cada asserção VERMELHA:
+ *  · o campo não ser carregado do grupo → `undefined` chega ao PDF consolidado e a coluna
+ *    "Concluído" imprime "—" para chamado que TEM data de conclusão (afirmação falsa num
+ *    documento que vai ao cliente);
+ *  · trocar `?? null` por deixar `undefined` → o tipo declara `string | null`, e o consumidor
+ *    passaria a precisar de dois ramos onde o contrato promete um.
+ */
+describe('consolidateClientReport — data de conclusão do chamado (123/FAT-1)', () => {
+  it('carrega `fechadoEmChamado` na linha consolidada', () => {
+    const rows = consolidateClientReport([
+      makeItem({ timeEntryId: 1, fechadoEmChamado: '2024-04-02T13:00:00Z' }),
+      makeItem({ timeEntryId: 2, fechadoEmChamado: '2024-04-02T13:00:00Z' }),
+    ])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].fechadoEmChamado).toBe('2024-04-02T13:00:00Z')
+    // Companheira positiva: a agregação de fato aconteceu (2 apontamentos de 600 s).
+    expect(rows[0].totalSegundos).toBe(1200)
+  })
+
+  it('campo ausente vira `null` (nunca `undefined`) — contrato de um ramo só', () => {
+    const rows = consolidateClientReport([makeItem({ timeEntryId: 1 })])
+    expect(rows[0].fechadoEmChamado).toBeNull()
+  })
+
+  it('linha de projeto consolidada fica com `null`', () => {
+    const rows = consolidateClientReport([
+      makeItem({ timeEntryId: 9, origem: 'projeto', ticketId: null, projetoId: 5 }),
+    ])
+    expect(rows[0].origem).toBe('projeto')
+    expect(rows[0].fechadoEmChamado).toBeNull()
+  })
+
+  it('dois chamados com conclusões DIFERENTES não trocam de valor entre si', () => {
+    // Cardinalidade/valores assimétricos de propósito: com as duas datas iguais, um bug que
+    // aplicasse a data do primeiro grupo a todos passaria batido.
+    const rows = consolidateClientReport([
+      makeItem({ timeEntryId: 1, ticketId: 100, fechadoEmChamado: '2024-04-02T13:00:00Z' }),
+      makeItem({ timeEntryId: 2, ticketId: 200, fechadoEmChamado: '2024-05-09T13:00:00Z' }),
+    ])
+    expect(rows).toHaveLength(2)
+    expect(rows[0].fechadoEmChamado).toBe('2024-04-02T13:00:00Z')
+    expect(rows[1].fechadoEmChamado).toBe('2024-05-09T13:00:00Z')
+  })
+})

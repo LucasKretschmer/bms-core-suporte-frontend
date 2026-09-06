@@ -27,15 +27,14 @@ import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
 import { Combobox } from '../../../components/ui/Combobox'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
-import type { ExportColumn } from '../shared/utils/exportTable'
 import { getClientReport } from '../shared/services/reportsService'
 import type { ClientReportItemDto, OrigemFiltro } from '../shared/types/reports'
-import {
-  formatDate,
-  formatDateTime,
-  formatSeconds,
-} from '../shared/utils/formatters'
+import { CompetenciaNota } from '../shared/components/CompetenciaNota'
 import { buildClientReportColumns } from './columns'
+import {
+  CLIENT_REPORT_EXPORT_COLUMNS,
+  itemToExportRow,
+} from './utils/clientReportExportRows'
 import { ClientReportHeader } from './components/ClientReportHeader'
 import { ClientReportPdf } from './components/ClientReportPdf'
 import { useClientReport } from './hooks/useClientReport'
@@ -49,60 +48,6 @@ const ORIGEM_OPTIONS = [
   { value: 'ticket', label: 'Ticket' },
   { value: 'projeto', label: 'Projeto' },
 ]
-
-/**
- * Colunas do export CSV/Excel — explícitas para garantir que
- * a categoria do HubSpot NUNCA apareça no arquivo exportado.
- *
- * PRIVACIDADE: esta lista é a fonte de verdade do export.
- * Nunca adicionar campos de categoria interna do HubSpot aqui.
- */
-const EXPORT_COLUMNS: ExportColumn[] = [
-  { header: 'Origem', key: 'origem' },
-  { header: 'Ticket / Projeto', key: 'ticket' },
-  { header: 'Nome do ticket', key: 'assunto' },
-  { header: 'Equipe', key: 'equipe' },
-  // Serviço / Serviço - Secundário: propriedades HubSpot expostas pelo backend (118.5.2)
-  { header: 'Serviço', key: 'servico' },
-  { header: 'Serviço - Secundário', key: 'servicoSecundario' },
-  { header: 'Solicitante', key: 'solicitante' },
-  { header: 'Atendente', key: 'atendente' },
-  { header: 'Categorização do atendimento', key: 'categorizacaoAtendimento' },
-  // Faturamento: 3 status seguros (nunca expõe a categoria do HubSpot)
-  { header: 'Faturamento', key: 'faturamento' },
-  { header: 'Abertura do chamado', key: 'aberturaChamado' },
-  { header: 'Data do apontamento', key: 'dataApontamento' },
-  { header: 'Tempo', key: 'tempo' },
-]
-
-/**
- * Converte ClientReportItemDto em linha para export.
- * A ausência do campo de categoria do HubSpot é garantida pelo próprio tipo do DTO.
- */
-function itemToExportRow(item: ClientReportItemDto): Record<string, string | number | null> {
-  const isProjeto = item.origem === 'projeto'
-  return {
-    // Origem (057): rótulo legível — Ticket / Projeto
-    origem: isProjeto ? 'Projeto' : 'Ticket',
-    // Ticket-only: #hubspotTicketId; Projeto: nome do projeto (null-safe)
-    ticket: isProjeto ? (item.projetoNome ?? '—') : item.hubspotTicketId ? `#${item.hubspotTicketId}` : '—',
-    // Nome do ticket (ticket) ou stage (projeto)
-    assunto: isProjeto ? (item.stage ?? '—') : (item.assunto ?? '—'),
-    equipe: item.equipeAtribuida ?? '—',
-    servico: item.servico ?? '—',
-    servicoSecundario: item.servicoSecundario ?? '—',
-    solicitante: item.solicitante?.nome ?? '—',
-    atendente: item.atendente || '—',
-    // categorizacaoAtendimento = ServiceCategory interna (≠ categoria do HubSpot)
-    categorizacaoAtendimento: item.categorizacaoAtendimento ?? '—',
-    // faturamento = 3 status abstratos — nunca vaza categoria do HubSpot
-    faturamento: item.faturamento,
-    // Linhas de projeto não têm abertura de chamado
-    aberturaChamado: item.aberturaDosChamado ? formatDate(item.aberturaDosChamado) : '—',
-    dataApontamento: formatDateTime(item.dataApontamento),
-    tempo: formatSeconds(item.totalSegundos),
-  }
-}
 
 /**
  * Página principal U5 — Relatório do Cliente.
@@ -185,7 +130,7 @@ export default function ClientReportPage() {
         'cliente'
       exportToCsv(
         `relatorio-cliente-${clientName}-${periodSuffix}`.toLowerCase().replace(/\s+/g, '-'),
-        EXPORT_COLUMNS,
+        CLIENT_REPORT_EXPORT_COLUMNS,
         rows,
       )
     } finally {
@@ -203,7 +148,7 @@ export default function ClientReportPage() {
         'cliente'
       await exportToXlsx(
         `relatorio-cliente-${clientName}-${periodSuffix}`.toLowerCase().replace(/\s+/g, '-'),
-        EXPORT_COLUMNS,
+        CLIENT_REPORT_EXPORT_COLUMNS,
         rows,
       )
     } finally {
@@ -302,6 +247,24 @@ export default function ClientReportPage() {
             />
           </div>
         ) : null
+      }
+      /* 123/FAT-1 (lacuna G5/G9) — esta tela é uma tela de FATURA e não dizia por qual data
+         apurava. Vai no slot `banner` porque ele fica FORA da máquina de estados: a
+         explicação precisa estar visível justamente quando a tabela volta vazia, que é
+         quando o usuário conclui que o filtro perdeu as horas dele.
+         Só aparece depois de cliente + datas escolhidos — antes disso não há recorte a
+         explicar (o próprio EmptyState pede os filtros). */
+      banner={
+        hasRequiredFilters ? (
+          <CompetenciaNota
+            from={filters.from}
+            to={filters.to}
+            /* A tela mistura ticket (por conclusão) e projeto (por apontamento) numa
+               listagem só — `ReportQueryRepository.cs:114-118` × `:150-153`. Com o filtro
+               de origem em "Ticket" a exceção de projeto não se aplica e seria ruído. */
+            incluiProjeto={filters.origem !== 'ticket'}
+          />
+        ) : undefined
       }
       isLoading={isLoading && hasRequiredFilters}
       isError={isError}

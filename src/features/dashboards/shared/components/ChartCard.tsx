@@ -8,6 +8,15 @@ type ChartCardProps = {
   /** ID manual — se omitido, gerado via useId() (AP-FRONTEND-003) */
   id?: string
   title: string
+  /**
+   * Linha explicativa sob o título — **sempre visível**, inclusive em loading, erro e vazio.
+   *
+   * Fica fora de `renderContent()` de propósito (123/FE-PER): esconder a explicação de COMO
+   * o número é apurado justamente quando o card não tem número é o silêncio que faz o leitor
+   * concluir que a tela está errada. Mesmo motivo pelo qual `ReportPageLayout` tem o slot
+   * `banner`.
+   */
+  subtitle?: React.ReactNode
   isLoading?: boolean
   isError?: boolean
   isEmpty?: boolean
@@ -29,6 +38,7 @@ type ChartCardProps = {
 export function ChartCard({
   id: idProp,
   title,
+  subtitle,
   isLoading = false,
   isError = false,
   isEmpty = false,
@@ -108,6 +118,10 @@ export function ChartCard({
         )}
         </div>
       </div>
+
+      {subtitle && (
+        <p className="-mt-2 max-w-[100ch] text-xs text-muted">{subtitle}</p>
+      )}
 
       {/* Conteúdo */}
       <div>{renderContent()}</div>

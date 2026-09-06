@@ -77,12 +77,28 @@ describe('ReportPageLayout — consumidores (121/F6)', () => {
     )
   })
 
-  it('só Consumo de Planos passa `banner` — as outras 5 seguem idênticas', () => {
+  it('as telas que passam `banner` são nominalmente estas 2 — as outras 4 seguem idênticas', () => {
     // O slot é aditivo: para quem não passa, o guard `{banner && …}` é falsy e nada é
     // renderizado. Uma tela nova que comece a passar `banner` reprova aqui e obriga a
-    // declarar o impacto, em vez de aparecer sozinha em produção.
+    // declarar o impacto, em vez de aparecer sozinha em produção. Foi exatamente o que
+    // aconteceu na 123/FAT-1 — este teste ficou vermelho e a entrada abaixo é a
+    // declaração pedida.
+    //
+    // ENTRADAS, item a item, com a justificativa ao lado (allowlist NOMINAL, nunca padrão
+    // de nome):
+    //  · plan-consumption — card de exceções de faturamento (121/A2) + nota de
+    //    competência (123/FAT-1). Os dois têm de sobreviver ao estado vazio da listagem:
+    //    a listagem volta zerada justamente quando o chamado fechou em outra competência,
+    //    que é o momento em que a explicação é necessária;
+    //  · client-report    — nota de competência (123/FAT-1, lacunas G5/G9). É a outra
+    //    tela de FATURA (recorta por `Ticket.FechadoEm`, `ReportQueryRepository.cs:114-118`)
+    //    e não dizia por qual data apurava. Mesmo motivo do slot: o EmptyState "nenhum
+    //    apontamento no período" é o caso em que o usuário mais precisa da explicação.
     expect(new Set(CONSUMIDORES.filter((c) => c.passaBanner).map((c) => c.arquivo))).toEqual(
-      new Set(['src/features/reports/plan-consumption/index.tsx']),
+      new Set([
+        'src/features/reports/client-report/index.tsx',
+        'src/features/reports/plan-consumption/index.tsx',
+      ]),
     )
   })
 

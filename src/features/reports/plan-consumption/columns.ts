@@ -1,6 +1,13 @@
 import type { ColumnDef } from '../../../components/ui/DataTable/types'
 import type { PlanConsumptionItemDto } from '../shared/types/reports'
 import { formatHours, formatPercent } from '../shared/utils/formatters'
+import {
+  TOOLTIP_HORAS_ADICIONAIS,
+  TOOLTIP_HORAS_ANALISE,
+  TOOLTIP_HORAS_FATURAVEIS,
+  TOOLTIP_HORAS_RESTANTES,
+  TOOLTIP_HORAS_USADAS,
+} from '../shared/utils/competenciaTexts'
 import React from 'react'
 
 /** Aplica máscara de CNPJ: XX.XXX.XXX/XXXX-XX */
@@ -36,6 +43,12 @@ const percentColorClasses: Record<PercentClass, string> = {
 /**
  * Colunas da tabela U3 — Consumo de Planos.
  * Ordem exata conforme PRD. sortKey deve casar com a whitelist do backend.
+ *
+ * 123/FAT-1 — os `headerInfo` das colunas de horas vivem em
+ * `shared/utils/competenciaTexts.ts`, com a âncora de backend de cada afirmação. Antes eles
+ * diziam genericamente "no período": quem filtrava julho e não via a hora apontada em julho
+ * concluía que o sistema tinha perdido o dado. Desde a 121 o recorte é por DATA DE CONCLUSÃO
+ * do chamado, e agora a coluna diz isso.
  */
 export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
@@ -81,7 +94,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasUsadas',
     header: 'Horas Usadas',
-    headerInfo: 'Horas usadas do plano no período (não inclui horas faturadas fora do plano).',
+    headerInfo: TOOLTIP_HORAS_USADAS,
     sortable: true,
     sortKey: 'horasusadas',
     align: 'right',
@@ -90,6 +103,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasRestantes',
     header: 'Horas Restantes',
+    headerInfo: TOOLTIP_HORAS_RESTANTES,
     sortable: true,
     sortKey: 'horasrestantes',
     align: 'right',
@@ -98,7 +112,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasAdicionais',
     header: 'Horas Adicionais',
-    headerInfo: 'Horas consumidas além do plano contratado.',
+    headerInfo: TOOLTIP_HORAS_ADICIONAIS,
     sortable: true,
     sortKey: 'horasadicionais',
     align: 'right',
@@ -118,7 +132,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasFaturaveis',
     header: 'Horas Faturáveis',
-    headerInfo: 'Horas cobradas fora do plano (billableOutsidePlan).',
+    headerInfo: TOOLTIP_HORAS_FATURAVEIS,
     sortable: true,
     sortKey: 'horasfaturaveis',
     align: 'right',
@@ -127,7 +141,7 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'horasAnalise',
     header: 'Horas de Análise',
-    headerInfo: 'Horas em tickets de análise interna.',
+    headerInfo: TOOLTIP_HORAS_ANALISE,
     sortable: true,
     sortKey: 'horasanalise',
     align: 'right',

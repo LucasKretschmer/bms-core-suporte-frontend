@@ -194,3 +194,98 @@ describe('generateClientReportPdf — colunas Serviço / Serviço - Secundário 
     expect(capturedTexts.filter((t) => t === '—').length).toBeGreaterThanOrEqual(2)
   })
 })
+
+// ── 123/FAT-1 — coluna "Concluído" no PDF ────────────────────────────────────
+
+/**
+ * O PDF é o artefato que sai do sistema e vai para o cliente (AP-FRONTEND-028: planilha /
+ * documento errado não volta). Sem a data de conclusão, uma linha "Apontamento 20/07" num
+ * relatório de agosto não tem explicação nenhuma no documento.
+ *
+ * O que deixa cada asserção VERMELHA:
+ *  · remover o header 'Concluído' ou a célula `row.concluido` → o texto some de
+ *    `capturedTexts`;
+ *  · guard `=== undefined` no `fmtConclusao` → `null` vira "Invalid Date" impresso;
+ *  · o consolidado não carregar `fechadoEmChamado` do grupo → a data some só nesse tipo,
+ *    e o teste do detalhado sozinho ficaria verde.
+ */
+describe('generateClientReportPdf — coluna "Concluído" (123/FAT-1)', () => {
+  it('detalhado: imprime o header e a data de conclusão do chamado', async () => {
+    await generateClientReportPdf({
+      report: REPORT,
+      items: [makeItem({ fechadoEmChamado: '2024-04-02T13:00:00Z' })],
+      type: 'detalhado',
+    })
+    expect(capturedTexts).toContain('Concluído')
+    expect(capturedTexts).toContain('02/04/2024')
+  })
+
+  it('detalhado: apontamento de MARÇO com conclusão em ABRIL — as duas datas no documento', async () => {
+    await generateClientReportPdf({
+      report: REPORT,
+      items: [
+        makeItem({
+          dataApontamento: '2024-03-10T09:00:00Z',
+          fechadoEmChamado: '2024-04-02T13:00:00Z',
+        }),
+      ],
+      type: 'detalhado',
+    })
+    // Companheira positiva: a data do apontamento continua impressa. Sem ela, "vejo
+    // 02/04/2024" não provaria que as duas convivem.
+    expect(capturedTexts).toContain('10/03/2024')
+    expect(capturedTexts).toContain('02/04/2024')
+  })
+
+  it('consolidado: a data de conclusão do CHAMADO sobrevive à agregação', async () => {
+    // Dois apontamentos do MESMO chamado (ticketId 100) — o consolidado gera 1 linha.
+    await generateClientReportPdf({
+      report: REPORT,
+      items: [
+        makeItem({
+          timeEntryId: 1,
+          dataApontamento: '2024-03-10T09:00:00Z',
+          fechadoEmChamado: '2024-04-02T13:00:00Z',
+        }),
+        makeItem({
+          timeEntryId: 2,
+          dataApontamento: '2024-03-12T09:00:00Z',
+          fechadoEmChamado: '2024-04-02T13:00:00Z',
+        }),
+      ],
+      type: 'consolidado',
+    })
+    expect(capturedTexts).toContain('Concluído')
+    expect(capturedTexts).toContain('02/04/2024')
+  })
+
+  it('sem data de conclusão → "—", nunca "Invalid Date"', async () => {
+    await generateClientReportPdf({
+      report: REPORT,
+      // `makeItem({})` não traz `fechadoEmChamado`: é o caso de linha de projeto e de
+      // chamado sem `closed_date`.
+      items: [makeItem({})],
+      type: 'detalhado',
+    })
+    expect(capturedTexts).toContain('Concluído')
+    expect(capturedTexts.some((t) => t.includes('Invalid'))).toBe(false)
+    expect(capturedTexts).toContain('—')
+  })
+
+  it('o número de células por linha bate com o número de headers', async () => {
+    // Acrescentar header sem acrescentar célula (ou vice-versa) desalinha TODAS as colunas
+    // do PDF a partir dali — e o documento continua sendo gerado, sem erro nenhum.
+    capturedTexts.length = 0
+    await generateClientReportPdf({
+      report: REPORT,
+      items: [makeItem({ fechadoEmChamado: '2024-04-02T13:00:00Z' })],
+      type: 'detalhado',
+    })
+    const iHeader = capturedTexts.indexOf('Origem')
+    expect(iHeader).toBeGreaterThanOrEqual(0)
+    const headers = capturedTexts.slice(iHeader, capturedTexts.indexOf('Tempo') + 1)
+    // 1 linha de dados: tudo que vem depois dos headers são as células dela.
+    const celulas = capturedTexts.slice(iHeader + headers.length)
+    expect(celulas).toHaveLength(headers.length)
+  })
+})

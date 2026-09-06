@@ -33,9 +33,48 @@
   --color-warning-bg: #fffbef;
   --color-info-bg:    #dff1fd;
 
+  /* ── Token de ERRO do DESIGN SYSTEM, sobrescrito aqui (123/FE-FIX3, achado `F-1`) ──
+     `--color-error` NASCE no @theme do DS (`node_modules/@migrate/design-system/styles.css:36`)
+     valendo `#ff0000`. Ele é OUTRO token, irmão homônimo de `--color-error-fg`: é ele que os
+     componentes COMPILADOS do DS usam (`dist/index.js`) para a mensagem de validação inline
+     de `Input`/`Select`, para o asterisco de campo obrigatório, para o Badge de erro e para
+     a borda de campo inválido — e é ele que `components/ui/Button.tsx:42` usa no botão
+     destrutivo (`bg-error text-white`).
+     A 123/FE-A2 escureceu só `--color-error-fg`; a mensagem de validação continuava em
+     `#ff0000` = 4.00:1 sobre o card, que é a superfície LITERAL do achado `A-2`.
+     Este @theme vem DEPOIS do `@import '@migrate/design-system/styles.css'`, então a
+     declaração abaixo vence a do DS na cascata do Tailwind v4 e alcança as classes
+     `text-error`/`bg-error`/`border-error` geradas para os componentes do pacote
+     (o `@source '../../node_modules/@migrate/design-system/dist'` acima garante o scan).
+     Os 10 usos de `--color-error` no bundle do DS + o `Button.tsx:42` do app foram
+     ENUMERADOS e MEDIDOS (`src/utils/colorContrast.ts`): NENHUM é claro-sobre-escuro, logo
+     escurecer melhora todos e não prejudica nenhum. Antes → depois:
+       texto sobre #ffffff (card: validação inline, asterisco)   4.00 → 6.48:1
+       texto sobre #ffe0e0 (Badge soft error)                    3.24 → 5.24:1  <- o mais apertado
+       branco sobre o token (Badge solid, Button danger)         4.00 → 6.48:1
+       texto sobre #f0f4f7 (fora de card)                        3.62 → 5.86:1
+       borda / ícone (WCAG 1.4.11, piso 3:1)                     4.00 → 6.48:1
+     `#c00000` é o MESMO valor de `--color-error-fg`: os dois tokens passam a coincidir de
+     propósito, para que a app não tenha dois vermelhos de erro. Travado (valor E identidade
+     dos call sites) por `src/utils/alertTokenContrast.test.ts`. */
+  --color-error:      #c00000;
+
   /* ── Alertas — texto/acento (repontados) ── */
   --color-success-fg: #008000;
-  --color-error-fg:   #ff0000;
+  /* 123/FE-A2 (achado `A-2` do QA da rodada 4) — ESTE TOKEN FOI ESCURECIDO.
+     Era `#ff0000` e REPROVAVA AA como texto: 4.00:1 sobre `--color-card` e
+     3.24:1 sobre `--color-error-bg` (piso 4.5:1), em ~20 call sites de texto.
+     Correção por VALOR (uma mudança conserta todos) em vez de token aditivo,
+     porque o token já era usado como texto em toda a app. `#c00000` é o mesmo
+     vermelho já medido e aprovado em `--color-status-cancelado-fg`.
+     Contrastes medidos (WCAG 2.x, `src/utils/colorContrast.ts`):
+       #c00000 sobre #ffffff (card)                 = 6.48:1
+       #c00000 sobre #ffe0e0 (error-bg)             = 5.24:1  <- par mais apertado
+       #c00000 sobre #f0f4f7 (background)           = 5.86:1
+       #ffffff sobre #c00000 (bg-error-fg, botao de descarte) = 6.48:1
+     Travado por `src/utils/alertTokenContrast.test.ts`, que LE este arquivo e
+     reprova abaixo de 4.5:1 — o valor nao pode regredir em silencio. */
+  --color-error-fg:   #c00000;
   --color-warning-fg: #e07600;
   --color-info-fg:    #074b7f;
 
@@ -78,11 +117,13 @@
   --color-badge-origem-ticket-fg: #e07600;
 
   /* ── Status por categoria — badge da coluna Status de Apontamentos (119, MELH-01/D11) ──
-     NOVOS e ADITIVOS — nunca reutilizar/alterar --color-warning-fg/--color-error-fg aqui:
-     esses tokens compartilhados reprovam AA como texto pequeno (~3.00:1 e ~3.24:1) e são
-     usados em outras telas (Badge.tsx). Os pares abaixo foram medidos (WCAG, luminância
-     relativa) e atingem ≥4.5:1: aberto #a85800/#fffbef = 5.00:1; cancelado #c00000/#ffe0e0
-     = 5.24:1. `emandamento`/`fechado` reaproveitam --color-info-fg/-bg e
+     NOVOS e ADITIVOS — nunca reutilizar `--color-warning-fg` aqui: esse token compartilhado
+     reprova AA como texto pequeno (#e07600/#fffbef = 3.00:1) e é usado em outras telas
+     (Badge.tsx). `--color-error-fg` REPROVAVA junto (3.24:1) e foi CORRIGIDO para #c00000
+     em 123/FE-A2 — hoje passa (5.24:1 sobre o próprio -bg), mas continua sem substituir
+     estes tokens, que carregam matiz/fundo próprios por status. Os pares abaixo foram
+     medidos (WCAG, luminância relativa) e atingem ≥4.5:1: aberto #a85800/#fffbef = 5.00:1;
+     cancelado #c00000/#ffe0e0 = 5.24:1. `emandamento`/`fechado` reaproveitam --color-info-fg/-bg e
      --color-success-fg/-bg (já passam: 7.82:1 e 4.75:1). */
   --color-status-aberto-fg: #a85800;
   --color-status-aberto-bg: #fffbef;
@@ -92,16 +133,19 @@
   /* ── Status "Descartado" do apontamento (120, D-1) ──
      NOVO e ADITIVO — família violeta, não usada por nenhum outro status hoje (verde=fechado,
      azul=em andamento, laranja=aberto, vermelho=cancelado). Nunca reutilizar/alterar
-     --color-warning-fg/--color-error-fg (reprovam AA — AP-FRONTEND-018) nem as 4 entradas
-     existentes do Badge.tsx BADGE_MAP. Contraste medido (WCAG, luminância relativa,
+     --color-warning-fg (reprova AA como texto, 3.00:1 — AP-FRONTEND-018) nem as 4 entradas
+     existentes do Badge.tsx BADGE_MAP. (--color-error-fg constava aqui como reprovado; foi
+     corrigido para #c00000 em 123/FE-A2 e hoje passa — ver o comentário do token.) Contraste medido (WCAG, luminância relativa,
      mesma fórmula de statusColors.ts/colorContrast.ts): #6b21a8/#f3e8ff = 7.39:1 (>> 4.5:1 AA). */
   --color-status-descartado-fg: #6b21a8;
   --color-status-descartado-bg: #f3e8ff;
 
   /* ── Faturamento — "Na fatura" e card de exceções (121/FAT-5, A2/D2) ──
-     NOVOS e ADITIVOS. Nenhum token compartilhado foi alterado: `--color-warning-fg`
-     (#e07600 sobre #fffbef = 3.00:1) e `--color-error-fg` REPROVAM AA como texto
-     (AP-FRONTEND-018) e são usados por 5+ telas via Badge.tsx.
+     NOVOS e ADITIVOS. Nenhum token compartilhado foi alterado por ESTA entrega:
+     `--color-warning-fg` (#e07600 sobre #fffbef = 3.00:1) REPROVA AA como texto
+     (AP-FRONTEND-018) e é usado por 5+ telas via Badge.tsx. `--color-error-fg` também
+     reprovava quando este bloco foi escrito; foi escurecido para #c00000 em 123/FE-A2
+     e hoje passa (ver o comentário do token, acima).
      Contrastes medidos (WCAG 2.x, luminância relativa — mesma fórmula de
      `src/utils/colorContrast.ts`), travados pelo teste
      `features/reports/shared/utils/faturamentoTheme.test.ts`, que LÊ estes valores

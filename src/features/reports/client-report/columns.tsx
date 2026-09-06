@@ -26,6 +26,10 @@ import { Badge } from '../../../components/ui/Badge'
 import type { ColumnDef } from '../../../components/ui/DataTable/types'
 import type { ClientReportItemDto } from '../shared/types/reports'
 import { formatDate, formatDateTime, formatSeconds } from '../shared/utils/formatters'
+import {
+  HEADER_CONCLUIDO_EM,
+  TOOLTIP_CONCLUIDO_EM,
+} from '../shared/utils/competenciaTexts'
 
 /**
  * Ícone de link externo — aria-hidden pois o texto do link já é descritivo.
@@ -227,7 +231,29 @@ export function buildClientReportColumns(
       accessor: (row) => formatDateTime(row.dataApontamento),
     },
 
-    // ── Coluna 12: Tempo ────────────────────────────────────────────────────────
+    // ── Coluna 12: Concluído em (123/FAT-1) ───────────────────────────────────
+    // `fechadoEmChamado` — data de conclusão do CHAMADO, que é a competência de fatura da
+    // linha. Vem logo depois de "Data do apontamento" DE PROPÓSITO: é a leitura das duas
+    // juntas que explica por que um apontamento de julho aparece numa fatura de agosto.
+    //
+    // Não sortável: a whitelist de `sortBy` de `GET /reports/client format=rows` é
+    // inicioem/totalsegundos/hubspotticketid/assunto/origem — `fechadoemchamado` não está
+    // nela, e o backend cairia no default fazendo a seta mentir (mesma razão de "Equipe").
+    //
+    // Guard `== null` (AP-FRONTEND-028): cobre a chave ausente (linha de projeto, ou chamado
+    // sem data de conclusão) e a chave nula — as duas são "sem data de conclusão".
+    {
+      key: 'fechadoEmChamado',
+      header: HEADER_CONCLUIDO_EM,
+      headerInfo: TOOLTIP_CONCLUIDO_EM,
+      sortable: false,
+      align: 'center',
+      width: '130px',
+      accessor: (row) =>
+        row.fechadoEmChamado == null ? '—' : formatDate(row.fechadoEmChamado),
+    },
+
+    // ── Coluna 13: Tempo ────────────────────────────────────────────────────────
     {
       key: 'tempo',
       header: 'Tempo',

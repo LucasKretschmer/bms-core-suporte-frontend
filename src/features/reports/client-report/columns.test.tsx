@@ -117,9 +117,33 @@ describe('buildClientReportColumns — privacidade (categoria HubSpot nunca expo
 // ── Testes de mapeamento de colunas ──────────────────────────────────────────
 
 describe('buildClientReportColumns — mapeamento do DTO', () => {
-  it('retorna 13 colunas (incluindo Origem, 057)', () => {
+  /**
+   * IDENTIDADE do conjunto, não cardinalidade (`rules/tests.md` § "suíte parametrizada por
+   * enumeração encolhe em silêncio"): `toHaveLength(13)` passava quando uma coluna entrasse
+   * e outra saísse, e uma coluna some sem nada ficar vermelho. Com os nomes literais, tanto
+   * a entrada quanto a saída de qualquer coluna reprovam aqui.
+   *
+   * 123/FAT-1 acrescentou `fechadoEmChamado` ("Concluído em"), imediatamente após
+   * `dataApontamento` — é a leitura das duas juntas que explica a competência da linha.
+   */
+  it('as colunas são nominalmente estas, nesta ordem', () => {
     const cols = buildClientReportColumns()
-    expect(cols).toHaveLength(13)
+    expect(cols.map((c) => c.key)).toEqual([
+      'origem',
+      'ticket',
+      'assunto',
+      'equipe',
+      'servico',
+      'servicoSecundario',
+      'solicitante',
+      'atendente',
+      'categorizacaoAtendimento',
+      'faturamento',
+      'aberturaChamado',
+      'dataApontamento',
+      'fechadoEmChamado',
+      'tempo',
+    ])
   })
 
   it('a primeira coluna é "Origem" (057), sortável por origem', () => {
@@ -309,5 +333,53 @@ describe('buildClientReportColumns — null-safety dos campos ticket-only (057)'
     const col = getColumn('aberturaChamado')
     const result = col.accessor(BASE_ITEM)
     expect(result as string).toMatch(/\d{2}\/\d{2}\/\d{4}/)
+  })
+})
+
+// ── 123/FAT-1 — coluna "Concluído em" ────────────────────────────────────────
+
+/**
+ * O que deixa cada asserção VERMELHA:
+ *  · guard `=== undefined` no lugar de `== null` → linha com `fechadoEmChamado: null`
+ *    volta a renderizar "Invalid Date" em vez de "—";
+ *  · `sortable: true` na coluna → `fechadoemchamado` NÃO está na whitelist de sortBy de
+ *    `GET /reports/client format=rows` (inicioem, totalsegundos, hubspotticketid, assunto,
+ *    origem): o backend cairia no default e a seta afirmaria uma ordenação inexistente;
+ *  · acessar `dataApontamento` por engano → o assert do par julho/agosto cai.
+ */
+describe('buildClientReportColumns — coluna "Concluído em" (123/FAT-1)', () => {
+  it('não é sortável (a chave não está na whitelist do backend)', () => {
+    const col = getColumn('fechadoEmChamado')
+    expect(col.sortable).toBe(false)
+    expect(col.sortKey).toBeUndefined()
+  })
+
+  it('formata a data de conclusão do CHAMADO (literal escrito à mão)', () => {
+    const col = getColumn('fechadoEmChamado')
+    expect(col.accessor({ ...BASE_ITEM, fechadoEmChamado: '2024-04-02T13:00:00Z' })).toBe(
+      '02/04/2024',
+    )
+  })
+
+  it('é a data do CHAMADO, não a do apontamento — o par que explica o relato', () => {
+    // Apontamento em 15/03 (BASE_ITEM), chamado concluído em 02/04. É esta discrepância que
+    // a coluna existe para tornar legível; um accessor que lesse `dataApontamento`
+    // devolveria 15/03 e cairia aqui.
+    const col = getColumn('fechadoEmChamado')
+    const linha = { ...BASE_ITEM, fechadoEmChamado: '2024-04-02T13:00:00Z' }
+    expect(col.accessor(linha)).toBe('02/04/2024')
+    expect(getColumn('dataApontamento').accessor(linha)).toContain('15/03/2024')
+  })
+
+  it('linha de PROJETO (campo ausente) → "—"', () => {
+    // D2: projeto não tem chamado, logo não tem data de conclusão. O backend nem manda a
+    // chave (`WhenWritingNull`).
+    const col = getColumn('fechadoEmChamado')
+    expect(col.accessor(PROJECT_ITEM)).toBe('—')
+  })
+
+  it('`null` explícito → "—" também (a OUTRA forma de ausente no wire)', () => {
+    const col = getColumn('fechadoEmChamado')
+    expect(col.accessor({ ...BASE_ITEM, fechadoEmChamado: null })).toBe('—')
   })
 })

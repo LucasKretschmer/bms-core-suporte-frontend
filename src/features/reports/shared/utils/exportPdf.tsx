@@ -37,6 +37,18 @@ function formatDateRange(inicio: string | null, fim: string | null): string {
 }
 
 /**
+ * 123/FAT-1 — data de conclusão do chamado no PDF.
+ *
+ * Guard `== null` (AP-FRONTEND-028): a chave vem AUSENTE do wire em linha de projeto e em
+ * chamado sem `closed_date` (o backend serializa com `WhenWritingNull`), e `formatDate` de
+ * `undefined` imprimiria lixo num documento que vai para o cliente.
+ */
+function fmtConclusao(fechadoEmChamado: string | null | undefined): string {
+  if (fechadoEmChamado == null) return '—'
+  return formatDate(fechadoEmChamado)
+}
+
+/**
  * Export PDF do Relatório do Cliente.
  * Usa @react-pdf/renderer para layout declarativo em paisagem.
  * Importação LAZY — não pesa o bundle das demais telas.
@@ -143,6 +155,10 @@ export async function generateClientReportPdf(
     'Faturamento',
     'Abertura',
     'Apontamento',
+    // 123/FAT-1 — a competência de fatura da linha. É o PDF que vai para o cliente: sem
+    // esta coluna, uma linha com "Apontamento 20/07" num relatório de agosto não tem
+    // explicação nenhuma no documento (AP-FRONTEND-028: o artefato que sai do sistema).
+    'Concluído',
     'Tempo',
   ]
 
@@ -160,6 +176,7 @@ export async function generateClientReportPdf(
     faturamento: string
     abertura: string
     apontamento: string
+    concluido: string
     tempo: string
   }
 
@@ -185,6 +202,7 @@ export async function generateClientReportPdf(
               row.dataApontamentoInicio,
               row.dataApontamentoFim,
             ),
+            concluido: fmtConclusao(row.fechadoEmChamado),
             tempo: formatSeconds(row.totalSegundos),
           }
         })
@@ -205,6 +223,7 @@ export async function generateClientReportPdf(
             faturamento: item.faturamento,
             abertura: item.aberturaDosChamado ? formatDate(item.aberturaDosChamado) : '—',
             apontamento: formatDate(item.dataApontamento),
+            concluido: fmtConclusao(item.fechadoEmChamado),
             tempo: formatSeconds(item.totalSegundos),
           }
         })
@@ -252,6 +271,7 @@ export async function generateClientReportPdf(
             <Text style={styles.tableCell}>{row.faturamento}</Text>
             <Text style={styles.tableCell}>{row.abertura}</Text>
             <Text style={styles.tableCell}>{row.apontamento}</Text>
+            <Text style={styles.tableCell}>{row.concluido}</Text>
             <Text style={styles.tableCell}>{row.tempo}</Text>
           </View>
         ))}

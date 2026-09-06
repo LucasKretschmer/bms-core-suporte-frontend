@@ -131,20 +131,43 @@ export type ByCategoryDto = {
 
 // ── GET /metrics/plan-health ─────────────────────────────────────────────────
 
+/**
+ * Item de saúde do plano por cliente.
+ *
+ * CONTRATO DE WIRE — os nomes abaixo são os que o backend EMITE, verificados em 04/09/2026
+ * (demanda 123 / D4, que corrigiu um mismatch que deixava o gráfico em branco sem erro):
+ *  - `Suporte.Application/DTOs/Metrics/MetricsDtos.cs:120-126`
+ *    `PlanHealthItemDto(int ClientId, string? NomeFantasia, string? PlanNome,
+ *     decimal HorasContratadas, decimal HorasConsumidas, decimal PercentualConsumo, string Faixa)`
+ *  - `Suporte.API/Program.cs:106` — `PropertyNamingPolicy = CamelCase`
+ *  - `Suporte.API/Program.cs:107-108` — `DefaultIgnoreCondition = WhenWritingNull`: por isso
+ *    `nomeFantasia` e `planNome` são OPCIONAIS aqui (vêm AUSENTES, não `null`, quando nulos
+ *    no banco). Guardas nesses campos usam `== null`/`??`, nunca `=== undefined`
+ *    (AP-FRONTEND-028).
+ *
+ * Não renomear um lado só: é o mesmo shape do `ClientRowDto` de `/metrics/rows`.
+ */
 export type PlanHealthItemDto = {
   clientId: number
-  nomeCliente: string | null
-  nomePlano: string | null
+  nomeFantasia?: string | null
+  planNome?: string | null
   percentualConsumo: number
-  horasPlano: number
-  horasUsadas: number
-  faixaSaude: 'verde' | 'amarelo' | 'vermelho'
+  horasContratadas: number
+  horasConsumidas: number
+  faixa: 'verde' | 'amarelo' | 'vermelho'
 }
 
+/**
+ * Sumário de saúde dos planos — `MetricsDtos.cs:132`
+ * `PlanHealthSummaryDto(int TotalClientes, int Verde, int Amarelo, int Vermelho)`.
+ * `totalClientes` == verde + amarelo + vermelho (todo item cai em exatamente uma faixa,
+ * `MetricsService.cs:890-894`) e é o discriminador de "não há nada a mostrar".
+ */
 export type PlanHealthSummaryDto = {
-  totalVerde: number
-  totalAmarelo: number
-  totalVermelho: number
+  totalClientes: number
+  verde: number
+  amarelo: number
+  vermelho: number
 }
 
 export type PlanHealthResponseDto = {

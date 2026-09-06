@@ -142,12 +142,23 @@ export type TicketReportItemDto = {
    * transforma um no outro sem quebrar tipo nenhum, e o guard tem de ser `== null`.
    */
   entraNaFatura?: boolean | null
-  /** Balde Plano do chamado, ALL-TIME (sem recorte de `InicioEm`) — §4.4. */
-  faturaPlanoSegundos?: number
-  /** Balde Faturado (cobrar por fora) do chamado, ALL-TIME — §4.4. */
-  faturaFaturadoSegundos?: number
-  /** Balde Análise (Invoicy) do chamado, ALL-TIME — §4.4. */
-  faturaAnaliseSegundos?: number
+  /**
+   * Os 3 baldes de fatura do chamado, **ALL-TIME** (sem recorte de `InicioEm`) — §4.4.
+   * Somam os apontamentos `Completed` do chamado; a competência é a data de conclusão do
+   * CHAMADO (`entraNaFatura`), não a de cada apontamento.
+   *
+   * `?` + `| null` pelo mesmo motivo já registrado em `entraNaFatura` logo acima (121/F4):
+   * hoje o backend declara `long` não-anulável com default `0`
+   * (`ReportsDtos.cs:267-269`), então o número sempre vem — mas "ausente" tem DUAS formas
+   * na fronteira HTTP (chave que não veio, do backend anterior a FAT-3; chave nula, que um
+   * `long?` no DTO produziria sem quebrar tipo nenhum), e as duas significam
+   * **desconhecido**, não zero. O tipo declara as duas para que todo call site novo seja
+   * obrigado a decidir; o guard é `== null` (ver `client-tickets/columns.ts::baldeTexto`).
+   * Um `?? 0` afirmaria "nenhuma hora neste balde" onde o valor é desconhecido.
+   */
+  faturaPlanoSegundos?: number | null
+  faturaFaturadoSegundos?: number | null
+  faturaAnaliseSegundos?: number | null
 }
 
 // ── 121/§5.2 (A2/D2) + F-15 — Relatório de exceções de faturamento ────────────
@@ -337,6 +348,24 @@ export type ClientReportItemDto = {
   aberturaDosChamado: string | null  // ISO Z (null p/ projeto)
   dataApontamento: string            // ISO Z
   totalSegundos: number
+  /**
+   * 121/A1 (D1) — data de conclusão do CHAMADO da linha (`Ticket.FechadoEm`, ISO-8601).
+   * Backend: `ReportsDtos.cs:51` (`ClientReportItemDto.FechadoEmChamado`), preenchido em
+   * `ReportQueryRepository.cs:285` (`r.FechadoEmChamado?.ToString("o")`).
+   *
+   * É a **competência de fatura** da linha: as linhas de origem "ticket" deste relatório são
+   * as dos chamados CONCLUÍDOS dentro do período pedido, e por isso `dataApontamento` PODE
+   * estar fora do período — de propósito. Sem este campo em tela, "apontamento de 20/07" numa
+   * fatura de agosto não tem explicação nenhuma na UI (123/FAT-1).
+   *
+   * `null`/ausente em linha de PROJETO (D2: projeto recorta por `InicioEm` e não tem chamado).
+   *
+   * OPCIONAL + `| null` de propósito (AP-FRONTEND-021/028): "ausente" tem DUAS formas no wire
+   * — chave que não veio (o backend serializa com `DefaultIgnoreCondition =
+   * WhenWritingNull`, `Program.cs:107-108`) e chave que veio nula. As duas significam
+   * "sem data de conclusão", e o guard de todo call site é `== null`, nunca `=== undefined`.
+   */
+  fechadoEmChamado?: string | null
 }
 
 export type ClientReportDto = {

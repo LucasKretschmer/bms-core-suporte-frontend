@@ -25,6 +25,8 @@ import {
 } from '../services/clientTicketsService'
 import type { PlanConsumptionItemDto } from '../../reports/shared/types/reports'
 import type { ClientTicketItemDto } from '../types/clientTickets'
+// 123/FE-FIX3 (F-3): consolidado em `defaultCurrentMonthFullPeriod`.
+import { defaultCurrentMonthFullPeriod } from '../../reports/shared/utils/defaultPeriod'
 
 vi.mock('../services/clientTicketsService', () => ({
   getClientKpis: vi.fn(),
@@ -198,12 +200,33 @@ describe('ClientTicketsPanel — KPIs seguem o período (121/C1)', () => {
     expect(ultimoPeriodoTabela()).toEqual({ from: JULHO.from, to: JULHO.to })
   })
 
-  it('sem período selecionado, envia from/to nulos aos KPIs (ramo explícito: backend aplica o default)', async () => {
+  /**
+   * 123/FE-PER (D-2) — teste INVERTIDO no mesmo commit da correção (não apagado).
+   *
+   * Ele afirmava o defeito: sem período, os KPIs iam com `null` e a tabela com `undefined`,
+   * e cada rota aplicava um default OPOSTO (mês corrente × sem restrição). Hoje afirma o
+   * requisito: **a mesma janela nas duas metades**, e ela é o mês atual.
+   *
+   * Os valores literais e a forma no wire estão no irmão
+   * `ClientTicketsPanel.periodo-padrao.test.tsx`, que congela o relógio; aqui o que se prova
+   * é a IGUALDADE entre os dois consumidores, que é o requisito da D-2.
+   */
+  it('sem período selecionado, KPIs e tabela recebem o MESMO período (mês atual) — 123/D-2', async () => {
     renderPanel(<ClientTicketsPanel clientId={1} />)
-    await waitFor(() => {
-      expect(ultimoPeriodoKpis()).toEqual({ from: null, to: null })
-    })
-    expect(ultimoPeriodoTabela()).toEqual({ from: undefined, to: undefined })
+
+    await waitFor(() => expect(ultimoPeriodoKpis()).toBeDefined())
+    await waitFor(() => expect(ultimoPeriodoTabela()).toBeDefined())
+
+    const kpis = ultimoPeriodoKpis()
+    const tabela = ultimoPeriodoTabela()
+
+    expect(kpis).toEqual({ from: defaultCurrentMonthFullPeriod().from, to: defaultCurrentMonthFullPeriod().to })
+    expect(tabela).toEqual({ from: defaultCurrentMonthFullPeriod().from, to: defaultCurrentMonthFullPeriod().to })
+    // A afirmação da D-2, escrita como igualdade entre as duas requisições.
+    expect(tabela).toEqual(kpis)
+    // Companheiras não derivadas do módulo: primeira ponta é dia 1, nenhuma é nula.
+    expect(kpis?.from).toMatch(/^\d{4}-\d{2}-01$/)
+    expect(tabela?.to).toMatch(/^\d{4}-\d{2}-(28|29|30|31)$/)
   })
 
   it('período sem linha de consumo → KPIs vazios ("—" + aviso), sem quebrar a tabela', async () => {

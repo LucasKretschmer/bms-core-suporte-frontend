@@ -59,6 +59,13 @@ const colCliente: ColumnDef<TicketRowDto> = {
   key: 'clienteNome',
   header: 'Cliente',
   accessor: (row) => row.clienteNome ?? '—',
+  // Ordenação de SERVIDOR (123/D1): `cliente` está na whitelist da família ticket
+  // (MetricsQueryRepository.GetTicketRowsAsync → case "cliente" → Client.NomeFantasia,
+  // com desempate estável por PK). Sem `sortable` a DataTable não desenha o botão
+  // (`canSort = sortable && sortKey`) e a coluna não ordena de jeito nenhum — não há
+  // ordenação em memória nas tabelas de drill.
+  sortable: true,
+  sortKey: 'cliente',
   align: 'left',
 }
 
@@ -171,6 +178,16 @@ const extraColsByMetric: Record<TicketMetricKey, ColumnDef<TicketRowDto>[]> = {
   'tickets-csat': [colFechado, colCsat],
   'tickets-fcr': [colFechado, colFcr],
 }
+
+/**
+ * Todas as métricas da família ticket que abrem tabela de drill.
+ *
+ * DERIVADO em runtime do próprio mapa de colunas (`extraColsByMetric`, tipado como
+ * `Record<TicketMetricKey, …>` — o compilador exige exaustividade). Serve de universo
+ * para os invariantes de coluna/ordenação nos testes: métrica nova entra aqui sozinha,
+ * sem lista paralela mantida à mão.
+ */
+export const TICKET_DRILL_METRICS = Object.keys(extraColsByMetric) as TicketMetricKey[]
 
 /** Devolve o conjunto de colunas para o metric da família ticket. */
 export function ticketDrillColumns(metric: TicketMetricKey): ColumnDef<TicketRowDto>[] {

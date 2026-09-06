@@ -35,6 +35,22 @@ export type ListClientTicketsParams = {
   from?: string
   /** Fim do período (YYYY-MM-DD). Ver observação em `from`. */
   to?: string
+  /**
+   * 123/FAT-1 — `apenasFatura` de `GET /reports/tickets`
+   * (`ReportsController.cs:254`, `[FromQuery] bool apenasFatura = false`).
+   *
+   * `true`  → o backend recorta as LINHAS por `Ticket.FechadoEm ∈ [from, to)`
+   *           (`ReportQueryRepository.cs:1032-1036`), aplicado ANTES do `CountAsync`, de
+   *           modo que `totalCount`/paginação acompanham o recorte.
+   * `false`/ausente → nenhum recorte de linha por data: o chamado aparece sempre e só os
+   *           números da linha mudam (`:1023-1025`). É o DEFAULT e é o comportamento pedido
+   *           pelo usuário no documento de QA da 121 (a lista mostra os atendimentos ainda
+   *           em aberto, de propósito).
+   *
+   * Enviado apenas quando `true` (ver o call site): mandar `apenasFatura=false` seria um
+   * parâmetro a mais no wire para o mesmo efeito do default.
+   */
+  apenasFatura?: boolean
   sortBy?: string | null
   sortDirection?: 'asc' | 'desc'
   page: number
@@ -80,12 +96,37 @@ export async function listTicketOwners(): Promise<TicketOwnerOption[]> {
  *
  * Os DOIS ramos são explícitos (AP-FRONTEND-021: "ausente" ≠ "vazio"):
  *  - `string` → vai como `from`/`to` na query e recorta a janela do consumo
- *    (`MetricsService.ResolvePeriod` → `ReportQueryRepository.GetPlanConsumptionAsync`,
- *    onde `te.InicioEm >= from && te.InicioEm < toExclusive` entra em TODOS os
- *    agregados: horasUsadas, horasRestantes, horasAdicionais, faturáveis e análise);
+ *    (`MetricsService.ResolvePeriod` → `ReportQueryRepository.GetPlanConsumptionAsync`);
  *  - `null` → o param é OMITIDO (cleanParams) e o backend aplica o default
- *    "mês corrente" (`MetricsService.cs` ResolvePeriod). Nunca enviar string vazia:
- *    `DateTime?` no controller rejeitaria com 400.
+ *    "mês corrente" (`FusoSaoPaulo.Resolver`: dia 1 → último dia do mês local). Nunca
+ *    enviar string vazia: `DateTime?` no controller rejeitaria com 400.
+ *
+ * ⚠️ 123/FE-PER (D-2) — o painel do detalhe do parceiro **não usa mais o ramo `null`**: ele
+ * resolve o mês atual em `reports/shared/utils/periodoPadrao.ts` e manda as duas datas
+ * explícitas, porque a rota irmã da mesma tela (`/reports/tickets`) trata limite ausente
+ * como "sem restrição", não como mês corrente. O ramo `null` continua no TIPO de propósito:
+ * ele é o que obriga qualquer call site novo a decidir, em vez de herdar um default calado.
+ *
+ * ⚠️ 123/FAT-1 — POR QUAL DATA o período recorta, medido no código em 04/09/2026
+ * (prefixo `Suporte.Infrastructure/Repositories/`). O texto anterior deste comentário
+ * afirmava que `te.InicioEm >= from && te.InicioEm < toExclusive` entrava em TODOS os
+ * agregados. **Isso é falso desde a demanda 121** (commit `462d092`), e um comentário
+ * errado aqui é pior que nenhum: quem o lê "conserta" o backend de volta.
+ *
+ * O que `GetPlanConsumptionAsync` faz hoje, agregado por agregado:
+ *  | agregado                     | parcela TICKET                | parcela PROJETO       |
+ *  |------------------------------|-------------------------------|-----------------------|
+ *  | `horasUsadas`                | `Ticket.FechadoEm` (`:759-763`) | `InicioEm` (`:769`)  |
+ *  | `horasFaturaveis`            | `Ticket.FechadoEm` (`:775-779`) | `InicioEm` (`:786`)  |
+ *  | `horasAnalise`               | `Ticket.FechadoEm` (`:793-798`) | — (ticket-only)      |
+ *  | elegibilidade da linha       | `Ticket.FechadoEm` (`:686-689`) | `InicioEm` (`:690-692`) |
+ *  | `horasEmAbertoNaoFaturadas`  | **nenhuma data** — estoque all-time, `FechadoEm == null` (`:816-824`) |
+ *
+ * `horasRestantes` e `horasAdicionais` não têm predicado próprio: derivam de `horasUsadas`
+ * e herdam o recorte dela. A troca `InicioEm → FechadoEm` é **substituição, não conjunção**
+ * (`:101-113`), e é a regra do Bloco C do PRD da 123: a hora entra na fatura da competência
+ * em que o CHAMADO foi concluído. Projeto não tem chamado, logo continua por `InicioEm`
+ * (decisão D2 da 121).
  */
 export type ClientKpisPeriod = {
   from: string | null

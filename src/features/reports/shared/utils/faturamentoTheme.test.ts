@@ -21,34 +21,24 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { contrastRatio } from '../../../../utils/colorContrast'
+import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../../../utils/cssCascade'
 import { FATURA_CONTRAST_PAIRS } from './faturamentoTheme'
 
 const PISO_AA = 4.5
 
 /**
- * CSS do design system primeiro; o `@theme` do app depois (o app sobrescreve).
- * Caminhos a partir da raiz do projeto (cwd do Vitest) — `import.meta.url` sob o
- * runner não é `file:` e quebraria o `readFileSync`.
+ * 123/FE-FIX4 (`F-9`) — a cascata de CSS é **derivada** do grafo real de `@import`
+ * (`index.html` → `src/main.tsx` → `global.css` → …), nunca digitada aqui.
+ *
+ * Esta era a SEGUNDA lista à mão dos mesmos arquivos de tema (a outra estava em
+ * `utils/alertTokenContrast.test.ts`), e as duas tinham 2 dos 4 arquivos da cascata:
+ * `tokens.css` do design system e o `index.css` do Tailwind ficavam de fora. Duas
+ * fontes de verdade sobre o mesmo conjunto divergem — a única questão é quando.
+ * O mecanismo da derivação tem prova própria em `utils/cssCascade.test.ts`.
  */
-const ARQUIVOS_CSS = [
-  resolve(process.cwd(), 'node_modules/@migrate/design-system/styles.css'),
-  resolve(process.cwd(), 'src/styles/global.css'),
-]
+const lerDoDisco = (caminho: string): string => readFileSync(resolve(process.cwd(), caminho), 'utf8')
 
-/** Lê `--color-*: #hex;` dos arquivos de tema, na ordem de precedência do CSS. */
-function lerTokensDeCor(): Record<string, string> {
-  const tokens: Record<string, string> = {}
-  for (const arquivo of ARQUIVOS_CSS) {
-    const conteudo = readFileSync(arquivo, 'utf8')
-    const regex = /(--color-[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g
-    for (const m of conteudo.matchAll(regex)) {
-      tokens[m[1]] = m[2].toLowerCase()
-    }
-  }
-  return tokens
-}
-
-const TOKENS = lerTokensDeCor()
+const TOKENS = lerTokensDeCor(derivarCascataDeCssDoApp(lerDoDisco), lerDoDisco)
 
 describe('faturamentoTheme — contraste (piso AA de 4.5:1, inviolável)', () => {
   it('o conjunto de pares auditados é exatamente o esperado (não encolhe em silêncio)', () => {

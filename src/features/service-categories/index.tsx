@@ -11,6 +11,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { useToast } from '../../components/ui/Toast'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useReturnFocus } from '../../hooks/useReturnFocus'
 import { ExportButtons } from '../reports/shared/components/ExportButtons'
 import {
   exportToCsv,
@@ -19,6 +20,7 @@ import {
   type ExportRow,
 } from '../reports/shared/utils/exportTable'
 import { buildCategoryColumns } from './columns'
+import { EditCategoryModal } from './components/EditCategoryModal'
 import { useCategoryMutations } from './hooks/useCategoryMutations'
 import { useServiceCategories } from './hooks/useServiceCategories'
 import {
@@ -47,11 +49,15 @@ function mapCategoryToExportRow(category: ServiceCategoryDto): ExportRow {
 export default function ServiceCategoriesPage() {
   const { isCoordenadorOuAcima } = usePermissions()
   const { data, isLoading, isError, refetch } = useServiceCategories()
-  const { create, toggleActive, remove } = useCategoryMutations()
+  const { create, update, toggleActive, remove } = useCategoryMutations()
   const toast = useToast()
   const [isExporting, setIsExporting] = useState(false)
 
+  // Estados SEPARADOS de propósito: excluir e renomear nunca abrem juntos.
   const [toDelete, setToDelete] = useState<ServiceCategoryDto | null>(null)
+  const [toEdit, setToEdit] = useState<ServiceCategoryDto | null>(null)
+  // Devolução do foco ao botão "editar" da linha (o Modal prende, quem abre devolve).
+  const returnFocus = useReturnFocus()
 
   const {
     register,
@@ -65,6 +71,16 @@ export default function ServiceCategoriesPage() {
 
   function onSubmit(values: NewCategoryFormValues) {
     create.mutate(values.nome, { onSuccess: () => reset({ nome: '' }) })
+  }
+
+  function handleOpenEdit(category: ServiceCategoryDto) {
+    returnFocus.capture()
+    setToEdit(category)
+  }
+
+  function handleCloseEdit() {
+    setToEdit(null)
+    returnFocus.restore()
   }
 
   function handleConfirmDelete() {
@@ -109,6 +125,7 @@ export default function ServiceCategoriesPage() {
 
   const columns = buildCategoryColumns({
     onToggle: (category) => toggleActive.mutate({ id: category.id, isActive: !category.isActive }),
+    onEdit: handleOpenEdit,
     onDelete: (category) => setToDelete(category),
     isToggling: toggleActive.isPending,
     isDeleting: remove.isPending,
@@ -178,6 +195,12 @@ export default function ServiceCategoriesPage() {
           </div>
         )}
       </div>
+
+      <EditCategoryModal
+        category={toEdit}
+        onRename={(category, nome) => update.mutateAsync({ id: category.id, nome })}
+        onClose={handleCloseEdit}
+      />
 
       <ConfirmDialog
         isOpen={toDelete !== null}

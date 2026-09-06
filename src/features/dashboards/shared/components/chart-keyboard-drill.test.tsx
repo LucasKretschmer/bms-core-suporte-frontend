@@ -109,9 +109,10 @@ const CATEGORIAS: CategoryMetricDto[] = [
 // Quantidades DIFERENTES por faixa de propósito: com 1/1/1 uma asserção de contagem
 // passaria com o alvo trocado.
 const PLANOS: PlanHealthSummaryDto = {
-  totalVerde: 12,
-  totalAmarelo: 4,
-  totalVermelho: 2,
+  totalClientes: 18,
+  verde: 12,
+  amarelo: 4,
+  vermelho: 2,
 }
 
 const STATUS_EQUIPE: StatusDistributionTeamScopeDto = {

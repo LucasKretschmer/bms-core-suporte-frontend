@@ -22,6 +22,8 @@ import {
   type MultiSelectOption,
 } from '../../../components/ui/MultiSelectCombobox'
 import { EmptyState } from '../../../components/ui/EmptyState'
+import { InfoIcon } from '../../../components/ui/InfoIcon'
+import { Switch } from '../../../components/ui/Switch'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Skeleton } from '../../../components/ui/Skeleton'
 import { useToast } from '../../../components/ui/Toast'
@@ -39,16 +41,43 @@ import {
   fetchAllPaginated,
   ExportLimitError,
 } from '../../reports/shared/utils/fetchAllPaginated'
-import { formatHours, formatPercent, formatSeconds } from '../../reports/shared/utils/formatters'
+import { formatDate, formatHours, formatPercent, formatSeconds } from '../../reports/shared/utils/formatters'
+import {
+  HEADER_BALDE_ANALISE,
+  HEADER_BALDE_FATURADO,
+  HEADER_BALDE_PLANO,
+  HEADER_CONCLUIDO_EM,
+  KPI_EM_ABERTO_LABEL,
+  KPI_EM_ABERTO_TEXTO,
+  TEXTO_APENAS_FATURA_INFO,
+  TEXTO_APENAS_FATURA_LABEL,
+  TEXTO_DIVERGENCIA_KPI_TABELA,
+  TOOLTIP_KPI_HORAS_FATURAVEIS,
+  TOOLTIP_KPI_HORAS_RESTANTES,
+  TOOLTIP_KPI_HORAS_USADAS,
+  textoPeriodoDoDetalhe,
+} from '../../reports/shared/utils/competenciaTexts'
+import { resolverPeriodoPadrao } from '../../reports/shared/utils/periodoPadrao'
 import { getPercentClass } from '../../reports/plan-consumption/columns'
 import { getTicketStatuses, listTeams } from '../../reports/shared/services/reportsService'
 import type { ClientTicketItemDto } from '../types/clientTickets'
-import { buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO } from '../columns'
+import { baldeTexto, buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO } from '../columns'
 import { listClientTickets, listTicketOwners } from '../services/clientTicketsService'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
 
-/** Colunas de export — espelham a tabela visível (visão interna de drill-down). */
+/**
+ * Colunas de export — espelham a tabela visível (visão interna de drill-down).
+ *
+ * ⚠️ AP-FRONTEND-028: o export é a MAIS grave das quatro superfícies do mesmo campo — tela
+ * errada o gestor recarrega, planilha errada ele encaminha. Toda coluna nova da tabela entra
+ * aqui no mesmo commit; a ORDEM espelha a da tabela para que a planilha se leia igual à tela.
+ *
+ * 123/FAT-1 — quatro colunas novas: "Concluído em" (a data que decide a competência) e os
+ * três baldes de fatura do chamado. É a lacuna literal do relato B2 ("para a extração de
+ * relatório com informações corretas"): sem os baldes, a planilha do detalhe não fecha com a
+ * linha da tela-mãe, porque "Tempo no período" é outra janela.
+ */
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket', key: 'ticket' },
   { header: 'Nome do ticket', key: 'assunto' },
@@ -58,8 +87,12 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   // 121/§4.4 — antes "Tempo do plano": o rótulo afirmava algo que a coluna não mede
   // (é o tempo TOTAL no período, todos os baldes). Mesmo rótulo da tabela visível.
   { header: HEADER_TEMPO_NO_PERIODO, key: 'tempo' },
-  { header: 'Na fatura', key: 'naFatura' },
   { header: 'Apontamentos', key: 'apontamentos' },
+  { header: HEADER_CONCLUIDO_EM, key: 'concluidoEm' },
+  { header: 'Na fatura', key: 'naFatura' },
+  { header: HEADER_BALDE_PLANO, key: 'baldePlano' },
+  { header: HEADER_BALDE_FATURADO, key: 'baldeFaturado' },
+  { header: HEADER_BALDE_ANALISE, key: 'baldeAnalise' },
 ]
 
 /**
@@ -73,6 +106,16 @@ function naFaturaTexto(entraNaFatura: boolean | null | undefined): string {
   return entraNaFatura ? 'Sim' : 'Não'
 }
 
+/**
+ * "Concluído em" no export: MESMO guard `== null` da coluna visível (AP-FRONTEND-028).
+ * Chamado sem data de conclusão vem com a chave AUSENTE (o backend serializa com
+ * `WhenWritingNull`), e um `formatDate(undefined)` colocaria "Invalid Date" na planilha.
+ */
+function concluidoEmTexto(fechadoEm: string | null | undefined): string {
+  if (fechadoEm == null) return '—'
+  return formatDate(fechadoEm)
+}
+
 function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
   return {
     ticket: `#${item.hubspotTicketId}`,
@@ -81,25 +124,21 @@ function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
     owner: item.ownerNome ?? '—',
     status: item.status ?? '—',
     tempo: formatSeconds(item.totalSeconds),
-    naFatura: naFaturaTexto(item.entraNaFatura),
     apontamentos: item.apontamentosCount,
+    concluidoEm: concluidoEmTexto(item.fechadoEm),
+    naFatura: naFaturaTexto(item.entraNaFatura),
+    // `baldeTexto` é o MESMO formatador da coluna visível — nunca uma segunda cópia da
+    // regra de ausência (é assim que o export divergiu da tela na 121/F4).
+    baldePlano: baldeTexto(item.faturaPlanoSegundos),
+    baldeFaturado: baldeTexto(item.faturaFaturadoSegundos),
+    baldeAnalise: baldeTexto(item.faturaAnaliseSegundos),
   }
 }
 
-/**
- * 121/§4.5 (D2) — texto obrigatório do KPI "Em aberto".
- *
- * `horasEmAbertoNaoFaturadas` é um **ESTOQUE, all-time**: por definição não reage ao
- * filtro de período (soma os apontamentos de chamados com `FechadoEm == null`, sem
- * recorte). Sem esta frase na tela, o próximo QA humano reabre exatamente o relato do
- * P4 ("o filtro de data não tem efeito") — §12/R12 da arquitetura.
- *
- * Redação copiada verbatim de §4.5. AP-FRONTEND-022: não afirma prazo, limite nem
- * periodicidade, e nenhum número é digitado aqui.
- */
-const KPI_EM_ABERTO_LABEL = 'Em aberto (não faturável ainda)'
-const KPI_EM_ABERTO_TEXTO =
-  'Total, independe do período — trabalho em chamados ainda sem data de conclusão.'
+// 121/§4.5 (D2) — o rótulo e o subtexto do KPI "Em aberto" agora moram em
+// `reports/shared/utils/competenciaTexts.ts`, junto com o resto da copy deste painel:
+// `textoPeriodoDoDetalhe` precisa nomear ESTE cartão como a exceção da frase de período
+// (123/FE-FIX3, ressalva `F-2`), e as duas pontas têm de sair da mesma constante.
 
 const PERCENT_SUBTEXT: Record<
   ReturnType<typeof getPercentClass>,
@@ -149,8 +188,18 @@ export function ClientTicketsPanel({
    * setFilters) e o que `useClientTickets` manda a /reports/tickets. Nunca de
    * `initialFrom`/`initialTo`, que congelam o período da abertura e voltariam a divergir
    * da tabela assim que o usuário trocasse a data com o painel aberto.
+   *
+   * 123/FE-PER (D-2) — e passam pelo MESMO resolvedor de default da tabela
+   * (`resolverPeriodoPadrao`). Antes, campo em branco significava coisas OPOSTAS nas duas
+   * rotas: `/metrics/plan-consumption` caía no mês corrente e `/reports/tickets` ficava sem
+   * restrição nenhuma — duas janelas de tempo na mesma tela, sem aviso. Agora as duas
+   * metades recebem a mesma janela, sempre explícita, e a tela imprime qual é (§ abaixo).
    */
-  const kpisQuery = useClientKpis(clientId, { from: filters.from, to: filters.to })
+  const periodo = useMemo(
+    () => resolverPeriodoPadrao({ from: filters.from, to: filters.to }),
+    [filters.from, filters.to],
+  )
+  const kpisQuery = useClientKpis(clientId, periodo)
 
   // Busca textual com debounce
   const [searchInput, setSearchInput] = useState(filters.search)
@@ -197,6 +246,9 @@ export function ClientTicketsPanel({
   const toast = useToast()
   const [isExporting, setIsExporting] = useState(false)
 
+  /** Id do toggle de fatura — `<label htmlFor>` precisa casar com o `id` do Switch. */
+  const apenasFaturaId = `${tableId}-apenas-fatura`
+
   const kpis = kpisQuery.data
   const pctClass = getPercentClass(kpis?.percentualPlano ?? null)
 
@@ -210,8 +262,13 @@ export function ClientTicketsPanel({
         status: filters.status.length > 0 ? filters.status : undefined,
         teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
         owner: filters.owner.length > 0 ? filters.owner : undefined,
-        from: filters.from ?? undefined,
-        to: filters.to ?? undefined,
+        // Mesma janela resolvida da tela (D-2): a planilha não pode sair com o range aberto
+        // enquanto a tabela mostra o mês atual.
+        from: periodo.from,
+        to: periodo.to,
+        // O export sai com o MESMO recorte da tela — senão a planilha responde a outra
+        // pergunta que a tabela de onde o usuário clicou "Exportar".
+        apenasFatura: filters.apenasFatura || undefined,
         sortBy: sortBy ?? undefined,
         sortDirection,
         page,
@@ -272,14 +329,20 @@ export function ClientTicketsPanel({
               value={kpis?.nomePlano ?? '—'}
               isLoading={kpisQuery.isLoading}
             />
+            {/* 123/FAT-1 — os KPIs vêm da MESMA linha de /metrics/plan-consumption da
+                tela-mãe (getClientKpis), logo recortam por DATA DE CONCLUSÃO do chamado.
+                Sem o tooltip, "Horas usadas = 0h 0m" com apontamentos visíveis na tabela
+                logo abaixo parece defeito — é o relato B2 literal. */}
             <KpiCard
               label="Horas usadas"
               value={kpis ? formatHours(kpis.horasUsadas) : '—'}
+              tooltipText={TOOLTIP_KPI_HORAS_USADAS}
               isLoading={kpisQuery.isLoading}
             />
             <KpiCard
               label="Horas restantes"
               value={kpis ? formatHours(kpis.horasRestantes) : '—'}
+              tooltipText={TOOLTIP_KPI_HORAS_RESTANTES}
               isLoading={kpisQuery.isLoading}
             />
             <KpiCard
@@ -291,6 +354,7 @@ export function ClientTicketsPanel({
             <KpiCard
               label="Faturável por fora"
               value={kpis ? formatHours(kpis.horasFaturaveis) : '—'}
+              tooltipText={TOOLTIP_KPI_HORAS_FATURAVEIS}
               isLoading={kpisQuery.isLoading}
             />
             {/* 121/§4.5 — "Em aberto": estoque all-time, NÃO reage ao filtro de
@@ -326,6 +390,20 @@ export function ClientTicketsPanel({
             />
           </KpiCardGrid>
         )}
+
+        {/* 123/FAT-1 + 123/FE-PER — a tela deixa de esconder TRÊS coisas:
+              0. (D-2) QUAL período está em uso, inclusive quando ele veio do padrão da tela
+                 (mês atual). Default invisível é defeito de comunicação: foi ele que fez o
+                 usuário concluir que a tela estava errada.
+              1. por qual data os cartões acima recortam (data de conclusão do chamado);
+              2. que a coluna "Tempo no período" da tabela recorta por OUTRA data
+                 (a do apontamento) — e que os dois não fecham de propósito.
+            Isto apenas torna a divergência LEGÍVEL. Unificar as duas janelas depende da
+            decisão de produto DP-7, ainda aberta, e mexeria em query do backend. */}
+        <p className="mt-2 max-w-[100ch] text-xs text-muted">
+          {textoPeriodoDoDetalhe({ from: filters.from, to: filters.to })}{' '}
+          {TEXTO_DIVERGENCIA_KPI_TABELA}
+        </p>
       </section>
 
       {/* Filtros */}
@@ -393,6 +471,28 @@ export function ClientTicketsPanel({
               to={filters.to}
               onChange={(from, to) => setFilters({ from, to })}
             />
+
+            {/* 123/FAT-1 — liga `apenasFatura`, que existia implementado e testado no
+                backend (`ReportsController.cs:254`) e não tinha NENHUM chamador no painel.
+                Nasce DESLIGADO: o padrão continua sendo a visão de conferência, com os
+                chamados em aberto na lista (instrução explícita do usuário). Ligado, o
+                usuário reconcilia esta lista com a linha da tela-mãe. */}
+            <div className="flex items-center gap-2 pb-2">
+              <Switch
+                id={apenasFaturaId}
+                checked={filters.apenasFatura}
+                onChange={(apenasFatura) => setFilters({ apenasFatura })}
+                label={TEXTO_APENAS_FATURA_LABEL}
+                hideLabel={false}
+              />
+              <label
+                htmlFor={apenasFaturaId}
+                className="text-xs text-foreground cursor-pointer"
+              >
+                {TEXTO_APENAS_FATURA_LABEL}
+              </label>
+              <InfoIcon tooltip={TEXTO_APENAS_FATURA_INFO} />
+            </div>
           </div>
           {!isEmpty && (
             <ExportButtons
@@ -412,7 +512,15 @@ export function ClientTicketsPanel({
       )}
       {!isLoading && isError && <ErrorState onRetry={() => void refetch()} />}
       {!isLoading && !isError && isEmpty && (
-        <EmptyState message="Nenhum ticket encontrado para este cliente no período." />
+        /* O vazio significa coisas diferentes com e sem o recorte de fatura, e um texto
+           só faria o usuário concluir que o cliente não tem chamado nenhum. */
+        <EmptyState
+          message={
+            filters.apenasFatura
+              ? 'Nenhum chamado deste cliente foi concluído dentro do período filtrado, então nada dele entra nesta fatura. Desligue "Só o que entra na fatura do período" para ver também os chamados em aberto.'
+              : 'Nenhum ticket encontrado para este cliente no período.'
+          }
+        />
       )}
       {!isLoading && !isError && !isEmpty && (
         <div className="bg-card rounded-card border border-border overflow-hidden">

@@ -1,24 +1,57 @@
 /**
- * Testes de ticketDrillColumns (016).
+ * Testes de ticketDrillColumns (016 + 123/D1).
  * Verifica: colunas base presentes em todo metric; colunas específicas por metric;
- * tradução do FrSla; nenhuma coluna expõe categoria HubSpot proibida (AP-SECURITY-001).
+ * tradução do FrSla; nenhuma coluna expõe categoria HubSpot proibida (AP-SECURITY-001);
+ * e a IDENTIDADE dos `sortKey` ordenáveis por metric (123/D1 — `cliente` incluído).
+ *
+ * O universo de métricas é DERIVADO em runtime (`TICKET_DRILL_METRICS`), nunca uma lista
+ * paralela mantida à mão: métrica nova entra em todos os laços sozinha. A identidade do
+ * conjunto é travada com os nomes literais logo abaixo — cardinalidade não discrimina
+ * (uma métrica entrar e outra sair passaria).
  */
 
 import { describe, it, expect } from 'vitest'
-import { ticketDrillColumns } from './ticketDrillColumns'
+import { ticketDrillColumns, TICKET_DRILL_METRICS } from './ticketDrillColumns'
 import { CATEGORIAS_PROIBIDAS } from './kpiCatalog'
 import type { TicketMetricKey, TicketRowDto } from '../types/metrics'
 
-const ALL_METRICS: TicketMetricKey[] = [
-  'tickets-backlog',
-  'tickets-abertos',
-  'tickets-resolvidos',
-  'tickets-reabertos',
-  'tickets-tempos',
-  'tickets-sla',
-  'tickets-csat',
-  'tickets-fcr',
-]
+const ALL_METRICS: TicketMetricKey[] = TICKET_DRILL_METRICS
+
+/**
+ * Whitelist de `sortBy` da família ticket no backend, transcrita do switch de
+ * `MetricsQueryRepository.GetTicketRowsAsync` (case a case, em minúsculas). Qualquer
+ * `sortKey` fora daqui é ignorado em silêncio pelo servidor (cai no default
+ * `hscriadoem desc`) — o usuário clica e a ordem não muda, sem erro nenhum.
+ */
+const BACKEND_TICKET_SORT_WHITELIST = [
+  'hubspotticketid',
+  'assunto',
+  'cliente',
+  'owner',
+  'abertoem',
+  'hscriadoem',
+  'fechadoem',
+  'reabertoem',
+  'csat',
+] as const
+
+/**
+ * Identidade (nomes literais, na ordem das colunas) dos `sortKey` ordenáveis de cada
+ * metric após 123/D1. Ao tornar outra coluna ordenável (ex.: `assunto`, que o backend
+ * também aceita), ATUALIZE esta tabela no mesmo commit — nunca afrouxe a asserção.
+ */
+const SORT_KEYS_ESPERADOS: Record<TicketMetricKey, string[]> = {
+  'tickets-backlog': ['hubspotticketid', 'cliente', 'hscriadoem'],
+  'tickets-abertos': ['hubspotticketid', 'cliente', 'hscriadoem'],
+  'tickets-resolvidos': ['hubspotticketid', 'cliente', 'hscriadoem', 'fechadoem'],
+  'tickets-reabertos': ['hubspotticketid', 'cliente', 'hscriadoem', 'reabertoem'],
+  'tickets-tempos': ['hubspotticketid', 'cliente'],
+  'tickets-sla': ['hubspotticketid', 'cliente', 'hscriadoem'],
+  // A coluna CSAT não é ordenável hoje, embora o backend aceite `csat` — fora do
+  // escopo de 123/D1 (que trata só de cliente). Se for habilitada, atualize aqui.
+  'tickets-csat': ['hubspotticketid', 'cliente', 'fechadoem'],
+  'tickets-fcr': ['hubspotticketid', 'cliente', 'fechadoem'],
+}
 
 const BASE_ROW: TicketRowDto = {
   ticketId: 1,
@@ -42,6 +75,62 @@ const BASE_ROW: TicketRowDto = {
 }
 
 describe('ticketDrillColumns', () => {
+  it('o universo de métricas da família ticket é exatamente estas 8 (identidade, não contagem)', () => {
+    expect([...TICKET_DRILL_METRICS].sort()).toEqual(
+      [
+        'tickets-abertos',
+        'tickets-backlog',
+        'tickets-csat',
+        'tickets-fcr',
+        'tickets-reabertos',
+        'tickets-resolvidos',
+        'tickets-sla',
+        'tickets-tempos',
+      ].sort(),
+    )
+  })
+
+  it('a coluna Cliente é ordenável em TODA métrica da família, com sortKey=cliente (123/D1)', () => {
+    for (const metric of ALL_METRICS) {
+      const cliente = ticketDrillColumns(metric).find((c) => c.key === 'clienteNome')
+      expect(cliente, `metric ${metric} sem coluna de cliente`).toBeDefined()
+      expect(cliente!.header).toBe('Cliente')
+      // As DUAS props: a DataTable só desenha o botão com `sortable && sortKey`.
+      expect(cliente!.sortable, `metric ${metric}: Cliente sem sortable`).toBe(true)
+      expect(cliente!.sortKey, `metric ${metric}: sortKey de Cliente errado`).toBe('cliente')
+    }
+  })
+
+  it('sortKeys ordenáveis batem com a identidade esperada por metric (123/D1)', () => {
+    for (const metric of ALL_METRICS) {
+      const sortKeys = ticketDrillColumns(metric)
+        .filter((c) => c.sortable)
+        .map((c) => c.sortKey)
+      expect(sortKeys, `metric ${metric}`).toEqual(SORT_KEYS_ESPERADOS[metric])
+    }
+  })
+
+  it('todo sortKey exposto está na whitelist do backend (fora dela o servidor ignora em silêncio)', () => {
+    for (const metric of ALL_METRICS) {
+      for (const col of ticketDrillColumns(metric)) {
+        if (!col.sortable) continue
+        expect(
+          BACKEND_TICKET_SORT_WHITELIST as readonly string[],
+          `metric ${metric}: coluna "${col.key}" com sortKey "${col.sortKey}" fora da whitelist`,
+        ).toContain(col.sortKey)
+      }
+    }
+  })
+
+  it('coluna ordenável nunca tem sortKey vazio/ausente (canSort exige as duas props)', () => {
+    for (const metric of ALL_METRICS) {
+      for (const col of ticketDrillColumns(metric)) {
+        if (!col.sortable) continue
+        expect(Boolean(col.sortable && col.sortKey), `metric ${metric}: ${col.key}`).toBe(true)
+      }
+    }
+  })
+
   it('toda métrica inclui as colunas base (ticket, assunto, cliente, equipe, status)', () => {
     for (const metric of ALL_METRICS) {
       const keys = ticketDrillColumns(metric).map((c) => c.key)

@@ -23,26 +23,29 @@ import { ToastProvider } from '../../../../components/ui/Toast'
 import * as exportTable from '../../../reports/shared/utils/exportTable'
 import type { PlanHealthResponseDto } from '../../shared/types/metrics'
 
+// Nomes de campo = os do WIRE do backend (`MetricsDtos.cs:120-132`), ver 123/D4.
+// Este arquivo constrói o mock a partir do TIPO do frontend, então NÃO prova o contrato —
+// a prova de contrato está em `SupportPlanHealthSection.wire.test.tsx`, com payload literal.
 const DATA: PlanHealthResponseDto = {
-  summary: { totalVerde: 2, totalAmarelo: 1, totalVermelho: 1 },
+  summary: { totalClientes: 4, verde: 2, amarelo: 1, vermelho: 1 },
   data: [
     {
       clientId: 1,
-      nomeCliente: 'ACME',
-      nomePlano: 'Premium',
+      nomeFantasia: 'ACME',
+      planNome: 'Premium',
       percentualConsumo: 50,
-      horasPlano: 40,
-      horasUsadas: 20,
-      faixaSaude: 'verde',
+      horasContratadas: 40,
+      horasConsumidas: 20,
+      faixa: 'verde',
     },
     {
       clientId: 2,
-      nomeCliente: null,
-      nomePlano: null,
+      nomeFantasia: null,
+      planNome: null,
       percentualConsumo: 97,
-      horasPlano: 10,
-      horasUsadas: 9.7,
-      faixaSaude: 'vermelho',
+      horasContratadas: 10,
+      horasConsumidas: 9.7,
+      faixa: 'vermelho',
     },
   ],
 }

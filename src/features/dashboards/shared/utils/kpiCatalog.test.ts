@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { KPI_CATALOG, CATEGORIAS_PROIBIDAS } from './kpiCatalog'
+import { ticketDrillColumns } from './ticketDrillColumns'
+import { apontamentoDrillColumns } from './apontamentoDrillColumns'
+import { metricFamily, type TicketMetricKey } from '../types/metrics'
 
 describe('kpiCatalog — AP-SECURITY-001', () => {
   it('CATEGORIAS_PROIBIDAS é não-vazio', () => {
@@ -156,5 +159,56 @@ describe('kpiCatalog — drill-down (016)', () => {
         expect(kpi.drill.title).not.toContain(proibida)
       }
     }
+  })
+})
+
+describe('kpiCatalog — ordenação por cliente nos cards (123/D1)', () => {
+  /**
+   * Cards do dashboard cuja tabela de drill pertence à família TICKET.
+   * DERIVADO em runtime do catálogo + `metricFamily` — card novo entra sozinho.
+   */
+  const cardsTicket = KPI_CATALOG.filter(
+    (k) => k.drill !== undefined && metricFamily(k.drill.metric) === 'ticket',
+  )
+
+  it('a lista nominal de cards da família ticket é exatamente estes 13 (identidade, não contagem)', () => {
+    expect(cardsTicket.map((k) => k.label)).toEqual([
+      'Backlog (em aberto)',
+      'Tickets abertos no período',
+      'Tickets resolvidos no período',
+      'Taxa de resolução',
+      'TMR (corridas)',
+      'TMR (horas úteis)',
+      'TME / 1ª resposta (corridas)',
+      '1ª resposta (horas úteis)',
+      'Respondidos no prazo (SLA)',
+      'Respondidos fora do prazo',
+      'Tickets reabertos',
+      'CSAT',
+      'FCR (1º contato)',
+    ])
+  })
+
+  it('todo card da família ticket abre uma tabela com Cliente ordenável (sortKey=cliente)', () => {
+    for (const card of cardsTicket) {
+      const cols = ticketDrillColumns(card.drill!.metric as TicketMetricKey)
+      const cliente = cols.find((c) => c.key === 'clienteNome')
+      expect(cliente, `card "${card.label}" sem coluna Cliente`).toBeDefined()
+      expect(cliente!.sortable, `card "${card.label}": Cliente não ordenável`).toBe(true)
+      expect(cliente!.sortKey, `card "${card.label}": sortKey errado`).toBe('cliente')
+    }
+  })
+
+  it('cards da família apontamento seguem SEM coluna de cliente ATE a unidade D1b (backend) existir', () => {
+    // Fronteira de escopo de 123/D1: o DTO de apontamento não traz o cliente e a whitelist
+    // do backend (`GetApontamentoRowsAsync`) não aceita `sortBy=cliente` — uma coluna
+    // adicionada só no front ordenaria em SILÊNCIO pela ordem default. Quem entregar D1b
+    // INVERTE este teste no mesmo commit (coluna presente + sortKey=cliente), nunca o apaga.
+    const cardsApontamento = KPI_CATALOG.filter(
+      (k) => k.drill !== undefined && metricFamily(k.drill.metric) === 'apontamento',
+    )
+    expect(cardsApontamento.length).toBeGreaterThan(0)
+    const keys = apontamentoDrillColumns().map((c) => c.key)
+    expect(keys).not.toContain('clienteNome')
   })
 })
