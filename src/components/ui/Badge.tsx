@@ -16,6 +16,24 @@ type BadgeProps = {
    * cor por token. Uso normal deve seguir os tokens — não abusar deste escape.
    */
   style?: React.CSSProperties
+  /**
+   * Superfície sobre a qual o badge é renderizado (125/`Q-1`).
+   *
+   * - `padrao` — o badge está sobre `--color-card` (#ffffff). É o caso de toda a app.
+   * - `recuada` — o badge está sobre `--color-background` (#f0f4f7), o fundo próprio do
+   *   card de apontamento CANCELADO.
+   *
+   * Só muda alguma coisa para o badge do FALLBACK neutro: `--color-badge-neutro-bg` é o
+   * **mesmo valor** de `--color-background` (os dois são #f0f4f7 — ver `styles/global.css`),
+   * então sobre a superfície recuada a pílula neutra fica com fundo idêntico ao do card e
+   * vira texto solto. Nesse caso — e só nele — a superfície do badge inverte para
+   * `bg-card`. Badges COM cor própria no mapa (`Cancelado`, `Concluído`, `Pausado`…) não
+   * mudam: o fundo deles já se distingue do card recuado.
+   *
+   * A decisão de qual badge é neutro sai do próprio `BADGE_MAP`, nunca do call site — quem
+   * chama não precisa saber quais valores têm cor.
+   */
+  variante?: 'padrao' | 'recuada'
 }
 
 /**
@@ -58,8 +76,23 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
 
 const FALLBACK: BadgeStyle = { bg: 'bg-badge-neutro-bg', fg: 'text-badge-neutro-fg' }
 
-export function Badge({ value, className, truncate = false, style }: BadgeProps) {
-  const tone = BADGE_MAP[value] ?? FALLBACK
+/**
+ * O fallback neutro sobre a superfície RECUADA (`--color-background`): a única diferença é
+ * a superfície da pílula, que inverte para `--color-card`. O texto continua
+ * `--color-badge-neutro-fg` (#666666) e mede 5,74:1 sobre #ffffff — acima do 5,19:1 que ele
+ * media sobre #f0f4f7, então a inversão SOBE o contraste do texto em vez de gastá-lo.
+ */
+const FALLBACK_RECUADO: BadgeStyle = { bg: 'bg-card', fg: 'text-badge-neutro-fg' }
+
+export function Badge({
+  value,
+  className,
+  truncate = false,
+  style,
+  variante = 'padrao',
+}: BadgeProps) {
+  const doMapa = BADGE_MAP[value]
+  const tone = doMapa ?? (variante === 'recuada' ? FALLBACK_RECUADO : FALLBACK)
 
   return (
     <DsBadge

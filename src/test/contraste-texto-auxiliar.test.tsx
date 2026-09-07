@@ -233,7 +233,7 @@ describe('DurationLabel — duas classes de cor no MESMO elemento (clsx não des
   })
 })
 
-describe('TimeEntryCard — o grupo `opacity-70` do cancelado muda o veredito', () => {
+describe('TimeEntryCard — o cancelado recua por SUPERFÍCIE, e o veredito muda com ela', () => {
   function entry(overrides: Partial<TicketTimeEntryDto> = {}): TicketTimeEntryDto {
     return {
       id: 1,
@@ -275,16 +275,21 @@ describe('TimeEntryCard — o grupo `opacity-70` do cancelado muda o veredito', 
     expect(classesForeground(medidas)).toEqual(['text-foreground', 'text-foreground/70'])
   })
 
-  it('apontamento CANCELADO: /70 mediria 3,00:1 — por isso ali o token é cheio (5,59:1)', () => {
+  // REESCRITO em 125/`Q-1`: enquanto havia `opacity-70` no card, `/70` media 3,00:1 e o
+  // ponto usava o token CHEIO (5,59:1). O grupo saiu — o card cancelado é `bg-background`
+  // opaco — e o `/70` volta a valer nos dois estados, medindo 5,20:1 aqui e 5,47:1 no ativo.
+  it('apontamento CANCELADO: o mesmo /70 do ativo, sobre o fundo próprio, mede 5,20:1', () => {
     const { container } = render(
       <TimeEntryCard entry={entry({ status: 'CANCELLED' })} canEdit={false} onEdit={vi.fn()} />,
     )
     const medidas = medirTela(container)
 
-    expect(classesDoTexto(medidas, 'sem pausa')).toEqual(['text-foreground'])
-    // O fundo NÃO é o card: o grupo compõe o card sobre a página.
+    expect(classesDoTexto(medidas, 'sem pausa')).toEqual(['text-foreground/70'])
+    // O fundo continua NÃO sendo o card — mas agora porque o card cancelado tem fundo
+    // próprio e opaco, e não porque um grupo compõe o branco sobre a página.
     expect(fundoDoTexto(medidas, 'sem pausa')).not.toEqual([CARD])
-    expect(razaoDoTexto(medidas, 'sem pausa').toFixed(2)).toBe('5.59')
+    expect(fundoDoTexto(medidas, 'sem pausa')).toEqual([TOKENS['--color-background']])
+    expect(razaoDoTexto(medidas, 'sem pausa').toFixed(2)).toBe('5.20')
     expect(reprovacoesDasFrases(medidas, ['sem pausa'])).toEqual([])
   })
 })

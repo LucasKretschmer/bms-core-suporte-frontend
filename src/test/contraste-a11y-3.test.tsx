@@ -44,13 +44,21 @@ import { ToastProvider } from '../components/ui/Toast'
  *
  * ## Três armadilhas que este arquivo existe para não repetir
  *
- * 1. **Opacidade no ancestral é GRUPO, não texto.** O card de apontamento CANCELADO é
+ * 1. **Opacidade no ancestral é GRUPO, não texto.** O card de apontamento CANCELADO ERA
  *    `bg-card opacity-70`: o navegador pinta fundo + texto e compõe **o conjunto** sobre a
- *    página, então a opacidade da classe se soma à do grupo. Ali `text-foreground/70` mede
+ *    página, então a opacidade da classe se soma à do grupo. Ali `text-foreground/70` media
  *    3,00:1, não 5,47:1 — a correção "troque tudo por `/70`" passaria num teste que não
  *    modelasse o grupo e continuaria reprovando na tela. Por isso cada ponto do
  *    `TimeEntryCard` é medido **nos dois estados**, e o número do cancelado é diferente do
  *    número do ativo em **toda** asserção.
+ *
+ *    ⚠️ Desde 125/`Q-1` o grupo NÃO EXISTE MAIS: o card cancelado recua por fundo próprio
+ *    (`bg-background`). O texto passava mesmo dentro do grupo (com o token cheio), mas os
+ *    QUATRO badges do card reprovavam, e nenhum valor de token os salvava — o token do
+ *    badge já é composto antes da opacidade entrar em cena. O invariante que impede o grupo
+ *    de voltar (a QUALQUER elemento do card, não só ao `<article>`) mora em
+ *    `src/test/contraste-q1-card-cancelado.test.tsx`. O modelo de grupo do medidor continua
+ *    testado — em fixture sintética — aqui e em `utils/contrasteDeTexto.test.ts`.
  * 2. **Nem toda ocorrência da classe é texto.** O `•` do `Breadcrumb` é `aria-hidden` e
  *    decorativo; ele foi MEDIDO (2,31:1) e deliberadamente NÃO trocado — e o teste prova a
  *    classificação no DOM, com o texto irmão continuando a ser medido (companheira
@@ -120,6 +128,8 @@ function ticketReport(overrides: Partial<TicketReportItemDto> = {}): TicketRepor
 }
 
 const CARD = TOKENS['--color-card']
+/** Fundo da página — e, desde 125/`Q-1`, também o fundo próprio do card CANCELADO. */
+const BACKGROUND = TOKENS['--color-background']
 const PAGINA = TOKENS['--color-background']
 
 /** Renderiza um nó sobre uma superfície real do app e devolve a varredura. */
@@ -149,7 +159,13 @@ describe('A-1 · TimeEntryCard — o `/40` da lista de segmentos, nos DOIS estad
     expect(reprovacoesDasFrases(medidas, ['· 1h 0m'])).toEqual([])
   })
 
-  it('CANCELADO: o grupo `opacity-70` muda o fundo E o veredito — token cheio, 5,59:1', () => {
+  // REESCRITO em 125/`Q-1` (decisão do usuário em 2026-09-07, alternativa A do
+  // comparativo). Antes este teste afirmava o desenho de HOJE: `opacity-70` no `<article>`,
+  // fundo composto (≠ CARD) e token CHEIO no texto, medindo 5,59:1. Aquele desenho passava
+  // no TEXTO e reprovava os QUATRO BADGES do card (3,76 / 2,86 / 3,81 / 2,86 — a medição
+  // está em `q1-comparativo-visual.md` §3). O grupo saiu; o cancelado recua por fundo
+  // próprio. O teste NÃO foi apagado: ele afirma agora o desenho novo, no mesmo commit.
+  it('CANCELADO: sem grupo, o fundo é `--color-background` e o `/70` mede 5,20:1', () => {
     const { container } = render(
       <div className="bg-background">
         <TimeEntryCard
@@ -162,15 +178,22 @@ describe('A-1 · TimeEntryCard — o `/40` da lista de segmentos, nos DOIS estad
     const { medidas, pulados } = varrer(container.firstElementChild as Element)
 
     expect(pulados).toEqual([])
-    expect(classesDoTexto(medidas, '· 1h 0m')).toEqual(['text-foreground'])
-    // O fundo NÃO é o card: o grupo compõe o card branco sobre a página.
+    // O token cheio saiu junto com o grupo: com o card opaco, ele deixaria o texto do
+    // cancelado MAIS forte que o do ativo (13,82 contra 5,47) — hierarquia invertida.
+    expect(classesDoTexto(medidas, '· 1h 0m')).toEqual(['text-foreground/70'])
+    // O fundo agora é conhecido e opaco — e é o do próprio card, não o card branco.
+    expect(fundoDoTexto(medidas, '· 1h 0m')).toEqual([BACKGROUND])
     expect(fundoDoTexto(medidas, '· 1h 0m')).not.toEqual([CARD])
-    expect(razaoDoTexto(medidas, '· 1h 0m').toFixed(2)).toBe('5.59')
+    expect(razaoDoTexto(medidas, '· 1h 0m').toFixed(2)).toBe('5.20')
 
     // Os irmãos do mesmo card, no mesmo estado — a correção não pode ser de um ponto só.
-    expect(razaoDoTexto(medidas, '→').toFixed(2)).toBe('5.59') // linha do segmento
-    expect(razaoDoTexto(medidas, 'sem pausa').toFixed(2)).toBe('5.59') // linha de meta
-    expect(razaoDoTexto(medidas, 'Motivo: Duplicado').toFixed(2)).toBe('5.20') // caixa do motivo
+    expect(razaoDoTexto(medidas, '→').toFixed(2)).toBe('5.20') // linha do segmento
+    expect(razaoDoTexto(medidas, 'sem pausa').toFixed(2)).toBe('5.20') // linha de meta
+    // A caixa de motivo INVERTEU de superfície (`bg-badge-neutro-bg` → `bg-card`), senão
+    // ela se fundiria ao card: `--color-badge-neutro-bg` e `--color-background` são o mesmo
+    // #f0f4f7. Sobre o card branco o mesmo `/70` mede 5,47:1 — a inversão SOBE o contraste.
+    expect(fundoDoTexto(medidas, 'Motivo: Duplicado')).toEqual([CARD])
+    expect(razaoDoTexto(medidas, 'Motivo: Duplicado').toFixed(2)).toBe('5.47')
     expect(
       reprovacoesDasFrases(medidas, ['· 1h 0m', '→', 'sem pausa', 'Motivo: Duplicado']),
     ).toEqual([])

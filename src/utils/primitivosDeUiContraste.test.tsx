@@ -176,6 +176,10 @@ const CASOS: Record<string, CasoDeRender[]> = {
     { elemento: <Badge value="Projeto" /> },
     { elemento: <Badge value="Ticket" /> },
     { elemento: <Badge value="Valor fora do mapa" /> },
+    // 125/`Q-1` — estado visual NOVO: o fallback neutro sobre a superfície recuada, onde a
+    // pílula inverte para `bg-card`. Entra na varredura permanente no MESMO commit que o
+    // cria; as duas superfícies de `SUPERFICIES` já o medem nos dois fundos.
+    { elemento: <Badge value="Valor fora do mapa" variante="recuada" /> },
   ],
   'src/components/ui/Button.tsx': [
     { elemento: <Button>Salvar</Button> },

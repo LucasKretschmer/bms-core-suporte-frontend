@@ -128,7 +128,13 @@ describe('TimeEntryCard', () => {
   })
 
   describe('DISCARDED (120, D-1)', () => {
-    it('NÃO aplica opacity-70 (diferente de CANCELLED — tempo real, não some da tela)', () => {
+    // REESCRITOS em 125/`Q-1`. Os dois travavam o desenho antigo — `opacity-70` no
+    // `<article>` do CANCELLED e a ausência dela no DISCARDED. A opacidade de grupo saiu do
+    // card (reprovava os quatro badges, ver `q1-comparativo-visual.md`); o que distingue os
+    // dois estados agora é a SUPERFÍCIE, e é isso que estes testes afirmam. O invariante
+    // que impede a opacidade de voltar a QUALQUER elemento do card está em
+    // `src/test/contraste-q1-card-cancelado.test.tsx`.
+    it('DISCARDED fica em `bg-card` (tempo real, não recua) e sem opacidade', () => {
       const { container } = render(
         <TimeEntryCard
           entry={entry({ status: 'DISCARDED', totalSeconds: 3600 })}
@@ -136,10 +142,13 @@ describe('TimeEntryCard', () => {
           onEdit={vi.fn()}
         />,
       )
-      expect(container.querySelector('article')?.className).not.toContain('opacity-70')
+      const classes = container.querySelector('article')?.className ?? ''
+      expect(classes).toContain('bg-card')
+      expect(classes).not.toContain('bg-background')
+      expect(classes).not.toMatch(/\bopacity-\d+\b/)
     })
 
-    it('CANCELLED continua aplicando opacity-70 (não regride)', () => {
+    it('CANCELLED recua por fundo próprio (`bg-background`), nunca por opacidade', () => {
       const { container } = render(
         <TimeEntryCard
           entry={entry({ status: 'CANCELLED', totalSeconds: 0 })}
@@ -147,7 +156,10 @@ describe('TimeEntryCard', () => {
           onEdit={vi.fn()}
         />,
       )
-      expect(container.querySelector('article')?.className).toContain('opacity-70')
+      const classes = container.querySelector('article')?.className ?? ''
+      expect(classes).toContain('bg-background')
+      expect(classes).not.toContain('bg-card')
+      expect(classes).not.toMatch(/\bopacity-\d+\b/)
     })
 
     it('mostra "Restaurar" quando canManage=true (mesmo gate do CANCELLED)', async () => {

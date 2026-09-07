@@ -23,6 +23,32 @@ describe('Badge', () => {
     expect(badge.className).toContain('text-badge-neutro-fg')
   })
 
+  it('variante recuada inverte a superfície SÓ do fallback neutro', () => {
+    render(<Badge value="Categoria Nova Nunca Vista" variante="recuada" />)
+    const badge = screen.getByText('Categoria Nova Nunca Vista')
+    // `--color-badge-neutro-bg` e `--color-background` são o MESMO #f0f4f7: sobre o card
+    // cancelado (que passou a ser `bg-background`) a pílula neutra sumiria.
+    expect(badge.className).toContain('bg-card')
+    expect(badge.className).not.toContain('bg-badge-neutro-bg')
+    // O texto NÃO muda — e sobe de 5,19:1 (sobre #f0f4f7) para 5,74:1 (sobre #ffffff).
+    expect(badge.className).toContain('text-badge-neutro-fg')
+    expect(contrastRatio('#666666', '#ffffff')).toBeGreaterThan(contrastRatio('#666666', '#f0f4f7'))
+  })
+
+  it('variante recuada NÃO toca em badge com cor própria no mapa', () => {
+    render(
+      <>
+        <Badge value="Cancelado" variante="recuada" />
+        <Badge value="Concluído" variante="recuada" />
+      </>,
+    )
+    // Companheira positiva do teste acima: se a inversão fosse cega ao mapa, ela apagaria
+    // o vermelho do "Cancelado" — que é justamente o badge do estado em questão.
+    expect(screen.getByText('Cancelado').className).toContain('bg-error-bg')
+    expect(screen.getByText('Cancelado').className).not.toContain('bg-card')
+    expect(screen.getByText('Concluído').className).toContain('bg-success-bg')
+  })
+
   it('aplica truncate e title quando truncate=true', () => {
     render(<Badge value="Plano de Suporte" truncate />)
     const badge = screen.getByText('Plano de Suporte')
