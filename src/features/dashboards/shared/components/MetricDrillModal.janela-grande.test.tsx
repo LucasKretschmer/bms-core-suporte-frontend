@@ -19,8 +19,6 @@
  * dirigidas têm vítima de COMPONENTE.
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -32,13 +30,9 @@ import { MetricDrillModal } from './MetricDrillModal'
 import { useMetricDrill } from '../hooks/useMetricDrill'
 import { getMetricRows } from '../services/metricsService'
 import { ToastProvider } from '../../../../components/ui/Toast'
-import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../../../utils/cssCascade'
-// Medidor de contraste de `FE-FIX2` — reusado, nunca reescrito.
-import {
-  medirTextosDoDom,
-  reprovacoesAA,
-  temaDaCascata,
-} from '../../../support-plans/utils/contrasteDeTexto'
+// 125/FE-A11Y-4 (`Q-2`): o medidor do repo é UM SÓ (`utils/contrasteDeTexto.ts`), servido
+// pelo harness `test/medidor-de-contraste.ts` — reusado, nunca reescrito.
+import { reprovacoesAA, varrer } from '../../../../test/medidor-de-contraste'
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { DrillSpec, MetricsBaseParams, TicketRowDto } from '../types/metrics'
 
@@ -110,14 +104,12 @@ async function renderComErro(error: unknown) {
 }
 
 // ── Contraste: tema derivado da cascata real de CSS do app ────────────────────
-const lerCssDoDisco = (caminho: string): string =>
-  readFileSync(resolve(process.cwd(), caminho), 'utf8')
-const CASCATA_CSS = derivarCascataDeCssDoApp(lerCssDoDisco)
-const TOKENS = lerTokensDeCor(CASCATA_CSS, lerCssDoDisco)
-const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
-
-const medir = (raiz: Element) =>
-  medirTextosDoDom(raiz, { tema: TEMA, fundoPadrao: TOKENS['--color-background'] })
+/** Varre e exige que nada tenha sido pulado — recusa do medidor reprova aqui (`Q-3`). */
+const medir = (raiz: Element) => {
+  const { medidas, pulados } = varrer(raiz)
+  expect(pulados).toEqual([])
+  return medidas
+}
 
 describe('MetricDrillModal — 422 DATE_RANGE_TOO_LARGE (FE-P3b · N-1)', () => {
   beforeEach(() => {

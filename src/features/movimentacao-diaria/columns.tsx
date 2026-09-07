@@ -9,6 +9,11 @@
  * PT-BR controlado pelo frontend — nunca a categoria HubSpot crua.
  */
 
+/**
+ * 125/FE-A11Y-3 (`A-1`) — "Sem equipe" era `text-foreground/40` = **2,34:1** sobre o
+ * card. É texto de conteúdo puro (não é travessão nem ícone), então nunca teve dúvida
+ * de classificação. `text-foreground/70` mede **5,47:1**.
+ */
 import { Badge } from '../../components/ui/Badge'
 import type { ColumnDef } from '../../components/ui/DataTable/types'
 import { formatDate, formatDateTime } from '../reports/shared/utils/formatters'
@@ -53,7 +58,7 @@ export function buildMovimentacaoDiariaColumns(): ColumnDef<MovimentacaoDiariaRo
       sortKey: 'equipe',
       align: 'left',
       accessor: (row) =>
-        row.equipe ?? <span className="text-foreground/40">Sem equipe</span>,
+        row.equipe ?? <span className="text-foreground/70">Sem equipe</span>,
     },
     {
       key: 'quantidade',

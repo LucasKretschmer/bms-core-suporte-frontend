@@ -71,11 +71,12 @@ export function buildSupportPlanColumns({
         }
         return (
           <span
-            // Texto em `foreground` sobre `warning-bg`, NÃO em `warning-fg`: o par
-            // `--color-warning-fg` (#e07600) sobre `--color-warning-bg` (#fffbef) mede
-            // **3.00:1** e reprova AA (AP-FRONTEND-018, e o comentário de
-            // `styles/global.css:118-127` proíbe reusá-lo como texto). `#002f4f` sobre
-            // `#fffbef` mede 13.36:1.
+            // Texto em `foreground` sobre `warning-bg`: `#002f4f` sobre `#fffbef` mede
+            // 13.36:1. Escolha ORIGINAL da 124/FE-F1, quando `--color-warning-fg` valia
+            // `#e07600` e media 3.00:1 sobre o mesmo fundo (AP-FRONTEND-018). O token foi
+            // escurecido para `#a85800` em 125/FE-A11Y-3 e hoje mede 5.00:1 — usá-lo aqui
+            // já seria legítimo; mantivemos `foreground` porque é texto de tabela e o
+            // contraste alto é preferível, não porque o outro reprove.
             className="inline-flex items-center gap-1.5 rounded-control bg-warning-bg px-2 py-0.5 text-foreground"
             title={`Sem identificador: os ${row.clientesVinculados} clientes deste plano são associados pelo nome. Renomear o plano desvincularia todos.`}
           >

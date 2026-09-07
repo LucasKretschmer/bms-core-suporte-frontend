@@ -121,7 +121,7 @@ export function GlobalRulesCard({ rules, isSaving, canEdit, onSaveIdle }: Global
           onBlur={commit}
           className="h-9 rounded-input border border-border px-3 py-2.5 text-sm text-foreground bg-card outline-none focus:border-primary-medium focus:ring-0 disabled:opacity-50 read-only:bg-background read-only:text-foreground/70 read-only:cursor-not-allowed"
         />
-        <p id={HINT_ID} className="text-xs text-foreground/50">
+        <p id={HINT_ID} className="text-xs text-foreground/70">
           Entre 1 e 60 minutos.
         </p>
       </div>

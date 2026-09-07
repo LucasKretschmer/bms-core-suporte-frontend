@@ -172,7 +172,7 @@ export default function TeamsPage() {
   return (
     <PageWrapper title="Equipes e Atendentes" breadcrumbItems={breadcrumb}>
       <div className="flex flex-col gap-6">
-        <p className="text-sm text-foreground/50 max-w-2xl">
+        <p className="text-sm text-foreground/70 max-w-2xl">
           Equipes e owners vêm do HubSpot. O papel define permissões (ex.: cancelar/editar log de
           terceiros: coordenador/gerente).
         </p>
@@ -258,7 +258,7 @@ export default function TeamsPage() {
                   >
                     <h3 className="text-sm font-medium text-foreground">
                       {team.nome}{' '}
-                      <span className="text-foreground/50 font-normal">
+                      <span className="text-foreground/70 font-normal">
                         · {team.membros.length}{' '}
                         {team.membros.length === 1 ? 'membro' : 'membros'}
                       </span>
@@ -273,7 +273,7 @@ export default function TeamsPage() {
                             <span className="truncate">{membro.nome}</span>
                             {membro.isPrimary && (
                               <span
-                                className="text-xs text-foreground/50"
+                                className="text-xs text-foreground/70"
                                 title="Equipe principal do atendente"
                               >
                                 (principal)

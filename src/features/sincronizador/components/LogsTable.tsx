@@ -1,3 +1,10 @@
+/**
+ * 125/FE-A11Y-3 (`A-1`) — o travessão de célula não aplicável era `text-foreground/30`:
+ * **1,84:1** sobre `--color-card`, a mesma razão da mensagem do `EmptyState` que
+ * originou a demanda 125 — e o pior valor achado na varredura de `/40` e piores. Não é
+ * `aria-hidden` e significa "não se aplica ao tipo desta rodada", logo é texto (4,5:1).
+ * `text-foreground/70` mede **5,47:1**.
+ */
 import { clsx } from 'clsx'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -61,7 +68,7 @@ function formatTipo(tipo: SyncLogTipo | undefined): string {
 
 /** Placeholder de célula sem valor aplicável ao tipo da rodada. */
 function EmptyCell() {
-  return <span className="text-foreground/30">—</span>
+  return <span className="text-foreground/70">—</span>
 }
 
 function formatDate(iso: string): string {
@@ -166,7 +173,7 @@ const COLUMNS: ColumnDef<LogDto>[] = [
           {row.mensagemErro}
         </span>
       ) : (
-        <span className="text-foreground/30">—</span>
+        <span className="text-foreground/70">—</span>
       ),
   },
 ]

@@ -24,7 +24,7 @@ export default function LoginPage() {
         {/* Logo / título */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold text-foreground">{appName}</h1>
-          <p className="text-sm text-foreground/60 mt-1">Acesso restrito a colaboradores</p>
+          <p className="text-sm text-foreground/70 mt-1">Acesso restrito a colaboradores</p>
         </div>
 
         <LoginForm />

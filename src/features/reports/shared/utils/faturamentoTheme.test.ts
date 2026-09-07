@@ -76,8 +76,10 @@ describe('faturamentoTheme — contraste (piso AA de 4.5:1, inviolável)', () =>
   )
 
   it('reprova um par fabricado abaixo do piso (controle positivo do detector)', () => {
-    // `--color-warning-fg` sobre `--color-warning-bg` = 3.00:1 — o par oficial do DS
-    // que motivou os tokens aditivos (AP-FRONTEND-018). Se este assert deixar de
+    // Valor HISTÓRICO de `--color-warning-fg` sobre `--color-warning-bg` = 3.00:1 — o par
+    // que motivou os tokens aditivos (AP-FRONTEND-018), escrito à mão como LITERAL. O
+    // token foi escurecido para #a85800 em 125/FE-A11Y-3 e hoje mede 5.00:1; lê-lo da
+    // cascata aqui deixaria este controle positivo inerte. Se este assert deixar de
     // valer, o cálculo virou inerte.
     const razao = contrastRatio('#e07600', '#fffbef')
     expect(razao).toBeLessThan(PISO_AA)

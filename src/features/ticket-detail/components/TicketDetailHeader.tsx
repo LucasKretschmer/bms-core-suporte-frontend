@@ -59,7 +59,7 @@ export function TicketDetailHeader({
             {ticket.pipelineStage && <Badge value={ticket.pipelineStage} />}
           </h1>
           {metaParts.length > 0 && (
-            <p className="mt-1 text-sm text-foreground/50">{metaParts.join(' · ')}</p>
+            <p className="mt-1 text-sm text-foreground/70">{metaParts.join(' · ')}</p>
           )}
         </div>
 

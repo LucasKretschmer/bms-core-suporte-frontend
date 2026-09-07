@@ -1,17 +1,23 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../utils/cssCascade'
 import { buildSupportPlanColumns } from './columns'
 import type { SupportPlanDto } from './types/supportPlan'
-import { medirTextosDoDom, reprovacoesAA, temaDaCascata } from './utils/contrasteDeTexto'
+// 125/FE-A11Y-4 (`Q-2`): o medidor do repo é UM SÓ (`utils/contrasteDeTexto.ts`), servido
+// pelo harness `test/medidor-de-contraste.ts`, que deriva o tema da cascata real de CSS.
+import {
+  TOKENS,
+  fundoDoTexto,
+  razaoDoTexto,
+  reprovacoesAA,
+  varrer,
+} from '../../test/medidor-de-contraste'
 
-const lerCssDoDisco = (caminho: string): string =>
-  readFileSync(resolve(process.cwd(), caminho), 'utf8')
-const CASCATA_CSS = derivarCascataDeCssDoApp(lerCssDoDisco)
-const TOKENS = lerTokensDeCor(CASCATA_CSS, lerCssDoDisco)
-const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
+/** Varre e exige que nada tenha sido pulado — recusa do medidor reprova aqui. */
+function medirTela(raiz: Element) {
+  const { medidas, pulados } = varrer(raiz)
+  expect(pulados).toEqual([])
+  return medidas
+}
 
 function plano(overrides: Partial<SupportPlanDto> = {}): SupportPlanDto {
   return {
@@ -54,12 +60,9 @@ describe('buildSupportPlanColumns — contraste do nome do plano (D-3)', () => {
     expect(nome.className).toContain('text-foreground/70')
     expect(nome.className).not.toContain('text-foreground/50')
 
-    const medidas = medirTextosDoDom(container, {
-      tema: TEMA,
-      fundoPadrao: TOKENS['--color-background'],
-    })
-    expect(medidas[0].fundo).toBe(TOKENS['--color-card'])
-    expect(medidas[0].razao.toFixed(2)).toBe('5.47')
+    const medidas = medirTela(container)
+    expect(fundoDoTexto(medidas, 'Plano Antigo')).toEqual([TOKENS['--color-card']])
+    expect(razaoDoTexto(medidas, 'Plano Antigo').toFixed(2)).toBe('5.47')
     expect(reprovacoesAA(medidas)).toEqual([])
   })
 
@@ -71,10 +74,7 @@ describe('buildSupportPlanColumns — contraste do nome do plano (D-3)', () => {
     expect(nome.className).toContain('text-foreground')
     expect(nome.className).not.toContain('text-foreground/')
 
-    const medidas = medirTextosDoDom(container, {
-      tema: TEMA,
-      fundoPadrao: TOKENS['--color-background'],
-    })
-    expect(medidas[0].razao.toFixed(2)).toBe('13.82')
+    const medidas = medirTela(container)
+    expect(razaoDoTexto(medidas, 'Plano Vigente').toFixed(2)).toBe('13.82')
   })
 })

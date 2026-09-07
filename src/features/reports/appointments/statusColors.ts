@@ -20,13 +20,14 @@ export type StatusTone = { color: string; backgroundColor: string }
  * Mapa fixo por categoria — 4 valores fechados (whitelist do banco).
  *
  * `aberto`/`cancelado` usam tokens NOVOS e aditivos (`--color-status-*`, ver
- * `src/styles/global.css`) — D11: o token compartilhado `--color-warning-fg`
- * (#e07600 sobre #fffbef = 3.00:1) reprova AA (4.5:1) como texto pequeno (12px)
- * sobre o próprio `-bg` e não pode ser alterado (compartilhado por `Badge.tsx`
- * em outras telas, ex. status "Pausado"). `--color-error-fg` reprovava junto
- * (3.24:1) quando este mapa foi escrito; em 123/FE-A2 ele foi escurecido de
- * `#ff0000` para `#c00000` e hoje passa (5.24:1 sobre `--color-error-bg`) — os
- * tokens `--color-status-*` continuam, porque carregam fundo próprio por status.
+ * `src/styles/global.css`) — D11. Quando este mapa foi escrito, os dois tokens
+ * compartilhados de alerta reprovavam AA: `--color-warning-fg` valia #e07600
+ * (3.00:1 sobre #fffbef) e `--color-error-fg` valia #ff0000 (3.24:1). AMBOS foram
+ * escurecidos desde então — erro para `#c00000` em 123/FE-A2 (5.24:1) e aviso para
+ * `#a85800` em 125/FE-A11Y-3 (5.00:1) — e hoje passam. Os tokens `--color-status-*`
+ * continuam mesmo assim, porque carregam fundo próprio por status.
+ * (`--color-status-aberto-fg` e `--color-warning-fg` hoje coincidem em `#a85800`:
+ * é o mesmo laranja acessível, não duplicação acidental.)
  * `info` (7.82:1) e `success` (4.75:1) já passam — reaproveitam os existentes.
  */
 const STATUS_TONE_MAP: Record<TicketStatusCategoria, StatusTone> = {

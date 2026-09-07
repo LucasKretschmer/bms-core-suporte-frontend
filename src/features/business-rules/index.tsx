@@ -47,7 +47,7 @@ export default function BusinessRulesPage() {
   return (
     <PageWrapper title="Configurações" breadcrumbItems={breadcrumb}>
       <div className="flex flex-col gap-6">
-        <p className="text-sm text-foreground/50 max-w-2xl">
+        <p className="text-sm text-foreground/70 max-w-2xl">
           Regras de negócio aplicadas ao timer e às equipes. Alterações são salvas automaticamente.
         </p>
 

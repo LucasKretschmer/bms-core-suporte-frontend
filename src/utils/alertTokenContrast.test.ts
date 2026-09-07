@@ -16,10 +16,12 @@
  *     `styles.css` do design system. Sem isto, mudar o token no CSS deixaria o teste
  *     medindo uma cor que não está mais na tela (continuaria verde medindo `#c00000`
  *     enquanto a app pintasse `#ff0000`).
- *  4. **controle positivo** — um par que REPROVA de verdade (`--color-warning-fg`
- *     sobre `--color-warning-bg` = 3,00:1, o par oficial do DS que motivou
- *     `AP-FRONTEND-018`) precisa ser detectado pela mesma função. Sem ele, "verde" é
- *     indistinguível de "cálculo inerte".
+ *  4. **controle positivo** — um par que REPROVA de verdade precisa ser detectado
+ *     pela mesma função. Sem ele, "verde" é indistinguível de "cálculo inerte". O par
+ *     usado é o valor HISTÓRICO de `--color-warning-fg` (`#e07600` sobre `#fffbef` =
+ *     3,00:1, o que motivou `AP-FRONTEND-018`), escrito à mão como literal: o TOKEN foi
+ *     escurecido para `#a85800` em 125/FE-A11Y-3 e hoje mede 5,00:1, então lê-lo da
+ *     cascata tornaria este controle inerte.
  *  5. **um tema por arquivo** — o app não tem tema escuro (verificado em 123/FE-A2:
  *     zero utilitários `dark:` em `src/`, nenhum bloco `.dark`, nenhum alternador).
  *     Este bloco trava esse fato pela **identidade dos arquivos que declaram cada
@@ -138,12 +140,19 @@ describe('alertTokenContrast — piso AA de 4.5:1 para a família de tokens de e
   })
 
   it('reprova um par fabricado abaixo do piso (controle positivo do detector)', () => {
-    // `--color-warning-fg` sobre `--color-warning-bg` — o par oficial do DS que
-    // continua reprovando (AP-FRONTEND-018). Se este assert deixar de valer, o
-    // cálculo virou inerte e todos os verdes acima não significam nada.
+    // Valor HISTÓRICO de `--color-warning-fg` sobre `--color-warning-bg`, escrito à mão
+    // (AP-FRONTEND-018). O TOKEN foi escurecido para #a85800 em 125/FE-A11Y-3 e hoje
+    // mede 5,00:1 — por isso este controle usa o literal, e não a cascata: com o token
+    // ele passaria a ser verde e o detector viraria inerte sem ninguém notar.
     const razao = contrastRatio('#e07600', '#fffbef')
     expect(razao).toBeLessThan(PISO_AA)
     expect(razao).toBeCloseTo(3.0, 1)
+
+    // Companheira positiva do MESMO par, agora lida da cascata: o token corrigido passa.
+    // Sem ela, "o literal reprova" não distingue "o app foi corrigido" de "o app não foi".
+    const hoje = contrastRatio(TOKENS['--color-warning-fg'], TOKENS['--color-warning-bg'])
+    expect(hoje).toBeGreaterThanOrEqual(PISO_AA)
+    expect(hoje.toFixed(2)).toBe('5.00')
   })
 })
 

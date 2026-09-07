@@ -20,6 +20,7 @@ import { render, screen } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 
 import { contrastRatio } from '../../../../utils/colorContrast'
+import { razaoDoTexto, reprovacoesAA, varrer } from '../../../../test/medidor-de-contraste'
 
 const { mockUsePermissions } = vi.hoisted(() => ({ mockUsePermissions: vi.fn() }))
 
@@ -616,7 +617,10 @@ describe('SupportSlaSection — contraste do estado vazio (medido, não presumid
     const regiao = screen.getByRole('region', { name: /FCR \(1º contato\)/ })
     expect(regiao.className).toContain('bg-warning-bg')
     expect(regiao.className).toContain('text-foreground')
-    // `text-warning-fg` sobre esse fundo mede 3.00:1 e REPROVA (AP-FRONTEND-018).
+    // Escolha da 124/FE-F1: quando ela foi feita, `text-warning-fg` sobre esse fundo
+    // media 3.00:1 e REPROVAVA (AP-FRONTEND-018). O token foi escurecido para #a85800
+    // em 125/FE-A11Y-3 e hoje mede 5.00:1 — a região continua em `text-foreground`
+    // (13.36:1) por preferência de contraste, e este assert trava essa escolha.
     expect(regiao.className).not.toContain('text-warning-fg')
 
     expect(
@@ -627,15 +631,41 @@ describe('SupportSlaSection — contraste do estado vazio (medido, não presumid
     ).toBeGreaterThanOrEqual(PISO_AA)
   })
 
-  it('POR QUE o EmptyState compartilhado não é usado: a mensagem dele mede < 2:1', () => {
-    // Trava do achado. Quando o design system corrigir `text-primary/30`, este teste
-    // reprova — e é o sinal de que o `EmptyState` compartilhado pode voltar para cá.
+  /**
+   * 125/FE-A11Y-1 — este teste travava a AUSÊNCIA do `EmptyState` compartilhado ("por que
+   * ele não é usado"). O componente foi corrigido e a seção voltou a usá-lo, então o
+   * teste é reescrito **afirmando a correção**: o vazio é renderizado pelo componente
+   * compartilhado, o texto que o gestor lê atende AA no DOM, e o par velho
+   * (`text-primary/30`, 1,84:1) continua REPROVANDO no mesmo medidor — controle positivo
+   * sem o qual "passa AA" seria indistinguível de um medidor morto.
+   */
+  it('o vazio usa o `EmptyState` compartilhado e atende AA — com o par velho reprovando', () => {
+    render(
+      <SupportSlaSection
+        respondidosNoPrazo={null}
+        respondidosForaDoPrazo={null}
+        chamadosNoPeriodo={12}
+      />,
+    )
+
+    const titulo = screen.getByText('SLA de 1º atendimento não configurado')
+    // O `<p>` da mensagem é irmão do ícone decorativo dentro do `EmptyState`.
+    const vazio = titulo.parentElement as HTMLElement
+    expect(vazio.querySelector('svg')).not.toBeNull()
+
+    const { medidas, pulados } = varrer(vazio)
+    expect(pulados).toEqual([])
+    expect(reprovacoesAA(medidas)).toEqual([])
+    expect(razaoDoTexto(medidas, 'SLA de 1º atendimento não configurado').toFixed(2)).toBe(
+      '13.82',
+    )
+
+    // Controle positivo: o par que fazia esta seção evitar o componente segue reprovando.
     const primary = tokenDoCss(CSS_DS, '--color-primary')
     const card = tokenDoCss(CSS_APP, '--color-card')
-    const razao = contrastRatio(comAlfa(primary, card, 0.3), card)
-
-    expect(razao).toBeLessThan(2)
-    expect(razao).toBeLessThan(PISO_AA)
+    const razaoVelha = contrastRatio(comAlfa(primary, card, 0.3), card)
+    expect(razaoVelha.toFixed(2)).toBe('1.84')
+    expect(razaoVelha).toBeLessThan(PISO_AA)
   })
 })
 

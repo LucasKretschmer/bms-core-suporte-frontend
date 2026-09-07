@@ -154,11 +154,12 @@ describe('BusinessCalendarPage — permissão e estados', () => {
 
   /**
    * QA `D-2` — a frase que explica a consequência de não configurar era renderizada a
-   * **1,84:1** pelo `EmptyState` compartilhado. A classe medida aqui é a que o elemento
-   * REALMENTE renderiza (lida do DOM), não a passada a um wrapper: foi exatamente por ler
-   * a classe do wrapper que o defeito passou despercebido.
+   * **1,84:1** pelo `EmptyState` compartilhado. Desde 125/FE-A11Y-1 o componente
+   * renderiza a própria mensagem e a tela voltou a usá-lo. A classe medida aqui é a que
+   * o elemento REALMENTE renderiza (lida do DOM), não a passada a um wrapper: foi
+   * exatamente por ler a classe do wrapper que o defeito passou despercebido.
    */
-  it('D-2: o vazio NÃO usa o EmptyState do DS, e o par de cores passa AA', () => {
+  it('D-2: o vazio usa o `EmptyState` corrigido, e o par de cores passa AA', () => {
     comDados({ calendars: { data: [] } })
     render(<BusinessCalendarPage />)
 

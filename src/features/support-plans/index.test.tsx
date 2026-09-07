@@ -1,10 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../utils/cssCascade'
-import { medirTextosDoDom, reprovacoesAA, temaDaCascata } from './utils/contrasteDeTexto'
+// 125/FE-A11Y-4 (`Q-2`): o medidor do repo é UM SÓ (`utils/contrasteDeTexto.ts`), servido
+// pelo harness `test/medidor-de-contraste.ts`, que deriva o tema da cascata real de CSS.
+import { TOKENS, reprovacoesAA, varrer } from '../../test/medidor-de-contraste'
 import type { CalendarOptionDto, SupportPlanDto, UnmatchedPlanDto } from './types/supportPlan'
 
 const {
@@ -265,19 +264,14 @@ describe('SupportPlansPage — fluxo do card de não correspondentes', () => {
  * `utils/contrasteDeTexto.test.ts`: lá ele é obrigado a REPROVAR `/30`, `/50` e `/60`.
  */
 
-const lerCssDoDisco = (caminho: string): string =>
-  readFileSync(resolve(process.cwd(), caminho), 'utf8')
-const CASCATA_CSS = derivarCascataDeCssDoApp(lerCssDoDisco)
-const TOKENS = lerTokensDeCor(CASCATA_CSS, lerCssDoDisco)
-const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
-
 function medirTela(container: HTMLElement) {
-  return medirTextosDoDom(container, {
-    tema: TEMA,
-    // O conteúdo da página fica sobre `--color-background`; `fundoEfetivo` sobrescreve
-    // isto sozinho nos trechos que estão dentro de um `bg-card`.
-    fundoPadrao: TOKENS['--color-background'],
-  })
+  // O conteúdo da página fica sobre `--color-background` (lido da regra `body` do CSS); o
+  // medidor sobrescreve isso sozinho nos trechos que estão dentro de um `bg-card`.
+  const { medidas, pulados } = varrer(container)
+  // Recusa do medidor (fundo que ele não sabe modelar) reprova aqui em vez de virar
+  // fallback silencioso — 125/FE-A11Y-4, `Q-3`.
+  expect(pulados).toEqual([])
+  return medidas
 }
 
 describe('SupportPlansPage — contraste AA (D-2 e D-3)', () => {
@@ -286,13 +280,15 @@ describe('SupportPlansPage — contraste AA (D-2 e D-3)', () => {
     mockUsePermissions.mockReturnValue(GERENTE)
   })
 
-  it('o estado vazio NÃO usa o EmptyState compartilhado (1,84:1) e passa AA', () => {
+  it('o estado vazio usa o `EmptyState` corrigido (125/FE-A11Y-1) e passa AA', () => {
     comDados({ plans: { data: [] } })
     const { container } = render(<SupportPlansPage />)
 
     const mensagem = screen.getByText('Nenhum plano de suporte cadastrado.')
-    // A classe do `<p>` INTERNO do DS é `text-xs italic text-primary/30`; o `className`
-    // do wrapper não a alcança. Por isso a asserção é sobre o elemento renderizado.
+    // O `<p>` INTERNO do DS saía em `text-xs italic text-primary/30` e o `className` do
+    // wrapper não o alcançava — por isso a asserção é sobre o elemento RENDERIZADO, e
+    // não sobre a prop passada. Desde 125/FE-A11Y-1 quem renderiza a mensagem é o
+    // wrapper local, em `text-foreground`.
     expect(mensagem.className).toContain('text-foreground')
     expect(mensagem.className).not.toContain('text-primary/30')
     expect(mensagem.className).not.toContain('italic')

@@ -9,21 +9,14 @@
  * genérico de sempre. Sem ela, o arquivo provaria apenas que a tela mostra *alguma coisa*.
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../../../utils/cssCascade'
-// Medidor de contraste de `FE-FIX2` — reusado, nunca reescrito. Ele vive em
-// `features/support-plans/utils/` e o próprio `fe-fix2-report.md` recomenda movê-lo para
-// `src/utils/`; mover é mudança de outra unidade, então aqui só se importa.
-import {
-  medirTextosDoDom,
-  reprovacoesAA,
-  temaDaCascata,
-} from '../../../support-plans/utils/contrasteDeTexto'
+// 125/FE-A11Y-4 (`Q-2`): o medidor foi consolidado em `utils/contrasteDeTexto.ts` (era o
+// que o `fe-fix2-report.md` recomendava) e é servido pelo harness
+// `test/medidor-de-contraste.ts` — reusado, nunca reescrito.
+import { reprovacoesAA, varrer } from '../../../../test/medidor-de-contraste'
 
 const { mockUseMetricsOverview } = vi.hoisted(() => ({ mockUseMetricsOverview: vi.fn() }))
 
@@ -79,14 +72,12 @@ function renderSecao() {
 }
 
 // ── Contraste: tema derivado da cascata real de CSS do app ────────────────────
-const lerCssDoDisco = (caminho: string): string =>
-  readFileSync(resolve(process.cwd(), caminho), 'utf8')
-const CASCATA_CSS = derivarCascataDeCssDoApp(lerCssDoDisco)
-const TOKENS = lerTokensDeCor(CASCATA_CSS, lerCssDoDisco)
-const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
-
-const medirTela = (container: HTMLElement) =>
-  medirTextosDoDom(container, { tema: TEMA, fundoPadrao: TOKENS['--color-background'] })
+/** Varre e exige que nada tenha sido pulado — recusa do medidor reprova aqui (`Q-3`). */
+const medirTela = (container: HTMLElement) => {
+  const { medidas, pulados } = varrer(container)
+  expect(pulados).toEqual([])
+  return medidas
+}
 
 describe('SupportKpiSection — 422 DATE_RANGE_TOO_LARGE (FE-P3)', () => {
   beforeEach(() => {

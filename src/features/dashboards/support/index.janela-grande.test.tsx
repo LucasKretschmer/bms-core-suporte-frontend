@@ -10,8 +10,6 @@
  * `SupportSlaSection` é o componente REAL.
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -19,13 +17,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import DashboardSuportePage from './index'
 import { useMetricsOverview } from '../shared/hooks/useMetricsOverview'
-import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../../utils/cssCascade'
-// Medidor de contraste de `FE-FIX2` — reusado, nunca reescrito.
-import {
-  medirTextosDoDom,
-  reprovacoesAA,
-  temaDaCascata,
-} from '../../support-plans/utils/contrasteDeTexto'
+// 125/FE-A11Y-4 (`Q-2`): o medidor do repo é UM SÓ (`utils/contrasteDeTexto.ts`), servido
+// pelo harness `test/medidor-de-contraste.ts` — reusado, nunca reescrito.
+import { reprovacoesAA, varrer } from '../../../test/medidor-de-contraste'
 
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({
@@ -105,14 +99,12 @@ function renderComErro(error: unknown) {
 }
 
 // ── Contraste: tema derivado da cascata real de CSS do app ────────────────────
-const lerCssDoDisco = (caminho: string): string =>
-  readFileSync(resolve(process.cwd(), caminho), 'utf8')
-const CASCATA_CSS = derivarCascataDeCssDoApp(lerCssDoDisco)
-const TOKENS = lerTokensDeCor(CASCATA_CSS, lerCssDoDisco)
-const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
-
-const medirTela = (container: HTMLElement) =>
-  medirTextosDoDom(container, { tema: TEMA, fundoPadrao: TOKENS['--color-background'] })
+/** Varre e exige que nada tenha sido pulado — recusa do medidor reprova aqui (`Q-3`). */
+const medirTela = (container: HTMLElement) => {
+  const { medidas, pulados } = varrer(container)
+  expect(pulados).toEqual([])
+  return medidas
+}
 
 describe('Dashboard Suporte — card de SLA com 422 DATE_RANGE_TOO_LARGE (FE-P3)', () => {
   beforeEach(() => {
@@ -132,7 +124,7 @@ describe('Dashboard Suporte — card de SLA com 422 DATE_RANGE_TOO_LARGE (FE-P3)
   })
 
   it('a mensagem passa no piso AA DENTRO do card — medida no DOM renderizado', () => {
-    // O fundo aqui é `bg-card` (o `ChartCard`), não o da página — `fundoEfetivo` sobe a
+    // O fundo aqui é `bg-card` (o `ChartCard`), não o da página — o medidor sobe a
     // cadeia sozinho. Sem esta medição, a frase que a unidade entrega poderia chegar ao
     // usuário ilegível, como aconteceu com o `EmptyState` do DS (1,84:1, FE-F4).
     const { container } = renderComErro(

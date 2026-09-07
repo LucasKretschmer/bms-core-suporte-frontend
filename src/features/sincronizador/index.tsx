@@ -181,7 +181,7 @@ export default function SincronizadorPage() {
       {/* Cabeçalho da página */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Sincronizador HubSpot</h1>
-        <p className="text-sm text-foreground/60 mt-1">
+        <p className="text-sm text-foreground/70 mt-1">
           Monitoramento e controle da sincronização automática com o HubSpot.
         </p>
       </div>
@@ -221,7 +221,7 @@ export default function SincronizadorPage() {
                 </span>
               </>
             ) : (
-              <span className="text-sm text-foreground/50 italic">Nunca executado.</span>
+              <span className="text-sm text-foreground/70 italic">Nunca executado.</span>
             )}
 
             {statusData.intervaloMinutos > 0 && (

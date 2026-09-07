@@ -1,3 +1,11 @@
+/**
+ * 125/FE-A11Y-3 (`A-1`) — o `placeholder` do campo de motivo era
+ * `placeholder:text-foreground/40` = **2,34:1** sobre o fundo do campo (`bg-card`,
+ * #ffffff). Placeholder é TEXTO para a WCAG 1.4.3 e vale 4,5:1; `/70` mede **5,47:1**.
+ * Ele não aparece na varredura de contraste do DOM (não existe nó de texto para o
+ * pseudo-elemento em jsdom), por isso a medição está travada por aritmética sobre os
+ * tokens do CSS, no teste desta unidade.
+ */
 import { useEffect, useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -187,7 +195,7 @@ export function TimeEntryModal({
       size="lg"
       title={mode === 'create' ? 'Adicionar apontamento' : 'Editar lançamento'}
     >
-        <p className="-mt-2 mb-4 text-sm text-foreground/50">{ticketLabel}</p>
+        <p className="-mt-2 mb-4 text-sm text-foreground/70">{ticketLabel}</p>
 
         <form onSubmit={handleSubmit(onValid)} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -219,7 +227,7 @@ export function TimeEntryModal({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-foreground">Cobrar por fora do plano</p>
-              <p className="text-xs text-foreground/50">
+              <p className="text-xs text-foreground/70">
                 Marca este apontamento como faturável fora do plano (consultoria, treinamento, etc.).
               </p>
             </div>
@@ -230,7 +238,7 @@ export function TimeEntryModal({
             />
           </div>
 
-          <p className="text-xs text-foreground/50">
+          <p className="text-xs text-foreground/70">
             Edite os horários ou adicione um apontamento. A ordem é resolvida pelos horários e as pausas
             entre apontamentos são calculadas automaticamente; o tempo total soma apenas os apontamentos.
           </p>
@@ -242,7 +250,7 @@ export function TimeEntryModal({
               return (
                 <fieldset key={field.id} className="rounded-input border border-border p-3">
                   <div className="flex items-center justify-between mb-1.5">
-                    <legend className="text-xs text-foreground/50">Apontamento {index + 1}</legend>
+                    <legend className="text-xs text-foreground/70">Apontamento {index + 1}</legend>
                     {fields.length > 1 && (
                       <button
                         type="button"
@@ -257,7 +265,7 @@ export function TimeEntryModal({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="flex flex-col space-y-0.5">
-                      <label htmlFor={`works-${index}-start`} className="text-xs text-foreground/50">
+                      <label htmlFor={`works-${index}-start`} className="text-xs text-foreground/70">
                         Início
                       </label>
                       <input
@@ -273,7 +281,7 @@ export function TimeEntryModal({
                       )}
                     </div>
                     <div className="flex flex-col space-y-0.5">
-                      <label htmlFor={`works-${index}-end`} className="text-xs text-foreground/50">
+                      <label htmlFor={`works-${index}-end`} className="text-xs text-foreground/70">
                         Fim
                       </label>
                       <input
@@ -317,7 +325,7 @@ export function TimeEntryModal({
             <textarea
               id="te-note"
               {...register('note')}
-              className="h-20 rounded-input border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-primary-medium resize-none"
+              className="h-20 rounded-input border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/70 outline-none focus:border-primary-medium resize-none"
             />
             {errors.note?.message && (
               <p className="text-xs text-error-fg" role="alert">

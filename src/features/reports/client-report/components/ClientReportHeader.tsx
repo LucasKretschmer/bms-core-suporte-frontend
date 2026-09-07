@@ -26,7 +26,7 @@ type KpiCardProps = {
 function KpiCard({ label, value, subtle }: KpiCardProps) {
   return (
     <div className="flex flex-col gap-0.5 px-4 py-3 bg-background rounded-control border border-border min-w-[120px]">
-      <span className="text-xs text-foreground/60 font-normal">{label}</span>
+      <span className="text-xs text-foreground/70 font-normal">{label}</span>
       <span
         className={
           subtle
@@ -53,15 +53,15 @@ export function ClientReportHeader({ report }: ClientReportHeaderProps) {
       {/* Informações do cliente */}
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1">
         <div>
-          <span className="text-xs text-foreground/60">Cliente</span>
+          <span className="text-xs text-foreground/70">Cliente</span>
           <p className="text-[15px] font-semibold text-foreground">{clientName}</p>
         </div>
         <div>
-          <span className="text-xs text-foreground/60">Plano contratado</span>
+          <span className="text-xs text-foreground/70">Plano contratado</span>
           <p className="text-sm font-medium text-foreground">{planName}</p>
         </div>
         <div>
-          <span className="text-xs text-foreground/60">Competência</span>
+          <span className="text-xs text-foreground/70">Competência</span>
           <p className="text-sm font-medium text-foreground">{competencia}</p>
         </div>
       </div>

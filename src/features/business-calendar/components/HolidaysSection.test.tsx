@@ -124,8 +124,13 @@ describe('HolidaysSection — estados', () => {
     expect(screen.queryByText(/nenhum resultado encontrado/i)).not.toBeInTheDocument()
   })
 
-  /** QA `D-2` — mesma medição do vazio da página, na classe que o DOM de fato tem. */
-  it('D-2: o vazio não herda o `text-primary/30` do EmptyState compartilhado', () => {
+  /**
+   * QA 124 `D-2`, reescrito por 125/FE-A11Y-1: o vazio VOLTOU a usar o `EmptyState`
+   * compartilhado (o contorno local existia porque a mensagem dele media 1,84:1). As
+   * asserções continuam sobre a classe que o DOM de fato tem — é lendo a classe do
+   * wrapper, e não a renderizada, que o defeito passou por três unidades.
+   */
+  it('D-2: o vazio (agora do `EmptyState` compartilhado) renderiza em classes AA', () => {
     comPagina({ items: [] })
     renderizar()
     const titulo = screen.getByText('Nenhum feriado configurado em "Padrão"')

@@ -20,6 +20,14 @@
  * descartados, por paridade com o KPI do detalhe do ticket).
  */
 
+/**
+ * 125/FE-A11Y-3 (`A-1`) — o travessão de célula vazia (`—`) era `text-foreground/40`:
+ * **2,34:1** sobre `--color-card` (#ffffff), pouco mais de metade do piso AA (4,5:1).
+ * Ele NÃO é decorativo — não é `aria-hidden` e os `headerInfo` desta tabela o DEFINEM
+ * como "informação não disponível", ou seja, ele carrega significado e é texto para a
+ * WCAG 1.4.3. `text-foreground/70` mede **5,47:1** sobre o card e 5,20:1 sobre a
+ * página, e mantém a célula vazia visualmente secundária.
+ */
 import { Badge } from '../../../components/ui/Badge'
 import type { ColumnDef } from '../../../components/ui/DataTable/types'
 import type { TicketReportItemDto } from '../shared/types/reports'
@@ -87,7 +95,7 @@ const MAX_VISIBLE_CATEGORIA_CHIPS = 2
  * Cobertura de teste via `accessor` da coluna 'categoriasTimer' (columns.test.tsx).
  */
 function CategoriaTimerChips({ categorias }: { categorias: string[] }) {
-  if (categorias.length === 0) return <span className="text-foreground/40">—</span>
+  if (categorias.length === 0) return <span className="text-foreground/70">—</span>
 
   const visible = categorias.slice(0, MAX_VISIBLE_CATEGORIA_CHIPS)
   const hidden = categorias.slice(MAX_VISIBLE_CATEGORIA_CHIPS)
@@ -207,7 +215,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       // Truncamos com reticências + tooltip (title) para não estourar a largura da coluna.
       // Cor por statusCategoria (MELH-01/D5) — Invoicy (107) tem prioridade sobre a categoria.
       accessor: (row) => {
-        if (!row.status) return <span className="text-foreground/40">—</span>
+        if (!row.status) return <span className="text-foreground/70">—</span>
         const isInvoicy = row.categoria === INVOICY_CATEGORY
         const tone = statusTone(row.statusCategoria, isInvoicy)
         return (

@@ -232,6 +232,28 @@ const adminItems: NavItem[] = [
   },
 ]
 
+/**
+ * Classe dos TÍTULOS DE GRUPO da sidebar ("Dashboards", "Relatórios", "Administração").
+ *
+ * 125/FE-A11Y-3 — era `text-white/60`. O fundo da sidebar é `bg-grad-escuro`, um
+ * **gradiente** (`linear-gradient(99deg, #074b7f 2.24%, #002f4f 93.71%)`, declarado em
+ * `@migrate/design-system/tokens.css`), então o contraste do texto varia AO LONGO da barra
+ * e o veredito é o do pior caso — a ponta CLARA:
+ *
+ *                        sobre #074b7f (clara)   sobre #002f4f (escura)
+ *   text-white/60              4,33:1  ❌               5,89:1  ✅
+ *   text-white/70              5,31:1  ✅               7,50:1  ✅
+ *
+ * Ninguém tinha medido este ponto até a 125/FE-A11Y-3: a varredura de contraste do repo não
+ * modelava `background-image` nenhum. Desde a 125/FE-A11Y-4 (`Q-3`) ela **modela o
+ * gradiente por parada** — `utils/contrasteDeTexto.ts` deriva as paradas do `@utility
+ * bg-grad-escuro` + `--grad-escuro` da cascata real e mede uma vez por ponta, então a barra
+ * inteira é varrida no DOM em `Sidebar.test.tsx`, sem hex digitado em lugar nenhum.
+ *
+ * As três chamadas usam esta constante para que o valor não possa divergir entre os grupos.
+ */
+const CLASSE_TITULO_DE_GRUPO = 'text-white/70 text-aux font-medium uppercase tracking-wide'
+
 export function Sidebar({ isCollapsed }: SidebarProps) {
   const [dashboardsOpen, setDashboardsOpen] = useState(true)
   const [reportsOpen, setReportsOpen] = useState(true)
@@ -294,7 +316,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
               className={clsx(
                 'flex items-center w-full h-10 gap-2 rounded-control px-3',
                 isCollapsed ? 'justify-center' : 'justify-between',
-                'text-white/60 text-aux font-medium uppercase tracking-wide',
+                CLASSE_TITULO_DE_GRUPO,
                 'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
                 'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
               )}
@@ -341,7 +363,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
             className={clsx(
               'flex items-center w-full h-10 gap-2 rounded-control px-3',
               isCollapsed ? 'justify-center' : 'justify-between',
-              'text-white/60 text-aux font-medium uppercase tracking-wide',
+              CLASSE_TITULO_DE_GRUPO,
               'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
               'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
             )}
@@ -387,7 +409,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
               className={clsx(
                 'flex items-center w-full h-10 gap-2 rounded-control px-3',
                 isCollapsed ? 'justify-center' : 'justify-between',
-                'text-white/60 text-aux font-medium uppercase tracking-wide',
+                CLASSE_TITULO_DE_GRUPO,
                 'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
                 'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
               )}
@@ -446,16 +468,30 @@ type NavLinkProps = {
   children: React.ReactNode
 }
 
+/**
+ * 125/FE-A11Y-4 — a cor do estado INATIVO mora em `inactiveProps`, nunca no `className`
+ * base.
+ *
+ * O `activeProps` do TanStack Router **acrescenta** classes; ele não substitui as do
+ * `className`. Com a cor no base, o item ativo renderizava as DUAS (`text-white/70` **e**
+ * `text-white`), e `clsx` não desempata classe de cor conflitante — quem desempata é a
+ * ordem da folha gerada pelo Tailwind, onde `.text-white` vem ANTES de `.text-white\/70`.
+ * Ou seja: no item ativo o `/70` vencia o `text-white` do `activeProps` (o realce ficava
+ * pela metade) e o texto media **4,33:1 na ponta clara do gradiente** — abaixo do piso AA,
+ * medido no DOM em `Sidebar.test.tsx`. Com a cor em `inactiveProps`, exatamente **uma**
+ * classe de cor existe em cada estado, e não há o que desempatar.
+ */
 function NavLink({ href, icon, isCollapsed, children }: NavLinkProps) {
   return (
     <Link
       to={href}
       className={clsx(
         'flex items-center h-10 gap-2.5 rounded-control px-3',
-        'text-white/80 hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+        'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
         'text-sm focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
         isCollapsed ? 'justify-center' : '',
       )}
+      inactiveProps={{ className: 'text-white/80' }}
       activeProps={{ className: 'bg-white/15 text-white font-semibold border-l-2 border-accent' }}
       title={isCollapsed ? String(children) : undefined}
     >
@@ -471,10 +507,11 @@ function SubNavLink({ href, icon, isCollapsed, children }: NavLinkProps) {
       to={href}
       className={clsx(
         'flex items-center h-9 gap-2 rounded-control text-sm',
-        'text-white/70 hover:bg-white/10 hover:text-white hover:shadow-hover transition',
+        'hover:bg-white/10 hover:text-white hover:shadow-hover transition',
         'focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
         isCollapsed ? 'px-3 justify-center' : 'ml-6 px-3',
       )}
+      inactiveProps={{ className: 'text-white/70' }}
       activeProps={{ className: 'text-white font-semibold bg-white/10' }}
       title={isCollapsed ? String(children) : undefined}
     >

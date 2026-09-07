@@ -1,13 +1,12 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { UnmatchedPlansCard } from './UnmatchedPlansCard'
 import { textoResumoUnmatched } from '../utils/unmatchedTexts'
 import type { UnmatchedPlanDto } from '../types/supportPlan'
-import { derivarCascataDeCssDoApp, lerTokensDeCor } from '../../../utils/cssCascade'
-import { medirTextosDoDom, reprovacoesAA, temaDaCascata } from '../utils/contrasteDeTexto'
+// 125/FE-A11Y-4 (`Q-2`): o medidor do repo é UM SÓ (`utils/contrasteDeTexto.ts`), servido
+// pelo harness `test/medidor-de-contraste.ts`, que deriva o tema da cascata real de CSS.
+import { TOKENS, reprovacoesAA, varrer } from '../../../test/medidor-de-contraste'
 
 const itens: UnmatchedPlanDto[] = [
   { valorHubspot: 'Support Gold', clientesAfetados: 9, exemploClienteId: 42 },
@@ -107,12 +106,6 @@ describe('UnmatchedPlansCard — lista', () => {
   })
 })
 
-const lerCssDoDisco = (caminho: string): string =>
-  readFileSync(resolve(process.cwd(), caminho), 'utf8')
-const CASCATA_CSS = derivarCascataDeCssDoApp(lerCssDoDisco)
-const TOKENS = lerTokensDeCor(CASCATA_CSS, lerCssDoDisco)
-const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
-
 /**
  * 124/FE-FIX2 · `D-3` — os dois `/60` deste card (4,04:1) viraram `/70` (5,47:1).
  * A medição é do DOM renderizado; o medidor tem controle positivo em
@@ -120,10 +113,11 @@ const TEMA = temaDaCascata(CASCATA_CSS, lerCssDoDisco, TOKENS)
  */
 describe('UnmatchedPlansCard — contraste AA (D-3)', () => {
   function medir(container: HTMLElement) {
-    return medirTextosDoDom(container, {
-      tema: TEMA,
-      fundoPadrao: TOKENS['--color-background'],
-    })
+    const { medidas, pulados } = varrer(container)
+    // Recusa do medidor (fundo que ele não sabe modelar) reprova aqui em vez de virar
+    // fallback silencioso — 125/FE-A11Y-4, `Q-3`.
+    expect(pulados).toEqual([])
+    return medidas
   }
 
   it('a lista (fundo de alerta) não tem nenhum texto abaixo de 4,5:1', () => {

@@ -20,7 +20,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { FirstResponseVsSlaChart } from './FirstResponseVsSlaChart'
-import { contrastRatio } from '../../../../utils/colorContrast'
+import { razaoDoTexto, reprovacoesAA, varrer } from '../../../../test/medidor-de-contraste'
 // Cruzamento shared → support APENAS em teste (ver o describe do fim do arquivo).
 import {
   PRE_CONDICAO_DO_CALCULO_DO_SLA,
@@ -172,42 +172,20 @@ describe('FirstResponseVsSlaChart — o empty não manda mais ao Service Hub (12
 })
 
 /**
- * 124/FE-TXT — contraste MEDIDO da classe com que o componente compartilhado renderiza a
- * frase, não da que este arquivo passou.
+ * 124/FE-TXT, **invertido** por 125/FE-A11Y-1.
  *
- * O `EmptyState` do design system ignora o `className` do wrapper para o parágrafo da
- * mensagem: ele o renderiza com `text-xs italic text-primary/30`. É o achado da §7 do
- * `fe-f4-report.md` (1,84:1 — menos da metade do piso AA), aqui CONFIRMADO por medição
- * sobre o DOM real, e travado com controle positivo do medidor.
+ * O par de testes que vivia aqui travava o DEFEITO: afirmava que o `EmptyState`
+ * compartilhado renderizava a frase com a classe interna do design system
+ * (`text-xs italic text-primary/30`) e que essa classe REPROVAVA AA (1,84:1) — a
+ * "quinta ocorrência inalcançável" citada no PRD 125 §5.4. O componente foi corrigido
+ * (`components/ui/EmptyState.tsx` passou a renderizar a própria mensagem), então os dois
+ * testes são reescritos **afirmando a correção**, no mesmo commit, em vez de apagados.
  *
- * Quando o design system corrigir `text-primary/30`, este teste reprova — e é o sinal de
- * que a mensagem passou a ser legível onde ela mais importa.
+ * A medição continua sendo do DOM real — a classe é lida do elemento renderizado, nunca
+ * a que este arquivo passou — e continua com controle positivo: o mesmo medidor tem de
+ * reprovar o par velho (1,84:1) na mesma execução.
  */
 describe('FirstResponseVsSlaChart — contraste do empty compartilhado (medido no DOM)', () => {
-  const PISO_AA = 4.5
-  const CSS_APP = 'src/styles/global.css'
-  const CSS_DS = 'node_modules/@migrate/design-system/styles.css'
-
-  function tokenDoCss(caminho: string, token: string): string {
-    const css = readFileSync(caminho, 'utf8')
-    const casamento = new RegExp(token + ':[^#]{0,20}(#[0-9a-fA-F]{6})').exec(css)
-    if (casamento === null) throw new Error(`Token ${token} não encontrado em ${caminho}`)
-    return casamento[1]
-  }
-
-  /** Composição de cor com alfa sobre fundo opaco — o que a sintaxe `/30` faz. */
-  function comAlfa(fg: string, bg: string, alfa: number): string {
-    const canais = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
-    const [r1, g1, b1] = canais(fg)
-    const [r2, g2, b2] = canais(bg)
-    const mistura = [
-      [r1, r2],
-      [g1, g2],
-      [b1, b2],
-    ].map(([a, b]) => Math.round(a * alfa + b * (1 - alfa)))
-    return `#${mistura.map((c) => c.toString(16).padStart(2, '0')).join('')}`
-  }
-
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -217,30 +195,45 @@ describe('FirstResponseVsSlaChart — contraste do empty compartilhado (medido n
     vi.restoreAllMocks()
   })
 
-  it('a classe REAL do parágrafo é a do DS (`text-primary/30`), não a passada pelo wrapper', () => {
+  it('a classe REAL do parágrafo é a do wrapper local, não mais a `text-primary/30` do DS', () => {
     render(
       <FirstResponseVsSlaChart
         respondidosNoPrazo={null}
         respondidosForaDoPrazo={null}
-        className="text-foreground"
+        className="text-primary/30"
       />,
     )
 
     const paragrafo = screen.getByText(MENSAGEM_ESPERADA)
-    // Lida do DOM: é o que o usuário vê, não o que este teste pediu.
-    expect(paragrafo.className).toContain('text-primary/30')
-    expect(paragrafo.className).not.toContain('text-foreground')
+    // Lida do DOM: é o que o usuário vê, não o que este teste pediu. O `className`
+    // HOSTIL acima cai no contêiner de fora e NÃO alcança a mensagem.
+    expect(paragrafo.className).toContain('text-foreground')
+    expect(paragrafo.className).not.toContain('text-primary/30')
+    expect(paragrafo.className).not.toContain('italic')
   })
 
-  it('e essa classe REPROVA AA — achado aberto do DS, não regressão desta unidade', () => {
-    const primary = tokenDoCss(CSS_DS, '--color-primary')
-    const card = tokenDoCss(CSS_APP, '--color-card')
-    const razao = contrastRatio(comAlfa(primary, card, 0.3), card)
+  it('e essa classe ATENDE AA — com o par velho (1,84:1) reprovando no mesmo medidor', () => {
+    render(
+      <FirstResponseVsSlaChart respondidosNoPrazo={null} respondidosForaDoPrazo={null} />,
+    )
 
-    expect(razao).toBeLessThan(PISO_AA)
-    expect(razao).toBeLessThan(2)
-    // Controle positivo do medidor: se ele morresse (aprovando tudo), esta linha cairia.
-    expect(contrastRatio(primary, card)).toBeGreaterThanOrEqual(PISO_AA)
+    const paragrafo = screen.getByText(MENSAGEM_ESPERADA)
+    const { medidas, pulados } = varrer(paragrafo)
+    expect(pulados).toEqual([])
+    expect(reprovacoesAA(medidas)).toEqual([])
+
+    // Controle positivo, na mesma execução: o medidor ainda REPROVA o par que este
+    // teste existia para denunciar. Sem isto, "sem reprovações" seria indistinguível
+    // de um medidor que parou de medir.
+    const { container } = render(
+      <div className="bg-card">
+        <p className="text-xs italic text-primary/30">{MENSAGEM_ESPERADA}</p>
+      </div>,
+    )
+    const velho = varrer(container.firstElementChild as Element)
+    expect(reprovacoesAA(velho.medidas)).toHaveLength(1)
+    // O medidor trunca o texto em 60 caracteres — o trecho é o prefixo da frase.
+    expect(razaoDoTexto(velho.medidas, MENSAGEM_ESPERADA.slice(0, 40)).toFixed(2)).toBe('1.84')
   })
 })
 

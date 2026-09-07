@@ -1,13 +1,48 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { TEMA, razaoDoTexto, reprovacoesAA, varrer } from '../../test/medidor-de-contraste'
+import { classeDeTextoNaoModelavel, coresDeTextoDaClasse } from '../../utils/contrasteDeTexto'
 
-const { mockUsePermissions } = vi.hoisted(() => ({ mockUsePermissions: vi.fn() }))
+const { mockUsePermissions, rotaAtiva } = vi.hoisted(() => ({
+  mockUsePermissions: vi.fn(),
+  /** Rota que o "router" considera ativa. `''` = nenhuma (todo link fica inativo). */
+  rotaAtiva: { valor: '' as string },
+}))
 
-// Link/anchor simplificado — não precisamos de RouterProvider no teste
+/**
+ * Link/anchor simplificado — não precisamos de `RouterProvider` no teste.
+ *
+ * 125/FE-A11Y-4: o mock **encaminha `className`, `inactiveProps` e `activeProps`** e
+ * aplica os `activeProps` na rota marcada como ativa, exatamente como o router faz
+ * (acrescentando, nunca substituindo). O mock anterior descartava as três coisas, e a
+ * varredura de contraste media uma sidebar **sem nenhuma das classes de cor dos itens** —
+ * ela media a cor herdada do `<nav>` e "passava". Mock que apaga a classe sob teste
+ * transforma a medição em outra pergunta.
+ */
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
-    <a href={to}>{children}</a>
-  ),
+  Link: ({
+    to,
+    className,
+    inactiveProps,
+    activeProps,
+    title,
+    children,
+  }: {
+    to: string
+    className?: string
+    inactiveProps?: { className?: string }
+    activeProps?: { className?: string }
+    title?: string
+    children: React.ReactNode
+  }) => {
+    const doEstado =
+      to === rotaAtiva.valor ? activeProps?.className : inactiveProps?.className
+    return (
+      <a href={to} title={title} className={[className, doEstado].filter(Boolean).join(' ')}>
+        {children}
+      </a>
+    )
+  },
 }))
 
 vi.mock('../../hooks/usePermissions', () => ({ usePermissions: mockUsePermissions }))
@@ -197,5 +232,169 @@ describe('Sidebar — Calendário Comercial (124/F2+F3)', () => {
     expect(screen.getAllByText('Calendário')).toHaveLength(1)
     expect(screen.getByText('Planos').closest('a')).toHaveAttribute('href', '/planos')
     expect(screen.getByText('Calendário').closest('a')).toHaveAttribute('href', '/calendario')
+  })
+})
+
+describe('Sidebar — contraste dos títulos de grupo (125/FE-A11Y-3)', () => {
+  afterEach(() => vi.clearAllMocks())
+
+  /**
+   * Metade estrutural da prova: QUAL classe o DOM de fato renderiza. A outra metade — o
+   * número, medido contra as duas pontas do gradiente — está no `describe` abaixo, que
+   * varre a árvore com o medidor consolidado.
+   */
+  function classesDosTitulosDeGrupo(): string[] {
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: true })
+    render(<Sidebar isCollapsed={false} />)
+    return ['Dashboards', 'Relatórios', 'Administração'].map((rotulo) => {
+      const botao = screen.getByText(rotulo).closest('button')
+      if (botao === null) {
+        throw new Error(
+          `O título de grupo "${rotulo}" não é mais um <button> — sem ele esta asserção ` +
+            'passaria vazia em vez de medir a classe renderizada.',
+        )
+      }
+      return botao.className
+    })
+  }
+
+  it('os três títulos renderizam `text-white/70` (era `/60`, 4,33:1 na ponta clara)', () => {
+    const classes = classesDosTitulosDeGrupo()
+    expect(classes).toHaveLength(3)
+    for (const className of classes) {
+      expect(className).toContain('text-white/70')
+      expect(className).not.toContain('text-white/60')
+    }
+  })
+
+  it('os três compartilham EXATAMENTE a mesma classe — nenhum grupo diverge', () => {
+    // Identidade, não "todos contêm": um grupo que ganhe um alfa próprio numa edição
+    // futura reprova aqui, mesmo que ainda contenha `text-white/70` em algum lugar.
+    expect(new Set(classesDosTitulosDeGrupo()).size).toBe(1)
+  })
+})
+
+/**
+ * 125/FE-A11Y-4 (`Q-3`) — **a sidebar inteira, medida no DOM sobre o GRADIENTE**.
+ *
+ * Até aqui a barra nunca tinha sido varrida: o medidor não modelava `background-image` e
+ * `bg-grad-escuro` o fazia **lançar**, então nenhum teste conseguia medi-la e o único
+ * número existente (o dos títulos de grupo) era aritmética escrita à mão em outro arquivo.
+ * Agora o medidor deriva as paradas do gradiente do CSS real e devolve **uma medida por
+ * ponta**, de modo que o veredito é o do PIOR ponto — a ponta clara `#074b7f`.
+ *
+ * Os dois estados são varridos de propósito: foi no item **ativo** que a varredura achou
+ * o defeito (`text-white/70` + `text-white` no mesmo elemento = 4,33:1 na ponta clara).
+ */
+describe('Sidebar — contraste da barra inteira sobre o gradiente (125/FE-A11Y-4)', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    rotaAtiva.valor = ''
+  })
+
+  function varrerSidebar(ativa: string) {
+    rotaAtiva.valor = ativa
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: true })
+    render(<Sidebar isCollapsed={false} />)
+    // Raiz no `document.body`: é a regra da demanda 125 e o que garante que nada da árvore
+    // fique de fora da medição.
+    return varrer(document.body)
+  }
+
+  it('mede as DUAS pontas do gradiente — e não pula nada', () => {
+    const { medidas, pulados } = varrerSidebar('')
+
+    // `pulados` vazio é o que transforma "não sei medir" em reprovação. Se o medidor
+    // voltar a não modelar `background-image`, ou o texto some daqui ou ele passa a ser
+    // medido contra o fundo da página — as duas coisas quebram este bloco.
+    expect(pulados).toEqual([])
+    expect(medidas.length).toBeGreaterThan(20)
+    expect(Array.from(new Set(medidas.map((m) => m.fundo))).sort()).toEqual([
+      '#002f4f',
+      '#074b7f',
+    ])
+  })
+
+  it('as classes de cor MEDIDAS são as da barra — identidade, não "contém"', () => {
+    // Sem esta trava, um mock de `Link` que descarte `className`/`inactiveProps` (foi o que
+    // o mock original fazia) deixaria a varredura medindo só a cor herdada do `<nav>` —
+    // `reprovacoesAA` ficaria vazio por medir OUTRA COISA, e "0 reprovações" seria
+    // indistinguível de "a barra não foi medida". Identidade, e não `toContain`: uma cor
+    // nova entra aqui antes de entrar na tela.
+    const { medidas } = varrerSidebar('')
+    expect(Array.from(new Set(medidas.map((m) => m.classe))).sort()).toEqual([
+      'text-white',
+      'text-white/70',
+      'text-white/80',
+    ])
+  })
+
+  it('estado INATIVO: nenhum texto abaixo de 4,5:1 na ponta clara', () => {
+    const { medidas } = varrerSidebar('')
+
+    expect(reprovacoesAA(medidas)).toEqual([])
+    // Os números, não só "não reprovou" — e sempre o pior ponto.
+    expect(razaoDoTexto(medidas, 'Dashboards').toFixed(2)).toBe('5.31') // título de grupo
+    expect(razaoDoTexto(medidas, 'Dashboard').toFixed(2)).toBe('5.31') // NavLink `/80`
+    expect(razaoDoTexto(medidas, 'Consumo de Planos').toFixed(2)).toBe('5.31') // SubNavLink
+  })
+
+  it('estado ATIVO: o item selecionado passa (era 4,33:1 com as duas classes de cor)', () => {
+    // O `activeProps` do router ACRESCENTA classes. Com a cor no `className` base, o item
+    // ativo carregava `text-white/70` E `text-white`; na folha gerada pelo Tailwind
+    // `.text-white` vem antes de `.text-white\/70`, então o `/70` vencia — 4,33:1 na ponta
+    // clara. A cor do estado inativo passou para `inactiveProps`.
+    const { medidas, pulados } = varrerSidebar('/relatorios/consumo-planos')
+
+    expect(pulados).toEqual([])
+    expect(reprovacoesAA(medidas)).toEqual([])
+    expect(razaoDoTexto(medidas, 'Consumo de Planos').toFixed(2)).toBe('6.99')
+  })
+
+  it('nenhum elemento carrega DUAS classes de cor — `clsx` não desempata cor', () => {
+    // Trava estrutural do ponto cego nº 5 da demanda 125, derivada do DOM (nunca de uma
+    // lista de seletores): quem desempata classe de cor conflitante é a ordem da folha
+    // gerada, não o componente. Vale nos dois estados.
+    for (const ativa of ['', '/relatorios/consumo-planos', '/']) {
+      const { container } = (() => {
+        rotaAtiva.valor = ativa
+        setRole({ isCoordenadorOuAcima: true, isGerentePlus: true })
+        return render(<Sidebar isCollapsed={false} />)
+      })()
+
+      const conflitantes = Array.from(container.querySelectorAll('*'))
+        // `className` de SVG é `SVGAnimatedString`, não string — e SVG aqui é decorativo.
+        .filter((el): el is HTMLElement => typeof el.className === 'string')
+        .map((el) => ({
+          classe: el.className,
+          // 125/FE-A11Y-5: uma cor NÃO MODELÁVEL (`text-[#hex]`, `text-token/[0.3]`) conta
+          // como cor para efeito de conflito. Sem ela, esta varredura via um elemento com
+          // `text-white text-[#b3c1ca]` como tendo UMA cor só — justamente o caso em que o
+          // desempate importa, e o que sobra é o pior dos dois.
+          cores: [
+            ...coresDeTextoDaClasse(el.className, TEMA).map((c) => c.classe),
+            ...(classeDeTextoNaoModelavel(el.className, TEMA) === null ? [] : ['(não modelável)']),
+          ],
+        }))
+        .filter((el) => el.cores.length > 1)
+
+      expect(conflitantes, `rota ativa "${ativa}"`).toEqual([])
+      cleanup()
+    }
+  })
+
+  it('COMPANHEIRA POSITIVA: o `/60` de antes REPROVA na mesma execução', () => {
+    // Sem ela, "0 reprovações" seria indistinguível de um medidor que parou de medir o
+    // gradiente. `/60` é o valor exato que a sidebar tinha antes da 125/FE-A11Y-3.
+    const fora = document.createElement('div')
+    fora.innerHTML =
+      '<nav class="bg-grad-escuro"><span class="text-white/60">Dashboards</span></nav>'
+    document.body.appendChild(fora)
+
+    const { medidas } = varrer(fora)
+    expect(razaoDoTexto(medidas, 'Dashboards').toFixed(2)).toBe('4.33')
+    expect(reprovacoesAA(medidas)).toHaveLength(1)
+
+    fora.remove()
   })
 })

@@ -47,7 +47,7 @@ export function AgentRoleCell({ agent, canEdit, isSelf }: AgentRoleCellProps) {
         disabled={!canEdit || mutation.isPending}
       />
       {canEdit && isSelf && (
-        <span className="text-xs text-foreground/50">
+        <span className="text-xs text-foreground/70">
           Alterar o próprio perfil só vale após novo login.
         </span>
       )}

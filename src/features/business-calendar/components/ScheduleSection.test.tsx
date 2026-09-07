@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ScheduleSection } from './ScheduleSection'
+import { razaoDoTexto, reprovacoesAA, varrer } from '../../../test/medidor-de-contraste'
 import type { CreateScheduleRequest, ScheduleDto } from '../types/calendar'
 
 /**
@@ -68,15 +69,25 @@ function renderizar(overrides: Partial<Parameters<typeof ScheduleSection>[0]> = 
 describe('ScheduleSection — estados', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  /** QA `D-2` — varredura do próprio diff: nenhum estado vazio desta demanda usa o
-   * `EmptyState` compartilhado, cuja mensagem mede 1,84:1. */
-  it('D-2: o vazio do expediente não usa o `text-primary/30` do EmptyState do DS', () => {
+  /**
+   * QA 124 `D-2`, **invertido** por 125/FE-A11Y-1. O teste antigo travava a AUSÊNCIA
+   * temporária do `EmptyState` compartilhado (a mensagem dele media 1,84:1). O
+   * componente foi corrigido, o contorno local saiu, e o teste passa a afirmar o
+   * requisito: o vazio USA o componente compartilhado e o texto que o usuário lê
+   * atende AA — medido no DOM, não na classe que a tela pretendia usar.
+   */
+  it('D-2: o vazio do expediente usa o `EmptyState` compartilhado e atende AA no DOM', () => {
     renderizar({ schedule: undefined })
     const regiao = screen.getByRole('status')
     expect(regiao).toHaveTextContent('Selecione um calendário para ver o expediente.')
-    expect(regiao.className).toContain('text-foreground/70')
-    expect(regiao.className).not.toContain('text-primary/30')
-    expect(regiao.className).not.toContain('italic')
+
+    const { medidas, pulados } = varrer(regiao)
+    expect(pulados).toEqual([])
+    expect(reprovacoesAA(medidas)).toEqual([])
+    // Literal escrito à mão (não derivado da resposta): `text-foreground` sobre
+    // `--color-card`. Se a mensagem voltar para o `<p>` do DS, cai para 1,84.
+    expect(razaoDoTexto(medidas, 'Selecione um calendário').toFixed(2)).toBe('13.82')
+    expect(regiao.innerHTML).not.toContain('text-primary/30')
   })
 
   it('carregando mostra skeleton', () => {

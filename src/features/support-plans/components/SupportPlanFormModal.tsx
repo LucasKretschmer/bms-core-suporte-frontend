@@ -187,8 +187,10 @@ function SupportPlanForm({
         {avisaRenameInseguro && (
           <p
             role="alert"
-            // `text-foreground` sobre `bg-warning-bg` = 13.36:1. `text-warning-fg` sobre o
-            // mesmo fundo mede 3.00:1 e reprova AA (AP-FRONTEND-018).
+            // `text-foreground` sobre `bg-warning-bg` = 13.36:1. Escolha da 124/FE-F1,
+            // quando `text-warning-fg` sobre o mesmo fundo media 3.00:1 e reprovava AA
+            // (AP-FRONTEND-018); o token foi escurecido em 125/FE-A11Y-3 e hoje mede
+            // 5.00:1 — o `foreground` fica por preferência de contraste, não por dívida.
             className="rounded-control border border-border bg-warning-bg px-3 py-2 text-sm text-foreground"
           >
             {textoAvisoRenameInseguro(plan.clientesVinculados)}

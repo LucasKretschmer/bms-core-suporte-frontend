@@ -35,7 +35,7 @@ export function buildCategoryColumns({
       header: 'Categoria',
       align: 'left',
       accessor: (row) => (
-        <span className={row.isActive ? 'text-foreground' : 'text-foreground/50'}>{row.nome}</span>
+        <span className={row.isActive ? 'text-foreground' : 'text-foreground/70'}>{row.nome}</span>
       ),
     },
     {

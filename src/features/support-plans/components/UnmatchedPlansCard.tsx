@@ -53,8 +53,9 @@ function CardShell({
       className={clsx(
         'rounded-card border p-4',
         // O tom de alerta pinta o FUNDO (`warning-bg`) e mantém o texto em
-        // `foreground` (13.36:1). `text-warning-fg` sobre esse fundo mede 3.00:1 e
-        // reprova AA — AP-FRONTEND-018 e `styles/global.css:118-127`.
+        // `foreground` (13.36:1). Escolha da 124/FE-F1, quando `text-warning-fg` sobre
+        // esse fundo media 3.00:1 e reprovava AA (AP-FRONTEND-018); o token foi
+        // escurecido para `#a85800` em 125/FE-A11Y-3 e hoje mede 5.00:1.
         tone === 'alerta' ? 'border-border bg-warning-bg' : 'bg-card border-border shadow-card',
         className,
       )}

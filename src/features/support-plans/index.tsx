@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { DataTable } from '../../components/ui/DataTable/DataTable'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { PageWrapper } from '../../components/layout/PageWrapper'
@@ -133,25 +134,17 @@ export default function SupportPlansPage() {
           />
         )}
         {!plans.isLoading && !plans.isError && plans.data && plans.data.length === 0 && (
-          <div className="rounded-card border border-border bg-card px-6 py-12 text-center">
-            {/* 🔴 O `EmptyState` compartilhado NÃO é usado aqui, e o porquê está medido: a
-                mensagem dele é `text-xs italic text-primary/30` (bundle do design system,
-                `dist/index.js:757`) — sobre o card isso mede **1,84:1**, menos da metade do
-                piso AA de 4,5:1. A classe é do `<p>` INTERNO do componente: o `className`
-                passado ao wrapper não a alcança, e foi assim que o defeito passou por três
-                unidades (QA 124 D-2). Aqui: título `text-foreground` = 13,82:1 e explicação
-                `text-foreground/70` = 5,47:1, as duas medidas em `index.test.tsx`.
-                Corrigir o componente compartilhado alcança o app inteiro e é demanda
-                própria: 15 arquivos ainda importam `components/ui/EmptyState` (contado em
-                06/09/2026), nenhum deles com QA nesta demanda. */}
-            <p className="text-base font-medium text-foreground">
-              Nenhum plano de suporte cadastrado.
-            </p>
-            <p className="mx-auto mt-2 max-w-[70ch] text-sm text-foreground/70">
-              Cadastre os planos para definir as horas contratadas, a meta de 1º atendimento e o
-              calendário de cada um.
-            </p>
-          </div>
+          /* 125/FE-A11Y-1 — de volta ao `EmptyState` compartilhado. O contorno local que
+             estava aqui existia porque a mensagem do componente saía em
+             `text-xs italic text-primary/30` (1,84:1, QA 124 `D-2`); o wrapper agora
+             renderiza a própria mensagem em `text-foreground` (13,82:1) e a descrição em
+             `text-foreground/70` (5,47:1), medidas no DOM por
+             `src/utils/primitivosDeUiContraste.test.tsx`. */
+          <EmptyState
+            className="rounded-card border border-border bg-card"
+            message="Nenhum plano de suporte cadastrado."
+            description="Cadastre os planos para definir as horas contratadas, a meta de 1º atendimento e o calendário de cada um."
+          />
         )}
         {!plans.isLoading && !plans.isError && plans.data && plans.data.length > 0 && (
           <div className="overflow-hidden rounded-card border border-border bg-card">

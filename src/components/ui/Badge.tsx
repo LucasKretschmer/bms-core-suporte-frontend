@@ -43,9 +43,13 @@ const BADGE_MAP: Record<string, BadgeStyle> = {
   'Concluído':        { bg: 'bg-success-bg', fg: 'text-success-fg' },
   'Cancelado':        { bg: 'bg-error-bg', fg: 'text-error-fg' },
   // Descartado (120, D-1) — entrada 100% ADITIVA, família violeta inédita (não colide com
-  // nenhum status existente). Contraste medido 7.39:1 (AA, ver global.css). NUNCA alterar
-  // as entradas acima ('Pausado'/'Cancelado' têm débito de contraste conhecido —
-  // AP-FRONTEND-018 — e são compartilhadas por 5+ telas; fora do escopo desta unidade).
+  // nenhum status existente). Contraste medido 7.39:1 (AA, ver global.css).
+  // Nota histórica: quando esta entrada foi escrita, 'Pausado' (`--color-warning-fg`,
+  // 3.00:1) e 'Cancelado' (`--color-error-fg`, 3.24:1) tinham débito de contraste
+  // conhecido (AP-FRONTEND-018) e o comentário mandava não alterá-las. Os DOIS tokens
+  // foram escurecidos desde então — erro para #c00000 em 123/FE-A2 e aviso para #a85800
+  // em 125/FE-A11Y-3 — e hoje TODAS as entradas deste mapa atendem AA, medidas no DOM
+  // por `src/utils/primitivosDeUiContraste.test.tsx` (sem allowlist de dívida).
   'Descartado':       { bg: 'bg-status-descartado-bg', fg: 'text-status-descartado-fg' },
   // Origem do apontamento (057, visão por cliente combinada) — tokens dedicados
   'Projeto':          { bg: 'bg-badge-origem-projeto-bg', fg: 'text-badge-origem-projeto-fg' },

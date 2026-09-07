@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Combobox, type ComboboxOption } from '../../../components/ui/Combobox'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
+import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Pagination } from '../../../components/ui/Pagination'
 import { Skeleton } from '../../../components/ui/Skeleton'
@@ -182,28 +183,26 @@ export function HolidaysSection({
       )}
 
       {!feriados.isLoading && !feriados.isError && itens.length === 0 && (
-        /* 🔴 O `EmptyState` compartilhado NÃO é usado aqui. A mensagem dele é
-           `text-xs italic text-primary/30` (bundle do DS, `dist/index.js:757`), medida
-           pelo QA em **1,84:1** no DOM renderizado — menos de metade do piso AA de
-           4,5:1 (QA `D-2`). O texto abaixo é o que explica a consequência de não
-           configurar; renderizá-lo quase invisível anula a entrega. Mesmo padrão que
-           `FE-F4` adotou no vazio do SLA. Corrigir o componente compartilhado alcança
-           29 arquivos e é demanda própria, já registrada. */
-        <div
-          role="status"
-          className="flex flex-col items-center gap-2 rounded-card border border-border bg-card px-6 py-10 text-center"
-        >
-          <p className="text-base font-medium text-foreground">
-            {ano == null
+        /* 125/FE-A11Y-1 — de volta ao `EmptyState` compartilhado, que voltou a ser
+           legível: mensagem em `text-foreground` (13,82:1) e descrição em
+           `text-foreground/70` (5,47:1), medidas no DOM por
+           `src/utils/primitivosDeUiContraste.test.tsx`. O contorno local existia porque
+           a mensagem dele saía em `text-xs italic text-primary/30` — 1,84:1 (QA 124
+           `D-2`). `announce` preserva o `role="status"` do contorno. */
+        <EmptyState
+          announce
+          className="rounded-card border border-border bg-card"
+          message={
+            ano == null
               ? `Nenhum feriado configurado em "${nomeDoCalendario}"`
-              : `Nenhum feriado cadastrado em ${ano}`}
-          </p>
-          <p className="max-w-[70ch] text-sm text-foreground/70">
-            {ano == null
+              : `Nenhum feriado cadastrado em ${ano}`
+          }
+          description={
+            ano == null
               ? 'Enquanto não houver, todos os dias úteis contam como dia cheio no cálculo do tempo em horário comercial.'
-              : 'Outros anos podem ter feriados cadastrados — troque o filtro de ano para vê-los.'}
-          </p>
-        </div>
+              : 'Outros anos podem ter feriados cadastrados — troque o filtro de ano para vê-los.'
+          }
+        />
       )}
 
       {!feriados.isLoading && !feriados.isError && itens.length > 0 && pagina !== undefined && (

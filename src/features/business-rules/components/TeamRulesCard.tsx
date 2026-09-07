@@ -70,7 +70,7 @@ export function TeamRulesCard({
               <li key={key} className="flex items-start justify-between gap-3">
                 <label htmlFor={switchId} className="flex flex-col cursor-pointer">
                   <span className="text-sm text-foreground">{meta.label}</span>
-                  <span className="text-xs text-foreground/60">{meta.description}</span>
+                  <span className="text-xs text-foreground/70">{meta.description}</span>
                 </label>
                 <Switch
                   id={switchId}

@@ -12,7 +12,7 @@ type DurationLabelProps = {
  */
 export function DurationLabel({ duracaoMs, className }: DurationLabelProps) {
   return (
-    <span className={clsx('text-xs text-foreground/60', className)}>
+    <span className={clsx('text-xs text-foreground/70', className)}>
       {formatDuration(duracaoMs)}
     </span>
   )

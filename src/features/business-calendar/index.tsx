@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Combobox, type ComboboxOption } from '../../components/ui/Combobox'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Tabs } from '../../components/ui/Tabs'
@@ -137,31 +138,24 @@ export default function BusinessCalendarPage() {
         )}
 
         {!calendarios.isLoading && !calendarios.isError && lista.length === 0 && (
-          /* 🔴 O `EmptyState` compartilhado NÃO é usado aqui, e o motivo foi MEDIDO no DOM
-             renderizado: a mensagem dele sai em `text-xs italic text-primary/30` (bundle do
-             DS, `dist/index.js:757`) — **1,84:1** sobre o fundo da página, menos de metade
-             do piso AA de 4,5:1 (QA `D-2`). O texto ilegível era justamente a frase que
-             explica por que o SLA fica sem apuração: o recado central da demanda. Mesmo
-             padrão de `FE-F4` no vazio do SLA (`text-foreground` = 13,82:1 no título,
-             `/70` = 5,47:1 no corpo). O componente compartilhado é usado por 29 arquivos e
-             a correção dele é demanda própria, já registrada — não é feita aqui. */
-          <div
-            role="status"
-            className="flex flex-col items-center gap-3 rounded-card border border-border bg-card px-6 py-10 text-center"
-          >
-            <p className="text-base font-medium text-foreground">
-              Nenhum calendário comercial configurado
-            </p>
-            <p className="max-w-[70ch] text-sm text-foreground/70">
-              Enquanto não houver, o tempo útil não é calculado e o SLA de 1º atendimento
-              fica sem apuração — o mesmo comportamento de hoje.
-            </p>
-            {isGerentePlus && (
-              <Button variant="secondary" onClick={() => abrirFormulario(null)}>
-                Criar calendário
-              </Button>
-            )}
-          </div>
+          /* 125/FE-A11Y-1 — de volta ao `EmptyState` compartilhado. O contorno local
+             existia porque a mensagem dele saía em `text-xs italic text-primary/30`
+             (**1,84:1**, QA 124 `D-2`); hoje o wrapper renderiza a mensagem em
+             `text-foreground` (13,82:1) e a descrição em `text-foreground/70` (5,47:1),
+             medidas no DOM por `src/utils/primitivosDeUiContraste.test.tsx`.
+             `announce` mantém o `role="status"` que o contorno tinha: este vazio
+             SUBSTITUI um carregamento. */
+          <EmptyState
+            announce
+            className="rounded-card border border-border bg-card"
+            message="Nenhum calendário comercial configurado"
+            description="Enquanto não houver, o tempo útil não é calculado e o SLA de 1º atendimento fica sem apuração — o mesmo comportamento de hoje."
+            action={
+              isGerentePlus
+                ? { label: 'Criar calendário', onClick: () => abrirFormulario(null) }
+                : undefined
+            }
+          />
         )}
 
         {!calendarios.isLoading && !calendarios.isError && selecionado !== null && (

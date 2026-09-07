@@ -36,6 +36,7 @@
 import { Link } from '@tanstack/react-router'
 import { FirstResponseVsSlaChart } from '../../shared/components/FirstResponseVsSlaChart'
 import { ChartCard } from '../../shared/components/ChartCard'
+import { EmptyState } from '../../../../components/ui/EmptyState'
 import { usePermissions } from '../../../../hooks/usePermissions'
 import type { DrillSpec } from '../../shared/types/metrics'
 import {
@@ -156,34 +157,31 @@ export function SupportSlaSection({
             }
           />
         ) : (
-          <div className="flex flex-col items-center gap-2 py-6 text-center">
-            {/* 🔴 O `EmptyState` compartilhado NÃO é usado aqui, e medi o porquê: a
-                mensagem dele é `text-xs italic text-primary/30` (bundle do design
-                system, `dist/index.js:756`), que sobre o card mede **1,84:1** — muito
-                abaixo do piso AA de 4,5:1. É o texto que ESTA unidade existe para
-                fazer o gestor ler; renderizá-lo quase invisível anularia a entrega.
-                Aqui o título é `text-foreground` sobre o card = **13,82:1**.
-                O achado vale para TODOS os estados vazios do app e está registrado no
-                `fe-f4-report.md` como candidato a demanda própria — corrigir o
-                componente compartilhado está fora do escopo desta unidade. */}
-            <p className="text-base font-medium text-foreground">
-              {estado.tipo === 'nao-configurado'
+          /* 125/FE-A11Y-1 — de volta ao `EmptyState` compartilhado. O contorno local
+             existia porque a mensagem dele saía em `text-xs italic text-primary/30`
+             (**1,84:1** sobre o card — `fe-f4-report.md` §7); o wrapper agora renderiza
+             a mensagem em `text-foreground` (13,82:1) e a descrição em
+             `text-foreground/70` (5,47:1), medidas no DOM por
+             `src/utils/primitivosDeUiContraste.test.tsx`. O texto de ação, que tem
+             links, entra como `children` — o `action` do wrapper é botão, e aqui a ação
+             é navegação. `py-6` preserva a altura que o card tinha. */
+          <EmptyState
+            className="py-6"
+            message={
+              estado.tipo === 'nao-configurado'
                 ? TITULO_SLA_NAO_CONFIGURADO
                 : estado.tipo === 'sem-chamados'
                   ? TITULO_SLA_SEM_CHAMADOS
-                  : TITULO_SLA_INDETERMINADO}
-            </p>
-
-            {/* text-foreground/70 sobre o card = 5.47:1 (AA). O padrão /50 do repo mede
-                3.04:1 e REPROVA — achado de FE-F2F3, não repetido aqui. */}
-            <p className="max-w-[70ch] text-sm text-foreground/70">
-              {estado.tipo === 'nao-configurado'
+                  : TITULO_SLA_INDETERMINADO
+            }
+            description={
+              estado.tipo === 'nao-configurado'
                 ? detalheSlaNaoConfigurado(estado.chamadosNoPeriodo)
                 : estado.tipo === 'sem-chamados'
                   ? DETALHE_SLA_SEM_CHAMADOS
-                  : DETALHE_SLA_INDETERMINADO}
-            </p>
-
+                  : DETALHE_SLA_INDETERMINADO
+            }
+          >
             {estado.tipo === 'nao-configurado' &&
               (isGestor ? (
                 // Mesmo gate da Sidebar (`requiresGestor`): oferecer o caminho a quem
@@ -207,7 +205,7 @@ export function SupportSlaSection({
                   {ACAO_SLA_NAO_CONFIGURADO_SEM_ACESSO}
                 </p>
               ))}
-          </div>
+          </EmptyState>
         )}
       </ChartCard>
     </>

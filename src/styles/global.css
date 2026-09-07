@@ -75,7 +75,34 @@
      Travado por `src/utils/alertTokenContrast.test.ts`, que LE este arquivo e
      reprova abaixo de 4.5:1 — o valor nao pode regredir em silencio. */
   --color-error-fg:   #c00000;
-  --color-warning-fg: #e07600;
+  /* ── Token de AVISO, ESCURECIDO (125/FE-A11Y-3, pendência `P-1` da FE-A11Y-1) ──
+     Era `#e07600` e REPROVAVA AA como texto: **3.00:1** sobre `--color-warning-bg`
+     (#fffbef) — o par oficial do design system que motivou `AP-FRONTEND-018` e o
+     terceiro par da tabela do PRD 125 §1. Ficou de fora da 124 (contornado
+     LOCALMENTE em 3 telas, que passaram a escrever `text-foreground` sobre
+     `bg-warning-bg`) e de fora do escopo literal das unidades `FE-A11Y-1` e `-2`.
+     Correção por VALOR (uma mudança conserta todos os call sites) pelo mesmo
+     raciocínio de `--color-error-fg` em 123/FE-A2: o token já era usado como TEXTO
+     em toda a app, então token aditivo só moveria a dívida.
+     `#a85800` é o MESMO valor já medido e aprovado em `--color-status-aberto-fg`
+     (5.00:1 sobre #fffbef) — a app não ganha um segundo laranja.
+     Os 8 call sites de `--color-warning-fg` foram ENUMERADOS por varredura de `src/**`
+     e do bundle do DS (`node_modules/@migrate/design-system/dist` NÃO usa este token:
+     ele nasce aqui). NENHUM é claro-sobre-escuro, logo escurecer melhora todos e não
+     prejudica nenhum. Antes → depois (WCAG 2.x, `src/utils/colorContrast.ts`):
+       texto sobre #fffbef (Badge "Pausado", badge "Executando" dos logs,
+                            aviso Invoicy do TicketDetailHeader)   3.00 → 5.00:1
+       texto sobre #ffffff (percentual 80–95% do consumo de planos) 3.11 → 5.17:1
+       ícone/ponto sobre #ffffff (LiveIndicator, dica de período)   3.11 → 5.17:1
+       ponto sobre #f0f4f7 (SyncStatusBadge "Degradado")            2.81 → 4.68:1
+         ^ este REPROVAVA até o piso NÃO-textual de 3:1 (WCAG 1.4.11)
+       branco sobre o token (nenhum call site hoje; registrado)     3.11 → 5.17:1
+     A borda decorativa `border-warning-fg/30` do aviso Invoicy vai de 1.37 para
+     1.52:1 — não é indicador único de nada (o texto ao lado carrega o significado),
+     então não tem piso; escurecer só a torna mais visível.
+     Travado por `src/utils/alertTokenContrast.test.ts` (que LÊ este arquivo) e pela
+     trava de primitivos `src/utils/primitivosDeUiContraste.test.tsx`. */
+  --color-warning-fg: #a85800;
   --color-info-fg:    #074b7f;
 
   /* ── Paleta de gráficos (chart tokens) ── */
@@ -114,14 +141,24 @@
   --color-badge-origem-projeto-bg: #dff1fd;
   --color-badge-origem-projeto-fg: #074b7f;
   --color-badge-origem-ticket-bg: #fff3e0;
-  --color-badge-origem-ticket-fg: #e07600;
+  /* ESCURECIDO em 125/FE-A11Y-3 (pendência `P-2`, ACHADO NOVO da trava da FE-A11Y-1).
+     Era `#e07600` — o MESMO laranja do `--color-warning-fg`, com o mesmo defeito, e
+     ninguém tinha medido: **2.83:1** sobre `--color-badge-origem-ticket-bg` (#fff3e0),
+     a PIOR reprovação de badge do app. `#a85800` mede **4.72:1** sobre o mesmo fundo.
+     O par irmão "Projeto" (`#074b7f` sobre `#dff1fd`) foi REMEDIDO junto, como a
+     pendência exigia: 7.81:1 — já passa, e por isso NÃO foi alterado; os dois badges
+     de origem passam a atender AA sem ficarem discrepantes.
+     Call site único: `components/ui/Badge.tsx` (BADGE_MAP, entrada 'Ticket' — 057). */
+  --color-badge-origem-ticket-fg: #a85800;
 
   /* ── Status por categoria — badge da coluna Status de Apontamentos (119, MELH-01/D11) ──
-     NOVOS e ADITIVOS — nunca reutilizar `--color-warning-fg` aqui: esse token compartilhado
-     reprova AA como texto pequeno (#e07600/#fffbef = 3.00:1) e é usado em outras telas
-     (Badge.tsx). `--color-error-fg` REPROVAVA junto (3.24:1) e foi CORRIGIDO para #c00000
-     em 123/FE-A2 — hoje passa (5.24:1 sobre o próprio -bg), mas continua sem substituir
-     estes tokens, que carregam matiz/fundo próprios por status. Os pares abaixo foram
+     NOVOS e ADITIVOS. Quando este bloco foi escrito, `--color-warning-fg` valia #e07600 e
+     reprovava AA como texto pequeno (3.00:1 sobre #fffbef); `--color-error-fg` reprovava
+     junto (3.24:1). Os DOIS foram escurecidos desde então — o de erro para #c00000 em
+     123/FE-A2 e o de aviso para #a85800 em 125/FE-A11Y-3 — e hoje passam. Mesmo assim
+     continuam sem substituir estes tokens, que carregam matiz/fundo próprios por status.
+     (`--color-status-aberto-fg` e `--color-warning-fg` passaram a coincidir em #a85800 de
+     propósito: é o mesmo laranja acessível, não uma duplicação acidental.) Os pares abaixo foram
      medidos (WCAG, luminância relativa) e atingem ≥4.5:1: aberto #a85800/#fffbef = 5.00:1;
      cancelado #c00000/#ffe0e0 = 5.24:1. `emandamento`/`fechado` reaproveitam --color-info-fg/-bg e
      --color-success-fg/-bg (já passam: 7.82:1 e 4.75:1). */
@@ -132,20 +169,22 @@
 
   /* ── Status "Descartado" do apontamento (120, D-1) ──
      NOVO e ADITIVO — família violeta, não usada por nenhum outro status hoje (verde=fechado,
-     azul=em andamento, laranja=aberto, vermelho=cancelado). Nunca reutilizar/alterar
-     --color-warning-fg (reprova AA como texto, 3.00:1 — AP-FRONTEND-018) nem as 4 entradas
-     existentes do Badge.tsx BADGE_MAP. (--color-error-fg constava aqui como reprovado; foi
-     corrigido para #c00000 em 123/FE-A2 e hoje passa — ver o comentário do token.) Contraste medido (WCAG, luminância relativa,
+     azul=em andamento, laranja=aberto, vermelho=cancelado). --color-warning-fg constava aqui
+     como reprovado (3.00:1 — AP-FRONTEND-018); foi escurecido para #a85800 em 125/FE-A11Y-3
+     e hoje passa (5.00:1) — ver o comentário do token. --color-error-fg constava pelo mesmo
+     motivo e foi corrigido para #c00000 em 123/FE-A2. Nenhum dos dois substitui este par:
+     a família violeta continua sendo a identidade do status "Descartado". Contraste medido (WCAG, luminância relativa,
      mesma fórmula de statusColors.ts/colorContrast.ts): #6b21a8/#f3e8ff = 7.39:1 (>> 4.5:1 AA). */
   --color-status-descartado-fg: #6b21a8;
   --color-status-descartado-bg: #f3e8ff;
 
   /* ── Faturamento — "Na fatura" e card de exceções (121/FAT-5, A2/D2) ──
-     NOVOS e ADITIVOS. Nenhum token compartilhado foi alterado por ESTA entrega:
-     `--color-warning-fg` (#e07600 sobre #fffbef = 3.00:1) REPROVA AA como texto
-     (AP-FRONTEND-018) e é usado por 5+ telas via Badge.tsx. `--color-error-fg` também
-     reprovava quando este bloco foi escrito; foi escurecido para #c00000 em 123/FE-A2
-     e hoje passa (ver o comentário do token, acima).
+     NOVOS e ADITIVOS. Nenhum token compartilhado foi alterado por ESTA entrega (121/FAT-5).
+     Quando este bloco foi escrito, `--color-warning-fg` valia #e07600 e REPROVAVA AA como
+     texto (3.00:1 sobre #fffbef, AP-FRONTEND-018), e era esse o motivo de não reaproveitá-lo
+     aqui. Os dois tokens compartilhados citados foram escurecidos depois — o de erro para
+     #c00000 em 123/FE-A2 e o de aviso para #a85800 em 125/FE-A11Y-3 — e hoje passam; o par
+     dedicado abaixo permanece por carregar matiz própria de faturamento.
      Contrastes medidos (WCAG 2.x, luminância relativa — mesma fórmula de
      `src/utils/colorContrast.ts`), travados pelo teste
      `features/reports/shared/utils/faturamentoTheme.test.ts`, que LÊ estes valores

@@ -117,6 +117,27 @@ export function TimeEntryCard({
     ? 'rounded-card border border-border bg-card p-4 opacity-70'
     : 'rounded-card border border-border bg-card p-4'
 
+  // 125/FE-A11Y-2 + 125/FE-A11Y-3 — TODO texto secundário deste card depende do estado.
+  //
+  // O `opacity-70` do card cancelado é um GRUPO: o navegador pinta o card inteiro (fundo +
+  // texto) e compõe **o conjunto** sobre a página, então a opacidade da classe do texto se
+  // SOMA à do grupo. Medido sobre `--color-background` (#f0f4f7), com o card composto em
+  // #fbfcfd — nenhum alfa de texto alcança o piso AA no cancelado:
+  //
+  //                       ativo (sobre #ffffff)      cancelado (grupo, sobre #fbfcfd)
+  //   text-foreground/40        2,34:1  ❌                   1,78:1  ❌  <- pior do card
+  //   text-foreground/70        5,47:1  ✅                   3,00:1  ❌
+  //   text-foreground/80        7,47:1  ✅                   3,63:1  ❌
+  //   text-foreground          13,82:1  ✅                   5,59:1  ✅
+  //
+  // Por isso o cancelado usa o token CHEIO em todo texto secundário — a hierarquia visual
+  // dele já vem do próprio `opacity-70`, não precisa vir de um alfa que apaga o texto.
+  // Uma única variável governa os quatro pontos (meta, linha de segmento, duração do
+  // segmento e caixa de motivo): substituto por ponto foi como o `/40` da lista de
+  // segmentos sobreviveu à correção da linha de meta na 125/FE-A11Y-2.
+  const textoSecundario = isCancelled ? 'text-foreground' : 'text-foreground/70'
+  const metaClass = `mt-1 text-xs ${textoSecundario}`
+
   return (
     <article className={articleClass}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -129,7 +150,7 @@ export function TimeEntryCard({
             {entry.categorizacaoNome && <Badge value={entry.categorizacaoNome} />}
             {entry.billableOutsidePlan && <Badge value="Faturável por fora" />}
           </div>
-          <p className="mt-1 text-xs text-foreground/50">
+          <p className={metaClass}>
             {metaTime} · {pauseLabel}
           </p>
         </div>
@@ -192,7 +213,10 @@ export function TimeEntryCard({
             const durSec = Number.isNaN(durMs) || durMs < 0 ? 0 : Math.round(durMs / 1000)
             const isWork = s.type === 'WORK'
             return (
-              <li key={s.id ?? idx} className="flex items-center gap-2 text-xs text-foreground/70">
+              <li
+                key={s.id ?? idx}
+                className={`flex items-center gap-2 text-xs ${textoSecundario}`}
+              >
                 <span
                   className={
                     isWork
@@ -205,7 +229,12 @@ export function TimeEntryCard({
                 <span>
                   {formatTime(s.segmentStart)} → {formatTime(s.segmentEnd)}
                 </span>
-                <span className="text-foreground/40">· {formatSeconds(durSec)}</span>
+                {/* 125/FE-A11Y-3 (`A-1`) — era `text-foreground/40`: 2,34:1 no card ativo e
+                    1,78:1 dentro do grupo do cancelado, a PIOR reprovação de texto medida
+                    fora do `EmptyState`. Herda a classe do `<li>` em vez de escurecer menos
+                    que o irmão: dois alfas diferentes na mesma linha foi o que produziu o
+                    defeito. */}
+                <span>· {formatSeconds(durSec)}</span>
               </li>
             )
           })}
@@ -214,7 +243,12 @@ export function TimeEntryCard({
 
       {/* Motivo do cancelamento/descarte + quem agiu (099/120) — destacado nos dois casos. */}
       {(isCancelled || isDiscarded) && (
-        <div className="mt-2 rounded-input border border-border bg-badge-neutro-bg px-3 py-2 text-xs text-foreground/70">
+        <div
+          // 125/FE-A11Y-3 — a caixa é `bg-badge-neutro-bg` (#f0f4f7). No DESCARTADO (sem
+          // grupo) `/70` mede 5,20:1 e passa; no CANCELADO o grupo a leva a 2,90:1. O token
+          // cheio mede 5,20:1 no cancelado — daí a mesma variável dos demais.
+          className={`mt-2 rounded-input border border-border bg-badge-neutro-bg px-3 py-2 text-xs ${textoSecundario}`}
+        >
           <span className="font-semibold">{isDiscarded ? 'Descartado' : 'Cancelado'}</span>
           {entry.canceladoPorNome ? ` por ${entry.canceladoPorNome}` : ''}
           {entry.note ? ` · Motivo: ${entry.note}` : ''}

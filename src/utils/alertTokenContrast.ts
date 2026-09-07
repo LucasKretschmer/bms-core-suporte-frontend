@@ -437,8 +437,10 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
       '`422 PLAN_RENAME_UNSAFE`. Mesmo caso do irmão `EditCategoryModal`: a mensagem de ' +
       'VALIDAÇÃO dos campos vem do `Input` do DS (`text-error`) e por isso não está aqui. ' +
       'O aviso PREVENTIVO de rename inseguro, do mesmo arquivo, NÃO usa a família de erro: ' +
-      'é `text-foreground` sobre `bg-warning-bg` (13.36:1), porque `text-warning-fg` sobre ' +
-      'esse fundo mede 3.00:1 e reprova AA (AP-FRONTEND-018).',
+      'é `text-foreground` sobre `bg-warning-bg` (13.36:1). Quando a 124/FE-F1 escolheu esse ' +
+      'par, `text-warning-fg` sobre o mesmo fundo media 3.00:1 e reprovava AA ' +
+      '(AP-FRONTEND-018); o token foi escurecido para #a85800 em 125/FE-A11Y-3 e hoje mede ' +
+      '5.00:1 — a escolha permanece por preferência de contraste, não por dívida.',
   },
   {
     arquivo: 'src/features/business-calendar/components/CalendarFormModal.tsx',
@@ -460,8 +462,9 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
       'importação de feriados (124/F3): erro de arquivo, situação de cada linha inválida na ' +
       'tabela de pré-visualização e o relatório linha a linha do `422 IMPORT_INVALID_ROWS`. ' +
       'O aviso de arquivo com DD/MM misturado NÃO usa a família de erro: é `text-foreground` ' +
-      'sobre `bg-warning-bg` (13.36:1), porque `text-warning-fg` ali mede 3.00:1 e reprova AA ' +
-      '(AP-FRONTEND-018).',
+      'sobre `bg-warning-bg` (13.36:1). Quando a 124/FE-F3 escolheu esse par, `text-warning-fg` ' +
+      'ali media 3.00:1 e reprovava AA (AP-FRONTEND-018); o token foi escurecido para #a85800 ' +
+      'em 125/FE-A11Y-3 e hoje mede 5.00:1.',
   },
   {
     arquivo: 'src/features/business-calendar/components/ScheduleSection.tsx',

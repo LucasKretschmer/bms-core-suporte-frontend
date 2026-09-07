@@ -1,3 +1,11 @@
+/**
+ * 125/FE-A11Y-3 (`A-1`) — o `placeholder` do campo de motivo era
+ * `placeholder:text-foreground/40` = **2,34:1** sobre o fundo do campo (`bg-card`,
+ * #ffffff). Placeholder é TEXTO para a WCAG 1.4.3 e vale 4,5:1; `/70` mede **5,47:1**.
+ * Ele não aparece na varredura de contraste do DOM (não existe nó de texto para o
+ * pseudo-elemento em jsdom), por isso a medição está travada por aritmética sobre os
+ * tokens do CSS, no teste desta unidade.
+ */
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -103,7 +111,7 @@ export function CancelTimeEntryDialog({
                 : 'Descreva por que este apontamento está sendo cancelado.'
             }
             {...register('reason')}
-            className="h-20 rounded-input border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/40 outline-none focus:border-primary-medium resize-none disabled:opacity-50"
+            className="h-20 rounded-input border border-border px-3 py-2 text-sm bg-card text-foreground placeholder:text-foreground/70 outline-none focus:border-primary-medium resize-none disabled:opacity-50"
           />
           {errors.reason?.message && (
             <p id="cancel-reason-error" className="text-xs text-error-fg" role="alert">

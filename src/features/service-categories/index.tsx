@@ -139,7 +139,7 @@ export default function ServiceCategoriesPage() {
   return (
     <PageWrapper title="Categorias do Atendimento" breadcrumbItems={breadcrumb}>
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-foreground/50 max-w-2xl">
+        <p className="text-sm text-foreground/70 max-w-2xl">
           Usada no encerramento do timer (consultoria, treinamento, plantão…). Não confundir com a
           categoria do ticket (HubSpot).
         </p>

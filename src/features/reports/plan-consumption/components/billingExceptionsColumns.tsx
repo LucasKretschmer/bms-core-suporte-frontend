@@ -14,6 +14,14 @@
  * "Horas presas" é uma afirmação verdadeira só na aba acionável.
  */
 
+/**
+ * 125/FE-A11Y-3 (`A-1`) — o travessão de célula vazia (`—`) era `text-foreground/40`:
+ * **2,34:1** sobre `--color-card` (#ffffff), pouco mais de metade do piso AA (4,5:1).
+ * Ele NÃO é decorativo — não é `aria-hidden` e os `headerInfo` desta tabela o DEFINEM
+ * como "informação não disponível", ou seja, ele carrega significado e é texto para a
+ * WCAG 1.4.3. `text-foreground/70` mede **5,47:1** sobre o card e 5,20:1 sobre a
+ * página, e mantém a célula vazia visualmente secundária.
+ */
 import { Badge } from '../../../../components/ui/Badge'
 import { ExternalLinkIcon } from '../../../../components/ui/ExternalLinkIcon'
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
@@ -103,7 +111,7 @@ export function buildBillingExceptionsColumns(
         row.status ? (
           <Badge value={row.status} truncate className="max-w-[150px]" />
         ) : (
-          <span className="text-foreground/40">—</span>
+          <span className="text-foreground/70">—</span>
         ),
     },
     {

@@ -119,9 +119,17 @@ describe('coluna "Concluído em" — três ramos, não dois', () => {
     expect(textoDaCelula('concluidoEm', ticket({ fechadoEm: null }))).toBe('—')
   })
 
-  it('o "—" tem contraste tratado e não é confundido com valor', () => {
+  // 125/FE-A11Y-3 — teste INVERTIDO (não apagado). Ele exigia `text-foreground/40` e
+  // chamava isso de "contraste tratado": aquela classe mede **2,34:1** sobre o card, pouco
+  // mais de metade do piso AA de 4,5:1 — ele travava o defeito, não a correção. O
+  // travessão é conteúdo (o `headerInfo` da coluna o define como "informação não
+  // disponível") e não é `aria-hidden`, logo vale o piso de TEXTO. `/70` mede 5,47:1.
+  // A medição no DOM, com o fundo efetivo e o número, está em
+  // `src/test/contraste-a11y-3.test.tsx`; aqui trava-se a classe renderizada.
+  it('o "—" fica secundário SEM cair abaixo do piso AA — e a classe velha não volta', () => {
     const { container } = render(<>{coluna('concluidoEm').accessor(ticket())}</>)
-    expect(container.querySelector('.text-foreground\\/40')).not.toBeNull()
+    expect(container.querySelector('.text-foreground\\/70')).not.toBeNull()
+    expect(container.querySelector('.text-foreground\\/40')).toBeNull()
   })
 })
 

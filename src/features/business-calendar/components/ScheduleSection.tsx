@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
+import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { Input } from '../../../components/ui/Input'
 import { Skeleton } from '../../../components/ui/Skeleton'
@@ -83,17 +84,16 @@ export function ScheduleSection({
   }
 
   if (schedule === undefined) {
-    // Mesmo motivo do vazio da página e do de feriados (QA `D-2`): a mensagem do
-    // `EmptyState` compartilhado sai em `text-xs italic text-primary/30` — 1,84:1,
-    // menos de metade do piso AA. Varredura do próprio diff da demanda, como pede a
-    // lição do QA: o achado vale para todo estado vazio que ESTA demanda entrega.
+    // 125/FE-A11Y-1 — de volta ao `EmptyState` compartilhado (mensagem em
+    // `text-foreground`, 13,82:1). O contorno local existia porque a mensagem dele saía
+    // em `text-xs italic text-primary/30` — 1,84:1, menos de metade do piso AA (QA 124
+    // `D-2`). `announce` preserva o `role="status"` que o contorno tinha.
     return (
-      <div
-        role="status"
-        className="rounded-card border border-border bg-card px-6 py-10 text-center text-sm text-foreground/70"
-      >
-        Selecione um calendário para ver o expediente.
-      </div>
+      <EmptyState
+        announce
+        className="rounded-card border border-border bg-card"
+        message="Selecione um calendário para ver o expediente."
+      />
     )
   }
 

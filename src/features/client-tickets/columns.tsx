@@ -22,6 +22,14 @@
  * a seta mentiria, exatamente como já documentado em "Na fatura".
  */
 
+/**
+ * 125/FE-A11Y-3 (`A-1`) — o travessão de célula vazia (`—`) era `text-foreground/40`:
+ * **2,34:1** sobre `--color-card` (#ffffff), pouco mais de metade do piso AA (4,5:1).
+ * Ele NÃO é decorativo — não é `aria-hidden` e os `headerInfo` desta tabela o DEFINEM
+ * como "informação não disponível", ou seja, ele carrega significado e é texto para a
+ * WCAG 1.4.3. `text-foreground/70` mede **5,47:1** sobre o card e 5,20:1 sobre a
+ * página, e mantém a célula vazia visualmente secundária.
+ */
 import { Badge } from '../../components/ui/Badge'
 import { ExternalLinkIcon } from '../../components/ui/ExternalLinkIcon'
 import type { ColumnDef } from '../../components/ui/DataTable/types'
@@ -120,7 +128,7 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
         row.status ? (
           <Badge value={row.status} />
         ) : (
-          <span className="text-foreground/40">—</span>
+          <span className="text-foreground/70">—</span>
         ),
     },
     {
@@ -173,7 +181,7 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
       width: '120px',
       accessor: (row) =>
         row.fechadoEm == null ? (
-          <span className="text-foreground/40">—</span>
+          <span className="text-foreground/70">—</span>
         ) : (
           formatDate(row.fechadoEm)
         ),
@@ -203,7 +211,7 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
       width: '110px',
       accessor: (row) => {
         if (row.entraNaFatura == null) {
-          return <span className="text-foreground/40">—</span>
+          return <span className="text-foreground/70">—</span>
         }
         return row.entraNaFatura ? (
           <Badge value="Sim" className={NA_FATURA_CLASSES.sim} />
