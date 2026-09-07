@@ -187,7 +187,10 @@ describe('HolidaysSection — DD-2 na remoção', () => {
     await usuario.click(screen.getByRole('button', { name: 'Remover feriado Carnaval' }))
 
     const dialogo = await screen.findByRole('alertdialog')
-    expect(dialogo).toHaveTextContent('Remover feriado em data passada')
+    // 124/`P-6` — travava 'Remover feriado em data passada'. Reescrito afirmando a
+    // correção: o título passou a cobrir hoje, e "passada" deixaria hoje de fora.
+    expect(dialogo).toHaveTextContent('Remover feriado em data de hoje ou anterior')
+    expect(dialogo).not.toHaveTextContent('em data passada')
     expect(await within(dialogo).findByText(/12 chamados já fechados/)).toBeInTheDocument()
     expect(mockGetHolidayImpact).toHaveBeenCalledWith(3, '2026-03-04')
     // O numero esta na tela ANTES da remocao — e isso que DD-2 pede.

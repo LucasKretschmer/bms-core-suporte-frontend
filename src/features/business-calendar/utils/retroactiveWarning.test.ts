@@ -56,10 +56,25 @@ describe('retroactiveWarning — quais datas disparam a confirmação', () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it('data passada exige confirmação; hoje e futuro, não', () => {
+  /**
+   * 124/`P-6` — este teste travava *"hoje e futuro, não"*. **Reescrito afirmando a
+   * correção**, e mais específico: agora nomeia os três dias e o motivo de cada um.
+   *
+   * O que faz o assert de HOJE ficar vermelho: voltar `ehDiaRetroativo` para `< hoje`.
+   * O que faz o de HOJE + 1 ficar vermelho: afrouxar a fronteira para o dia seguinte.
+   */
+  it('ontem e HOJE exigem confirmação; hoje + 1 e futuro, não (P-6)', () => {
     expect(exigeConfirmacaoRetroativa(['2026-09-05'])).toBe(true)
-    expect(exigeConfirmacaoRetroativa(['2026-09-06'])).toBe(false)
+    // 🔴 A mudança de `P-6`: chamado fechado hoje de manhã já tem indicador apurado.
+    expect(exigeConfirmacaoRetroativa(['2026-09-06'])).toBe(true)
+    expect(exigeConfirmacaoRetroativa(['2026-09-07'])).toBe(false)
     expect(exigeConfirmacaoRetroativa(['2026-12-25'])).toBe(false)
+  })
+
+  it('HOJE entra na lista de datas consultadas — e é a única data "de hoje" possível', () => {
+    // Companheira positiva do bloco acima na forma de lista: sem ela, "não vejo amanhã"
+    // passaria com a função devolvendo sempre `[]`.
+    expect(datasRetroativas(['2026-09-07', '2026-09-06'])).toEqual(['2026-09-06'])
   })
 
   it('na EDIÇÃO as duas datas contam — mover de ontem para amanhã também mexe no passado', () => {
@@ -75,12 +90,21 @@ describe('retroactiveWarning — quais datas disparam a confirmação', () => {
 
   it('data futura NÃO gera consulta nenhuma — é o caminho rápido', () => {
     expect(datasRetroativas(['2026-12-25', null])).toEqual([])
+    // A fronteira exata: hoje + 1 já é futuro.
+    expect(datasRetroativas(['2026-09-07'])).toEqual([])
   })
 
-  it('títulos por ação', () => {
-    expect(tituloConfirmacaoRetroativa('remover')).toBe('Remover feriado em data passada')
-    expect(tituloConfirmacaoRetroativa('criar')).toBe('Cadastrar feriado em data passada')
-    expect(tituloConfirmacaoRetroativa('editar')).toBe('Alterar feriado em data passada')
+  it('títulos por ação — "de hoje ou anterior", nunca "passada" (P-6)', () => {
+    // Reescrito: travava "…em data passada", que passou a ser FALSO para o caso de hoje.
+    expect(tituloConfirmacaoRetroativa('remover')).toBe(
+      'Remover feriado em data de hoje ou anterior',
+    )
+    expect(tituloConfirmacaoRetroativa('criar')).toBe(
+      'Cadastrar feriado em data de hoje ou anterior',
+    )
+    expect(tituloConfirmacaoRetroativa('editar')).toBe(
+      'Alterar feriado em data de hoje ou anterior',
+    )
   })
 })
 
@@ -176,8 +200,15 @@ describe('textoImpactos — o número, e o 0 que não é impacto', () => {
   })
 
   it('🔴 data NÃO retroativa não exibe número nenhum — o 0 dali significa outra coisa', () => {
-    const texto = textoImpactos([impacto('2026-09-06', false, 0)])
-    expect(texto).toBe('06/09/2026 não é uma data passada: nenhum indicador já apurado muda.')
+    // 124/`P-6` — o texto travado aqui era *"não é uma data passada"*. Com a fronteira em
+    // `<= hoje`, `avisoRetroativo: false` só acontece de **hoje + 1 em diante**, e por isso
+    // a frase foi reescrita para "é uma data futura". A data do caso mudou junto: 06/09 é
+    // HOJE nesta suíte e passou a ser retroativa.
+    const texto = textoImpactos([impacto('2026-09-07', false, 0)])
+    expect(texto).toBe('07/09/2026 é uma data futura: nenhum indicador já apurado muda.')
+    // O que faz este assert ficar vermelho: voltar a frase antiga, que hoje seria mentira
+    // (a data NÃO é "não passada" por acaso — ela é futura).
+    expect(texto).not.toContain('não é uma data passada')
     // O que faz este assert ficar vermelho: imprimir `ticketsFechadosNoDia` neste caso, que
     // faria "0" ser lido como "verifiquei e não há impacto".
     expect(texto).not.toContain('0 chamado')
@@ -225,7 +256,15 @@ describe('textoConfirmacaoRetroativa — nunca afirma número antes da resposta'
       tipo: 'pronto',
       impactos: [impacto('2026-03-04', true, 2), impacto('2026-01-01', true, 5)],
     })
-    expect(texto).toContain('as datas 04/03/2026 e 01/01/2026')
+    expect(texto).toContain('as datas 04/03/2026 e 01/01/2026, de hoje ou anteriores')
+  })
+
+  it('124/P-6: a frase de abertura NÃO afirma mais "anterior a hoje" — hoje entrou', () => {
+    // Travava, antes, a redação `…envolve a data 04/03/2026, anterior a hoje.` Ela ficou
+    // falsa para o caso de HOJE, que a mesma frase agora cobre.
+    const texto = textoConfirmacaoRetroativa('criar', ['2026-09-06'], { tipo: 'ocioso' })
+    expect(texto).toContain('a data 06/09/2026, de hoje ou anterior')
+    expect(texto).not.toContain('anterior a hoje')
   })
 })
 
@@ -287,9 +326,13 @@ describe('retroactiveWarning — soma dos impactos do lote', () => {
 describe('retroactiveWarning — texto da confirmação do LOTE', () => {
   const duas = ['2026-01-01', '2026-04-21']
 
-  it('título traz a contagem de datas e o singular correto', () => {
-    expect(tituloConfirmacaoRetroativaEmLote(2)).toBe('Importar 2 feriados em datas passadas')
-    expect(tituloConfirmacaoRetroativaEmLote(1)).toBe('Importar 1 feriado em data passada')
+  it('título traz a contagem de datas e o singular correto (P-6: "de hoje ou anterior")', () => {
+    expect(tituloConfirmacaoRetroativaEmLote(2)).toBe(
+      'Importar 2 feriados em datas de hoje ou anteriores',
+    )
+    expect(tituloConfirmacaoRetroativaEmLote(1)).toBe(
+      'Importar 1 feriado em data de hoje ou anterior',
+    )
   })
 
   it('carregando NÃO afirma número nenhum — nem 0', () => {
@@ -312,7 +355,7 @@ describe('retroactiveWarning — texto da confirmação do LOTE', () => {
       tipo: 'pronto',
       impactos: [impacto('2026-01-01', true, 12), impacto('2026-04-21', true, 3)],
     })
-    expect(texto).toContain('2 datas anteriores a hoje')
+    expect(texto).toContain('2 datas de hoje ou anteriores')
     expect(texto).toContain('01/01/2026, 21/04/2026')
     expect(texto).toContain('de 10 linhas do arquivo')
     expect(texto).toContain('Ao todo, 15 chamados já fechados têm os indicadores recalculados')
@@ -331,8 +374,8 @@ describe('retroactiveWarning — texto da confirmação do LOTE', () => {
 
     const texto = textoConfirmacaoRetroativaEmLote(60, quarenta, { tipo: 'pronto', impactos })
 
-    expect(texto).toContain('40 datas anteriores a hoje')
-    expect(texto).toContain(`Nas ${MAX_DATAS_CONSULTADAS_NO_LOTE} primeiras datas passadas`)
+    expect(texto).toContain('40 datas de hoje ou anteriores')
+    expect(texto).toContain(`Nas ${MAX_DATAS_CONSULTADAS_NO_LOTE} primeiras dessas datas`)
     expect(texto).toContain('60 chamados já fechados')
     expect(texto).toContain(`as outras ${40 - MAX_DATAS_CONSULTADAS_NO_LOTE} não foram consultadas`)
     expect(texto).toContain('o efeito real é maior')
@@ -344,7 +387,7 @@ describe('retroactiveWarning — texto da confirmação do LOTE', () => {
       impactos: [impacto('2026-01-01', true, 12), impacto('2026-04-21', false, 0)],
     })
     expect(texto).toContain('Ao todo, 12 chamados')
-    expect(texto).toContain('1 data não é considerada passada pelo servidor')
+    expect(texto).toContain('1 data não é considerada retroativa pelo servidor')
   })
 
   it('singular de uma data só sai em português correto — nada de "1 data(s)"', () => {
@@ -352,7 +395,7 @@ describe('retroactiveWarning — texto da confirmação do LOTE', () => {
       tipo: 'pronto',
       impactos: [impacto('2026-01-01', true, 1)],
     })
-    expect(texto).toContain('1 data anterior a hoje')
+    expect(texto).toContain('1 data de hoje ou anterior')
     expect(texto).toContain('de 1 linha do arquivo')
     expect(texto).toContain('1 chamado já fechado tem os indicadores recalculados')
     expect(texto).not.toContain('(s)')

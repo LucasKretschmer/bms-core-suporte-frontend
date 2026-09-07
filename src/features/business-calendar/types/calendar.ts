@@ -134,16 +134,25 @@ export type HolidayRequest = {
  * É a **pré-contagem** que DD-2 exige: o número de chamados afetados **antes** da escrita.
  * Sem ela, a tela só podia avisar por data e mostrar a contagem depois do fato.
  *
- * ⚠️ `ticketsFechadosNoDia` vem **0 quando a data não é retroativa — inclusive para hoje**, e
- * isso é regra, não bug: `avisoRetroativo` é `data < hoje` (dia local SP), e hoje ainda não é
- * passado. O `0` desse caso significa *"esta data não é passado"*, e **não** *"verifiquei e não
- * há impacto"*. Quem monta o texto (`utils/retroactiveWarning.ts`) não exibe o número quando
+ * ⚠️ `ticketsFechadosNoDia` vem **0 quando a data não é retroativa**, e isso é regra, não
+ * bug: `avisoRetroativo` é `data <= hoje` (dia local SP) desde a decisão `P-6`, então o `0`
+ * desse caso significa *"esta data está no futuro"*, e **não** *"verifiquei e não há
+ * impacto"*. Quem monta o texto (`utils/retroactiveWarning.ts`) não exibe o número quando
  * `avisoRetroativo === false`.
+ *
+ * 🔴 **Este campo é a fonte ÚNICA do que a tela afirma sobre retroatividade.** O predicado
+ * local (`utils/localDay.ts::ehDiaRetroativo`) só decide se **há o que perguntar** — nenhuma
+ * frase é montada a partir dele.
  */
 export type HolidayImpactDto = {
   /** Eco da data consultada, normalizada. */
   data: string
-  /** `true` quando `data < hoje` (dia local SP) — a mesma regra da resposta de mutação. */
+  /**
+   * `true` quando `data <= hoje` (dia local SP) — a mesma regra da resposta de mutação, e a
+   * mesma fronteira de `HolidayService.CalcularImpactoAsync` depois de `P-6`. **Hoje conta:**
+   * chamado fechado hoje de manhã já tem indicador apurado, e cadastrar hoje como feriado à
+   * tarde o altera.
+   */
   avisoRetroativo: boolean
   /** Mesmo número que a mutação devolveria para esta data (o backend usa a mesma função). */
   ticketsFechadosNoDia: number

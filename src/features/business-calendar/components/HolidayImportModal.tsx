@@ -91,7 +91,7 @@ type HolidayImportModalProps = {
  * pequeno e ignorada no grande é guarda não paga.
  *
  * Agora "Confirmar importação" **não grava**: abre um `alertdialog` que nomeia as datas
- * passadas, traz a **soma dos chamados já fechados** vinda da rota de pré-contagem
+ * retroativas, traz a **soma dos chamados já fechados** vinda da rota de pré-contagem
  * (`GET .../holidays/impacto?data=`) e fica **travado enquanto a consulta não volta** —
  * "ainda não sei" e "nenhum" são respostas diferentes. As peças são as mesmas do caminho
  * de um feriado (`utils/retroactiveWarning.ts`), o que impede as duas telas de divergirem.
@@ -146,9 +146,9 @@ export function HolidayImportModal({
   }, [errosDoServidor, linhasValidas])
 
   /**
-   * As datas do lote que estão no passado — **exatas e sem rede**: é a lista local, e ela
-   * nunca é truncada. É este número que garante que o usuário vê o tamanho do efeito
-   * mesmo quando o teto de consultas corta a contagem por data.
+   * As datas do lote que são de hoje ou anteriores (`P-6`) — **exatas e sem rede**: é a
+   * lista local, e ela nunca é truncada. É este número que garante que o usuário vê o
+   * tamanho do efeito mesmo quando o teto de consultas corta a contagem por data.
    */
   const retroativasDoLote = useMemo(
     () => (resolucao === null ? [] : datasRetroativas(resolucao.validas.map((v) => v.data))),
@@ -244,7 +244,7 @@ export function HolidayImportModal({
   }, [confirmandoRetroativo])
 
   /**
-   * O clique em "Confirmar importação" **não grava** quando há data passada no lote: abre
+   * O clique em "Confirmar importação" **não grava** quando há data retroativa no lote: abre
    * a confirmação de DD-2. É aqui que o caminho em lote passa a pagar a mesma guarda do
    * caminho de um feriado (QA `D-1`).
    */
@@ -457,8 +457,8 @@ export function HolidayImportModal({
             >
               <strong>
                 {retroativasDoLote.length === 1
-                  ? '1 data deste arquivo é anterior a hoje'
-                  : `${retroativasDoLote.length} datas deste arquivo são anteriores a hoje`}
+                  ? '1 data deste arquivo é de hoje ou anterior'
+                  : `${retroativasDoLote.length} datas deste arquivo são de hoje ou anteriores`}
               </strong>{' '}
               ({listaDeDatasResumida(retroativasDoLote)}). Feriado não é versionado: indicadores
               já apurados desses dias mudam de valor. Ao confirmar, a contagem de chamados

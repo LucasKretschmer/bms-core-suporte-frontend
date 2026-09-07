@@ -97,8 +97,9 @@ function HolidayForm({ calendarId, feriado, onSave, onClose }: HolidayFormProps)
   const dataAtual = watch('data')
   const diaSemana = diaSemanaDaData(dataAtual)
 
-  // As datas retroativas só são calculadas (e consultadas) quando o diálogo abre: consultar a
-  // cada tecla digitada no campo de data seria uma requisição por caractere.
+  // As datas retroativas (hoje ou antes, `P-6`) só são calculadas — e consultadas — quando o
+  // diálogo abre: consultar a cada tecla digitada no campo de data seria uma requisição por
+  // caractere.
   const datasParaConsultar =
     confirmando === null ? [] : datasRetroativas([confirmando.data, feriado?.data ?? null])
   const resultados = useHolidayImpacts(calendarId, datasParaConsultar)

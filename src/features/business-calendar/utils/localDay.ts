@@ -46,19 +46,34 @@ export function diaLocalSaoPaulo(referencia: Date = new Date()): string {
 }
 
 /**
- * `true` quando a data (dia civil SP) é **anterior a hoje**.
+ * `true` quando a data (dia civil SP) é **hoje ou anterior a hoje** — a fronteira do aviso
+ * de retroatividade (DD-2).
  *
- * É o predicado do aviso de retroatividade (DD-2): mexer num feriado **passado** muda
- * indicador já apurado, porque feriado não é versionado (AUTO-124-3). Hoje **não** é
- * passado — a comparação é estritamente `<`, igual à do backend
- * (`HolidayService.ComAvisoRetroativoAsync`).
+ * ## 🔴 Por que `<=` e não `<` (decisão `P-6`, 2026-09-06)
+ *
+ * A fronteira era `< hoje` ("hoje ainda está se formando"). Ela estava errada: um chamado
+ * **fechado hoje às 09h** já tem indicador apurado, e cadastrar hoje como feriado às 15h
+ * **muda esse indicador** — dano idêntico ao do caso passado. O usuário decidiu cobrir hoje,
+ * e o backend passou a usar a mesma fronteira em `HolidayService.CalcularImpactoAsync`
+ * (`data <= hoje`).
+ *
+ * ## 🔴 Este predicado é um GATE, nunca a fonte do que a tela AFIRMA
+ *
+ * Quem decide se uma data é retroativa **para efeito de exibição** é o servidor, no campo
+ * `avisoRetroativo` de `GET .../holidays/impacto` — ver `utils/retroactiveWarning.ts`. Este
+ * predicado existe só para responder, **sem rede**, se há o que perguntar: data futura não
+ * gera requisição nenhuma. Quando os dois discordam (virada do dia entre a abertura do
+ * diálogo e a resposta), quem manda na frase é o servidor.
+ *
+ * Por isso a fronteira daqui tem de ser **a mesma** do backend, e há teste que a trava nos
+ * dois lados dela: hoje ⇒ `true`, hoje + 1 ⇒ `false`.
  *
  * Comparação lexicográfica: `AAAA-MM-DD` é ordenável como texto, e assim não há
  * nenhuma conversão para `Date` (nem fuso) no caminho.
  */
-export function ehDiaPassado(iso: string, hoje: string = diaLocalSaoPaulo()): boolean {
+export function ehDiaRetroativo(iso: string, hoje: string = diaLocalSaoPaulo()): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false
-  return iso < hoje
+  return iso <= hoje
 }
 
 /** Soma anos a um dia `AAAA-MM-DD` mantendo-o dia civil (sem `Date`, sem fuso). */

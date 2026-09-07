@@ -118,7 +118,7 @@ describe('SupportSlaSection — vazio 1: "SLA não configurado"', () => {
       />,
     )
 
-    expect(screen.getByText('SLA de 1ª resposta não configurado')).toBeInTheDocument()
+    expect(screen.getByText('SLA de 1º atendimento não configurado')).toBeInTheDocument()
     expect(screen.queryByTestId('sla-chart')).not.toBeInTheDocument()
     // O "0%"/"0" que o `?? 0` produziria não pode existir em lugar nenhum do card.
     expect(screen.queryByText(/\b0\b/)).not.toBeInTheDocument()
@@ -137,12 +137,13 @@ describe('SupportSlaSection — vazio 1: "SLA não configurado"', () => {
     expect(
       screen.getByText(/Nenhum dos 12 chamados criados no período entrou na apuração/),
     ).toBeInTheDocument()
-    // 124/FE-TXT — era `/meta de 1ª resposta no plano do cliente/`. Reescrito afirmando a
+    // 124/FE-TXT — era `/meta de 1ª resposta no plano do cliente/`; 124/P-7 trocou o
+    // vocabulário para "1º atendimento". Reescrito afirmando a
     // correção e MAIS específico: agora exige as DUAS moradas da meta e a precedência
     // entre elas (`MetricsService.cs:691` — `PlanoSlaMinutos ?? metaDoCalendario`).
     expect(
       screen.getByText(
-        /meta de 1ª resposta — do plano do cliente ou, na falta dela, a meta padrão do calendário/,
+        /meta de 1º atendimento — do plano do cliente ou, na falta dela, a meta padrão do calendário/,
       ),
     ).toBeInTheDocument()
     expect(screen.getByText(/calendário com expediente cadastrado/)).toBeInTheDocument()
@@ -161,7 +162,9 @@ describe('SupportSlaSection — vazio 1: "SLA não configurado"', () => {
     const detalhe = screen.getByText(/Nenhum dos 12 chamados/)
     expect(detalhe).toHaveTextContent(/a meta padrão do calendário/)
     // NEGATIVA: a redação incompleta, que só conhecia a meta do plano.
-    expect(detalhe).not.toHaveTextContent(/exige a meta de 1ª resposta no plano do cliente/)
+    expect(detalhe).not.toHaveTextContent(/exige a meta de 1º atendimento no plano do cliente/)
+    // 124/P-7 — o vocabulário antigo não volta.
+    expect(detalhe).not.toHaveTextContent(/1ª resposta/i)
   })
 
   it('a contagem exibida vem do dado, não de constante', () => {
@@ -219,11 +222,11 @@ describe('SupportSlaSection — vazio 1: "SLA não configurado"', () => {
     expect(screen.getByText(/Cadastre o expediente em/)).toBeInTheDocument()
     // E a meta aparece com as duas moradas que o backend aceita.
     expect(
-      screen.getByText(/A meta de 1ª resposta pode ser a padrão do próprio calendário/),
+      screen.getByText(/A meta de 1º atendimento pode ser a padrão do próprio calendário/),
     ).toBeInTheDocument()
     expect(screen.getByText(/por cliente, a do plano em/)).toBeInTheDocument()
     // A redação antiga mandava direto ao plano, sem citar o padrão do calendário.
-    expect(screen.queryByText(/Cadastre a meta de 1ª resposta em/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Cadastre a meta de 1º atendimento em/)).not.toBeInTheDocument()
   })
 
   it('para o ATENDENTE não oferece link (as duas telas são requiresGestor), mas explica o caminho', () => {
@@ -236,14 +239,14 @@ describe('SupportSlaSection — vazio 1: "SLA não configurado"', () => {
       />,
     )
 
-    expect(screen.getByText('SLA de 1ª resposta não configurado')).toBeInTheDocument()
+    expect(screen.getByText('SLA de 1º atendimento não configurado')).toBeInTheDocument()
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
     // 124/FE-TXT — mais específico: o atendente recebe a MESMA verdade do gestor,
     // inclusive a segunda morada da meta. Antes só se afirmava "Peça a um gestor".
     const pedido = screen.getByText(/Peça a um gestor/)
     expect(pedido).toHaveTextContent(/expediente do calendário/)
     expect(pedido).toHaveTextContent(/a padrão do calendário ou a do plano do cliente/)
-    expect(pedido).not.toHaveTextContent(/cadastrar a meta de 1ª resposta do plano/)
+    expect(pedido).not.toHaveTextContent(/cadastrar a meta de 1º atendimento do plano/)
   })
 })
 
@@ -273,7 +276,7 @@ describe('SupportSlaSection — vazio 2: "sem chamado no período" (NUNCA a mesm
     )
 
     expect(
-      screen.getByText('SLA de 1ª resposta sem apuração para o período'),
+      screen.getByText('SLA de 1º atendimento sem apuração para o período'),
     ).toBeInTheDocument()
     expect(screen.queryByText(/não configurado/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Nenhum chamado criado no período/i)).not.toBeInTheDocument()
@@ -298,7 +301,7 @@ describe('SupportSlaSection — vazio 2: "sem chamado no período" (NUNCA a mesm
         chamadosNoPeriodo={4}
       />,
     )
-    const naoConfigurado = screen.getByText(/SLA de 1ª resposta não configurado/).textContent
+    const naoConfigurado = screen.getByText(/SLA de 1º atendimento não configurado/).textContent
 
     expect(semChamados).not.toBe(naoConfigurado)
   })
@@ -503,7 +506,7 @@ describe('SupportSlaSection — R-3: aviso do limite de confiabilidade do FCR', 
     )
 
     expect(screen.getByText(AVISO)).toBeInTheDocument()
-    expect(screen.getByText('SLA de 1ª resposta não configurado')).toBeInTheDocument()
+    expect(screen.getByText('SLA de 1º atendimento não configurado')).toBeInTheDocument()
   })
 
   it('o aviso é visível na tela — não é `title`/tooltip escondido', () => {
@@ -568,7 +571,7 @@ describe('SupportSlaSection — contraste do estado vazio (medido, não presumid
       />,
     )
 
-    const titulo = screen.getByText('SLA de 1ª resposta não configurado')
+    const titulo = screen.getByText('SLA de 1º atendimento não configurado')
     expect(titulo.className).toContain('text-foreground')
     expect(titulo.className).not.toContain('text-primary/30')
 
@@ -633,5 +636,51 @@ describe('SupportSlaSection — contraste do estado vazio (medido, não presumid
 
     expect(razao).toBeLessThan(2)
     expect(razao).toBeLessThan(PISO_AA)
+  })
+})
+
+
+/**
+ * 124/`P-7` — o VOCABULÁRIO da seção, na tela.
+ *
+ * A decisão do usuário (`decisoes.md` § `P-7`) foi padronizar em **"1º atendimento"**
+ * porque "1ª resposta" descreve errado o que é medido: o indicador conta até o primeiro
+ * **apontamento de tempo**, não até a resposta ao cliente. Aqui isso é verificado onde o
+ * gestor lê — o título do card e os títulos do drill.
+ *
+ * O que faz estes asserts ficarem vermelhos: restaurar `title="1ª Resposta vs SLA"` no
+ * `SupportSlaSection` (mutação `P7-TITULO-CARD`) ou os títulos `'Respondidos…'` do drill.
+ */
+describe('SupportSlaSection — vocabulário "1º atendimento" (124/P-7)', () => {
+  it('o título do card diz "1º Atendimento vs SLA"', () => {
+    render(
+      <SupportSlaSection
+        respondidosNoPrazo={7}
+        respondidosForaDoPrazo={3}
+        chamadosNoPeriodo={10}
+      />,
+    )
+
+    expect(screen.getByText('1º Atendimento vs SLA')).toBeInTheDocument()
+    // A negativa vem acompanhada da positiva acima, na mesma execução.
+    expect(screen.queryByText('1ª Resposta vs SLA')).not.toBeInTheDocument()
+    expect(document.body.textContent ?? '').not.toMatch(/1ª resposta/i)
+  })
+
+  it('o drill da fatia leva o título novo — "Atendidos", não "Respondidos"', () => {
+    const onSegmentDrill = vi.fn()
+    render(
+      <SupportSlaSection
+        respondidosNoPrazo={7}
+        respondidosForaDoPrazo={3}
+        chamadosNoPeriodo={10}
+        onSegmentDrill={onSegmentDrill}
+      />,
+    )
+
+    // O marcador que substitui o gráfico não dispara `onSegmentClick`; o que se afirma
+    // aqui é a PROP que a seção monta, lida do elemento renderizado.
+    expect(screen.getByTestId('sla-chart')).toBeInTheDocument()
+    expect(document.body.textContent ?? '').not.toMatch(/respondidos/i)
   })
 })

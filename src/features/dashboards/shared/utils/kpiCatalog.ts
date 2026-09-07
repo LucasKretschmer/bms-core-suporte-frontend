@@ -12,7 +12,7 @@
  * ## 124/FE-TXT — tooltip que descreve a FONTE do número é código, não copy
  *
  * `AP-FRONTEND-022`: texto de UI que afirma comportamento do sistema envelhece junto com
- * o sistema. `BE-F4F5` trocou a FONTE do SLA de 1ª resposta e do FCR — os dois deixaram
+ * o sistema. `BE-F4F5` trocou a FONTE do SLA de 1º atendimento e do FCR — os dois deixaram
  * de ser lidos de colunas do HubSpot e passaram a ser CALCULADOS a partir da configuração
  * local (plano + calendário) e do histórico de estágio. Os dois `tooltipText` que
  * mandavam o usuário ao Service Hub ficaram FALSOS no mesmo commit, e foram corrigidos
@@ -30,9 +30,30 @@
  * (`HubSpotClient.cs:1054` → `:1100`), gravado em `tickets.csat` e agregado direto da
  * coluna (`MetricsQueryRepository.cs:294`). Corrigir texto correto seria regressão.
  *
- * O vocabulário ("meta de 1ª resposta", "expediente", "calendário", "histórico de
+ * O vocabulário ("meta de 1º atendimento", "expediente", "calendário", "histórico de
  * movimentação") é o MESMO fixado por `supportSlaStates.ts` (124/FE-F4) — dois nomes para
  * a mesma coisa confundem mais do que o texto errado.
+ *
+ * ## 124/P-7 — "1ª resposta" saiu daqui porque DESCREVIA ERRADO o que é medido
+ *
+ * Decisão do usuário (`decisoes.md` § `P-7`, 2026-09-06): o vocabulário é **"1º
+ * atendimento"**, em toda a aplicação. O motivo não é consistência com as telas de
+ * configuração — é que o indicador conta da abertura do chamado até o **primeiro
+ * apontamento de tempo** (o atendente inicia o timer), e **não** até a primeira resposta
+ * ao cliente. A ressalva está no `prd.md` §F4 e foi aceita: o número tende a ser otimista
+ * frente à percepção do cliente, justamente porque o atendente pode iniciar o timer para
+ * analisar antes de responder. Chamar isso de "1ª resposta" num painel de gestão promete
+ * uma coisa e entrega outra.
+ *
+ * Pelo mesmo motivo, `respondidosNoPrazo`/`respondidosForaDoPrazo` — que são **este mesmo
+ * indicador contado**, comparado com a meta — deixaram de se chamar "Respondidos" e
+ * passaram a "Atendidos". As **chaves do DTO** não mudam: são o contrato de wire com
+ * `MetricsOverviewDto`, e renomeá-las quebraria a leitura sem corrigir nada do que o
+ * usuário lê.
+ *
+ * ⚠️ NÃO foi renomeado o que mede resposta de verdade: o CSAT (`Tickets com CSAT
+ * respondido`, `totalRespondentes`) é preenchido pelo **cliente**, e ali "respondido" é a
+ * palavra certa.
  */
 
 import type { DrillSpec, MetricsOverviewDto } from '../types/metrics'
@@ -151,21 +172,23 @@ export const KPI_CATALOG: KpiDefinition[] = [
   },
   {
     key: 'tmeHorasCorridas',
-    label: 'TME / 1ª resposta (corridas)',
+    label: 'TME / 1º atendimento (corridas)',
     formatter: formatHours,
     toleratesNull: true,
     drill: { metric: 'tickets-tempos', title: 'Tickets com tempos de atendimento' },
   },
   {
     key: 'tmeHorasUteis',
-    label: '1ª resposta (horas úteis)',
+    label: '1º atendimento (horas úteis)',
     formatter: formatHours,
     toleratesNull: true,
     drill: { metric: 'tickets-tempos', title: 'Tickets com tempos de atendimento' },
   },
   {
     key: 'respondidosNoPrazo',
-    label: 'Respondidos no prazo (SLA)',
+    // 124/P-7 — a CHAVE continua `respondidosNoPrazo` (contrato de wire); o RÓTULO não,
+    // porque o que se conta é o 1º atendimento dentro da meta, não a resposta ao cliente.
+    label: 'Atendidos no prazo (SLA)',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: true,
     // 124/FE-TXT — era 'Requer SLA configurado no Service Hub'. A meta nunca veio do
@@ -173,21 +196,22 @@ export const KPI_CATALOG: KpiDefinition[] = [
     // `BE-F4F5` a apuração é local. A meta tem DUAS moradas, com precedência conferida em
     // `MetricsService.cs:691` (`PlanoSlaMinutos ?? metaDoCalendario`): dizer só "no plano"
     // mandaria preencher plano a plano quem já tem a meta padrão do calendário.
-    tooltipText: 'Requer expediente no calendário e meta de 1ª resposta no plano ou no calendário',
+    tooltipText:
+      'Requer expediente no calendário e meta de 1º atendimento no plano ou no calendário',
     drill: {
       metric: 'tickets-sla',
-      title: 'Respondidos no prazo (SLA)',
+      title: 'Atendidos no prazo (SLA)',
       params: { sla: 'on' },
     },
   },
   {
     key: 'respondidosForaDoPrazo',
-    label: 'Respondidos fora do prazo',
+    label: 'Atendidos fora do prazo',
     formatter: (v) => new Intl.NumberFormat('pt-BR').format(v),
     toleratesNull: true,
     drill: {
       metric: 'tickets-sla',
-      title: 'Respondidos fora do prazo',
+      title: 'Atendidos fora do prazo',
       params: { sla: 'late' },
     },
   },

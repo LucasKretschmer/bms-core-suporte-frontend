@@ -1,5 +1,5 @@
 /**
- * 124/F4 — os dois estados vazios do SLA de 1ª resposta e o limite de confiabilidade
+ * 124/F4 — os dois estados vazios do SLA de 1º atendimento e o limite de confiabilidade
  * do FCR (`R-3`), como lógica PURA.
  *
  * ## Por que este arquivo existe (e não vive dentro do componente)
@@ -56,7 +56,7 @@
 import { dataCurta, diaLocalSaoPaulo } from '../../../business-calendar/utils/localDay'
 
 /* ────────────────────────────────────────────────────────────────────────────────────
- * Estado do SLA de 1ª resposta
+ * Estado do SLA de 1º atendimento
  * ──────────────────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -100,13 +100,13 @@ export function estadoDoSla({
 }
 
 /** Título do estado vazio "ainda não foi configurado" — as palavras exigidas pela unidade. */
-export const TITULO_SLA_NAO_CONFIGURADO = 'SLA de 1ª resposta não configurado'
+export const TITULO_SLA_NAO_CONFIGURADO = 'SLA de 1º atendimento não configurado'
 
 /** Título do estado vazio "o período não tem chamado" — nunca colapsado com o de cima. */
 export const TITULO_SLA_SEM_CHAMADOS = 'Nenhum chamado criado no período selecionado'
 
 /** Título do estado em que a tela não sabe qual dos dois é — não afirma nenhum. */
-export const TITULO_SLA_INDETERMINADO = 'SLA de 1ª resposta sem apuração para o período'
+export const TITULO_SLA_INDETERMINADO = 'SLA de 1º atendimento sem apuração para o período'
 
 /**
  * 124/FE-TXT — A FRASE ÚNICA da pré-condição do cálculo. Um fato, um texto.
@@ -132,9 +132,18 @@ export const TITULO_SLA_INDETERMINADO = 'SLA de 1ª resposta sem apuração para
  * O calendário aplicável é o do plano (`fonte.PlanoCalendarioId`) ou o marcado como padrão
  * (`MetricsService.cs:663-681`); o expediente vazio derruba a apuração antes da meta
  * (`:686`, a guarda que a mutação M5 de `BE-F4F5` revelou).
+ *
+ * ## 124/P-7 — "meta de 1ª resposta" virou "meta de 1º atendimento"
+ *
+ * Decisão do usuário (`decisoes.md` § `P-7`): é o nome que a tela de configuração usa
+ * (`SupportPlanFormModal`: *"Meta de 1º atendimento (minutos)"*), e é o nome **correto** —
+ * o indicador mede até o primeiro **apontamento de tempo**, não até a primeira resposta ao
+ * cliente (`prd.md` §F4). Esta constante é a fonte única da frase, e a cópia literal no
+ * `FirstResponseVsSlaChart` mudou no mesmo passo; o teste que compara as duas fontes reais
+ * reprova se uma andar sem a outra.
  */
 export const PRE_CONDICAO_DO_CALCULO_DO_SLA =
-  'O cálculo exige um calendário com expediente cadastrado e uma meta de 1ª resposta — ' +
+  'O cálculo exige um calendário com expediente cadastrado e uma meta de 1º atendimento — ' +
   'do plano do cliente ou, na falta dela, a meta padrão do calendário.'
 
 /**
@@ -157,7 +166,7 @@ export function detalheSlaNaoConfigurado(chamadosNoPeriodo: number): string {
 
 /** Explicação do vazio por filtro — nenhuma menção a configuração, que não é o caso. */
 export const DETALHE_SLA_SEM_CHAMADOS =
-  'Sem chamado criado no período, não há SLA de 1ª resposta para apurar. ' +
+  'Sem chamado criado no período, não há SLA de 1º atendimento para apurar. ' +
   'Ajuste o período ou os filtros.'
 
 /** Explicação do indeterminado: descreve o que se sabe, e só. */
@@ -182,11 +191,11 @@ export const ACAO_SLA_NAO_CONFIGURADO = 'Cadastre o expediente em'
  * vezes na mesma frase.
  */
 export const ACAO_SLA_NAO_CONFIGURADO_META =
-  '. A meta de 1ª resposta pode ser a padrão do próprio calendário ou, por cliente, a do plano em'
+  '. A meta de 1º atendimento pode ser a padrão do próprio calendário ou, por cliente, a do plano em'
 
 /** Chamada de ação para quem não tem acesso às telas de configuração. */
 export const ACAO_SLA_NAO_CONFIGURADO_SEM_ACESSO =
-  'Peça a um gestor para cadastrar o expediente do calendário e uma meta de 1ª resposta — ' +
+  'Peça a um gestor para cadastrar o expediente do calendário e uma meta de 1º atendimento — ' +
   'a padrão do calendário ou a do plano do cliente.'
 
 /* ────────────────────────────────────────────────────────────────────────────────────

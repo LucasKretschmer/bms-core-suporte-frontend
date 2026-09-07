@@ -43,7 +43,7 @@ const PAGE_SIZE_INICIAL = 25
  *
  * ## DD-2 — retroatividade
  *
- * Toda mutação que envolva data anterior a hoje (SP) passa por confirmação explícita, e a
+ * Toda mutação que envolva data de hoje ou anterior (SP) passa por confirmação explícita, e a
  * confirmação traz **a contagem real de chamados afetados**, vinda da rota de pré-contagem
  * (`GET .../holidays/impacto?data=`) **antes** da escrita. Ver `utils/retroactiveWarning.ts`.
  */
@@ -64,7 +64,8 @@ export function HolidaysSection({
   const feriados = useHolidays(calendarId, { ano, page, pageSize })
   const { create, update, remove, importar } = useHolidayMutations()
 
-  // Só consulta quando o diálogo de remoção está aberto, e só a data retroativa.
+  // Só consulta quando o diálogo de remoção está aberto, e só a data retroativa (`P-6`:
+  // hoje conta como retroativa — o indicador do chamado fechado hoje de manhã muda).
   const datasParaConsultar = removendo === null ? [] : datasRetroativas([removendo.data])
   const resultadosDoImpacto = useHolidayImpacts(calendarId, datasParaConsultar)
   const estadoDoImpactoDaRemocao = estadoDoImpacto(resultadosDoImpacto)

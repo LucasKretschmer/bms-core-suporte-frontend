@@ -217,7 +217,7 @@ export default function DashboardSuportePage() {
         onCategoryDrill={panelActive ? undefined : openDrill}
       />
 
-      {/* 1ª Resposta vs SLA — Fase 1B (dados vêm do overview). Fatia clicável (016). */}
+      {/* 1º Atendimento vs SLA — Fase 1B (dados vêm do overview). Fatia clicável (016). */}
       <SupportSlaSection
         respondidosNoPrazo={overviewQuery.data?.respondidosNoPrazo ?? null}
         respondidosForaDoPrazo={overviewQuery.data?.respondidosForaDoPrazo ?? null}

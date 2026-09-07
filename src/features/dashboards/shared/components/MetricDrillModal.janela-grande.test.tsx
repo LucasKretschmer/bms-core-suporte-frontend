@@ -61,7 +61,7 @@ const BASE: MetricsBaseParams = {
 
 const SPEC: DrillSpec = {
   metric: 'tickets-sla',
-  title: 'Respondidos no prazo (SLA)',
+  title: 'Atendidos no prazo (SLA)',
   params: { sla: 'on' },
 }
 

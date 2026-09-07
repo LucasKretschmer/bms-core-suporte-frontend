@@ -114,7 +114,10 @@ describe('estadoDoSla — os DOIS vazios, que não podem virar um só', () => {
 
 describe('textos dos dois vazios — distintos, e nenhum deles diz "zero"', () => {
   it('o título de "não configurado" usa as palavras exigidas', () => {
-    expect(TITULO_SLA_NAO_CONFIGURADO).toBe('SLA de 1ª resposta não configurado')
+    // 124/P-7 — travava 'SLA de 1ª resposta não configurado'. REESCRITO afirmando a
+    // correção: restaurar o rótulo antigo reprova aqui.
+    expect(TITULO_SLA_NAO_CONFIGURADO).toBe('SLA de 1º atendimento não configurado')
+    expect(TITULO_SLA_NAO_CONFIGURADO).not.toMatch(/resposta/i)
   })
 
   it('o título de "sem chamados" fala do PERÍODO e não de configuração', () => {
@@ -132,7 +135,7 @@ describe('textos dos dois vazios — distintos, e nenhum deles diz "zero"', () =
   })
 
   it('nenhum texto de vazio apresenta valor apurado — vazio não é zero nem 0%', () => {
-    // O "1" de "1ª resposta" é ordinal, não medida: a régua é zero/percentual.
+    // O "1" de "1º atendimento" é ordinal, não medida: a régua é zero/percentual.
     for (const texto of [
       TITULO_SLA_NAO_CONFIGURADO,
       TITULO_SLA_SEM_CHAMADOS,
@@ -151,7 +154,7 @@ describe('textos dos dois vazios — distintos, e nenhum deles diz "zero"', () =
   it('a explicação de "não configurado" enumera as condições reais, sem eleger uma causa', () => {
     const detalhe = detalheSlaNaoConfigurado(12)
     expect(detalhe).toContain('Nenhum dos 12 chamados criados no período entrou na apuração')
-    expect(detalhe).toContain('meta de 1ª resposta')
+    expect(detalhe).toContain('meta de 1º atendimento')
     expect(detalhe).toContain('expediente')
     expect(detalhe).toContain('isento')
     expect(detalhe).toContain('sem primeiro atendimento')
@@ -160,7 +163,7 @@ describe('textos dos dois vazios — distintos, e nenhum deles diz "zero"', () =
   /**
    * 124/FE-TXT — reescrito afirmando a correção, e MAIS específico que antes.
    *
-   * O `toContain('meta de 1ª resposta')` do teste acima é satisfeito tanto pela frase
+   * O `toContain('meta de 1º atendimento')` do teste acima é satisfeito tanto pela frase
    * completa quanto pela incompleta que dizia *"a meta de 1ª resposta no plano do
    * cliente"* — ele não discrimina. Estes travam a PRECEDÊNCIA, que é o fato novo.
    *
@@ -177,13 +180,15 @@ describe('textos dos dois vazios — distintos, e nenhum deles diz "zero"', () =
     expect(detalhe).toContain('na falta dela')
     // NEGATIVA — só vale por causa das três linhas acima: a redação incompleta,
     // que mandava preencher plano a plano quem já tinha o padrão do calendário.
-    expect(detalhe).not.toContain('exige a meta de 1ª resposta no plano do cliente')
+    expect(detalhe).not.toContain('exige a meta de 1º atendimento no plano do cliente')
+    // 124/P-7 — nem a redação incompleta, nem o vocabulário antigo.
+    expect(detalhe).not.toMatch(/1ª resposta/i)
   })
 
   it('a frase da pré-condição é UMA só, e é a exportada — a que o gráfico compartilhado repete', () => {
     // Literal escrito à mão: se a constante mudar sozinha, esta linha cai.
     expect(PRE_CONDICAO_DO_CALCULO_DO_SLA).toBe(
-      'O cálculo exige um calendário com expediente cadastrado e uma meta de 1ª resposta — ' +
+      'O cálculo exige um calendário com expediente cadastrado e uma meta de 1º atendimento — ' +
         'do plano do cliente ou, na falta dela, a meta padrão do calendário.',
     )
     // E o detalhe a usa INTEIRA, sem reescrevê-la por fora.
@@ -201,7 +206,7 @@ describe('textos dos dois vazios — distintos, e nenhum deles diz "zero"', () =
     expect(ACAO_SLA_NAO_CONFIGURADO_SEM_ACESSO).toContain('a do plano do cliente')
     // A redação antiga, que só conhecia a meta do plano.
     expect(ACAO_SLA_NAO_CONFIGURADO_SEM_ACESSO).not.toContain(
-      'cadastrar a meta de 1ª resposta do plano',
+      'cadastrar a meta de 1º atendimento do plano',
     )
   })
 

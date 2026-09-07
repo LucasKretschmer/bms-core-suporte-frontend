@@ -1,6 +1,6 @@
 import type { HolidayImpactDto } from '../types/calendar'
 import { getCalendarErrorMessage } from './calendarErrorMessage'
-import { dataCurta, ehDiaPassado } from './localDay'
+import { dataCurta, ehDiaRetroativo } from './localDay'
 
 /**
  * 124/F3 — **DD-2: mexer em feriado passado muda indicador do passado.**
@@ -29,12 +29,26 @@ import { dataCurta, ehDiaPassado } from './localDay'
  *
  * ## 🔴 O `0` que NÃO significa "sem impacto"
  *
- * `ticketsFechadosNoDia` vem **0 quando a data não é retroativa, inclusive para hoje** — porque
- * `avisoRetroativo` é `data < hoje` e hoje não é passado. Nesse caso o número não é uma medida
- * de impacto: é o valor neutro de uma pergunta que não se aplica. Por isso, quando
+ * `ticketsFechadosNoDia` vem **0 quando a data não é retroativa** — porque `avisoRetroativo`
+ * é `data <= hoje` (decisão `P-6`) e a data, então, está no futuro. Nesse caso o número não é
+ * uma medida de impacto: é o valor neutro de uma pergunta que não se aplica. Por isso, quando
  * `avisoRetroativo === false`, o texto **não exibe número nenhum** e diz o que de fato está
- * acontecendo ("não é uma data passada"). Preferir não mostrar número a mostrar um número que
+ * acontecendo ("é uma data futura"). Preferir não mostrar número a mostrar um número que
  * engana.
+ *
+ * ## 🔴 FONTE ÚNICA: quem AFIRMA é o servidor; o predicado local só ABRE a pergunta
+ *
+ * `datasRetroativas` (local, via {@link ehDiaRetroativo}) responde **sem rede** *"há o que
+ * perguntar?"* — sem ele, todo salvamento de data futura pagaria uma requisição inútil. Mas
+ * nenhuma frase desta tela afirma retroatividade a partir dele: `textoImpactos` e
+ * `textoConfirmacaoRetroativa*` leem **exclusivamente** `impacto.avisoRetroativo`, o campo
+ * que o servidor calcula em `HolidayService.CalcularImpactoAsync`.
+ *
+ * A consequência é a que interessa: quando as duas fronteiras discordam (virada do dia, ou
+ * um deploy em que só um lado tem `P-6`), a tela **não mente** — ela mostra a resposta do
+ * servidor. O predicado local só pode errar para o lado de perguntar à toa, nunca para o
+ * lado de calar o aviso — **desde que as duas fronteiras coincidam**, e é por isso que
+ * `localDay.test.ts` trava hoje e hoje + 1 dos dois lados dela.
  *
  * ## 🔴 OS CALL SITES DA GUARDA — lista completa, mantida aqui de propósito
  *
@@ -63,12 +77,13 @@ const VERBO: Record<AcaoDeFeriado, string> = {
 }
 
 /**
- * As datas **anteriores a hoje** entre as informadas, sem repetição e na ordem recebida.
+ * As datas **de hoje ou anteriores a hoje** entre as informadas, sem repetição e na ordem
+ * recebida (`P-6`: hoje entra — chamado fechado hoje de manhã já tem indicador apurado).
  *
  * Editar tem duas datas relevantes — a antiga e a nova. Considerar só a nova deixaria metade
  * dos casos sem confirmação (mover um feriado de ontem para amanhã mexe no passado igual).
  *
- * É esta lista que vira as consultas de pré-contagem: data futura **não** consulta nada.
+ * É esta lista que vira as consultas de pré-contagem: **só** data futura não consulta nada.
  */
 export function datasRetroativas(
   datas: readonly (string | null | undefined)[],
@@ -77,7 +92,7 @@ export function datasRetroativas(
   const vistas = new Set<string>()
   const retroativas: string[] = []
   for (const data of datas) {
-    if (data == null || !ehDiaPassado(data, hoje)) continue
+    if (data == null || !ehDiaRetroativo(data, hoje)) continue
     if (vistas.has(data)) continue
     vistas.add(data)
     retroativas.push(data)
@@ -85,7 +100,7 @@ export function datasRetroativas(
   return retroativas
 }
 
-/** `true` quando **alguma** das datas envolvidas está no passado. */
+/** `true` quando **alguma** das datas envolvidas é de hoje ou anterior (`P-6`). */
 export function exigeConfirmacaoRetroativa(
   datas: readonly (string | null | undefined)[],
   hoje?: string,
@@ -95,7 +110,7 @@ export function exigeConfirmacaoRetroativa(
 
 /** Título do diálogo de confirmação. */
 export function tituloConfirmacaoRetroativa(acao: AcaoDeFeriado): string {
-  return `${VERBO[acao]} feriado em data passada`
+  return `${VERBO[acao]} feriado em data de hoje ou anterior`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +131,7 @@ export function tituloConfirmacaoRetroativa(acao: AcaoDeFeriado): string {
  * anos de uma vez), e nesse caso a tela diz, com todas as letras, que a soma exibida é um
  * **piso** e não o total.
  *
- * O que NUNCA é truncado é a **quantidade de datas passadas**: ela é calculada aqui, sem
+ * O que NUNCA é truncado é a **quantidade de datas retroativas**: ela é calculada aqui, sem
  * rede, e é sempre exata. Mesmo no arquivo grande o usuário vê o tamanho do efeito.
  */
 export const MAX_DATAS_CONSULTADAS_NO_LOTE = 30
@@ -141,9 +156,9 @@ export function datasParaConsultarNoLote(retroativas: readonly string[]): string
   return retroativas.slice(0, MAX_DATAS_CONSULTADAS_NO_LOTE)
 }
 
-/** Título do diálogo do lote — já traz a contagem de datas passadas. */
+/** Título do diálogo do lote — já traz a contagem de datas retroativas. */
 export function tituloConfirmacaoRetroativaEmLote(quantidadeDeDatas: number): string {
-  return `Importar ${quantidadeDeDatas} ${plural(quantidadeDeDatas, 'feriado', 'feriados')} em ${plural(quantidadeDeDatas, 'data passada', 'datas passadas')}`
+  return `Importar ${quantidadeDeDatas} ${plural(quantidadeDeDatas, 'feriado', 'feriados')} em ${plural(quantidadeDeDatas, 'data de hoje ou anterior', 'datas de hoje ou anteriores')}`
 }
 
 /** Lista curta de datas, cortada no teto de exibição. */
@@ -183,7 +198,7 @@ export function somaDosImpactos(impactos: readonly HolidayImpactDto[]): {
  *
  * Mesma regra do caminho de um feriado: nunca há número na tela antes de `pronto`. A
  * diferença é o que se agrega — a soma dos chamados afetados — e a honestidade sobre o
- * teto: quando nem todas as datas passadas foram consultadas, o texto diz que o número
+ * teto: quando nem todas as datas retroativas foram consultadas, o texto diz que o número
  * exibido é o das consultadas e que o efeito real é maior. Afirmar um total que não foi
  * medido seria pior que não afirmar nenhum.
  */
@@ -194,7 +209,7 @@ export function textoConfirmacaoRetroativaEmLote(
 ): string {
   const quantas = retroativas.length
   const base =
-    `Esta importação grava ${quantas} ${plural(quantas, 'data anterior a hoje', 'datas anteriores a hoje')} ` +
+    `Esta importação grava ${quantas} ${plural(quantas, 'data de hoje ou anterior', 'datas de hoje ou anteriores')} ` +
     `(${listaDeDatasResumida(retroativas)}), de ${totalDeLinhas} ${plural(totalDeLinhas, 'linha', 'linhas')} do arquivo. ` +
     'Feriados não são versionados: o cálculo de SLA de 1º atendimento dos chamados daqueles dias ' +
     'passa a considerar a nova configuração, e indicadores já apurados mudam de valor.'
@@ -213,13 +228,13 @@ export function textoConfirmacaoRetroativaEmLote(
       const naoConsultadas = quantas - consultadas
       const contagem =
         naoConsultadas > 0
-          ? `Nas ${consultadas} primeiras datas passadas, ${chamados} ${plural(chamados, 'chamado já fechado tem', 'chamados já fechados têm')} ` +
+          ? `Nas ${consultadas} primeiras dessas datas, ${chamados} ${plural(chamados, 'chamado já fechado tem', 'chamados já fechados têm')} ` +
             `os indicadores recalculados; as outras ${naoConsultadas} não foram consultadas ` +
             `(é uma consulta por data, e o teto é ${MAX_DATAS_CONSULTADAS_NO_LOTE}), então o efeito real é maior.`
           : `Ao todo, ${chamados} ${plural(chamados, 'chamado já fechado tem', 'chamados já fechados têm')} os indicadores recalculados.`
       const divergencia =
         datasSemAviso > 0
-          ? ` ${datasSemAviso} ${plural(datasSemAviso, 'data não é considerada passada', 'datas não são consideradas passadas')} pelo servidor e ${plural(datasSemAviso, 'ficou', 'ficaram')} fora dessa soma.`
+          ? ` ${datasSemAviso} ${plural(datasSemAviso, 'data não é considerada retroativa', 'datas não são consideradas retroativas')} pelo servidor e ${plural(datasSemAviso, 'ficou', 'ficaram')} fora dessa soma.`
           : ''
       return `${base} ${contagem}${divergencia}`
     }
@@ -286,14 +301,19 @@ export function impactoBloqueiaConfirmacao(estado: EstadoDoImpacto): boolean {
 /**
  * A frase da contagem, por data.
  *
+ * O ramo é escolhido **só** por `impacto.avisoRetroativo` — o campo do servidor. Nenhuma
+ * comparação de data acontece aqui: é o que garante que a tela e o servidor nunca digam
+ * coisas diferentes sobre a mesma data (bloco 🔴 "FONTE ÚNICA" do topo).
+ *
  * - `avisoRetroativo === true` ⇒ mostra **o número** e o que ele significa;
- * - `avisoRetroativo === false` ⇒ **não mostra número** (ver o bloco 🔴 do topo).
+ * - `avisoRetroativo === false` ⇒ a data está **no futuro** (`P-6`: a fronteira é `<= hoje`),
+ *   e então **não mostra número** (ver o bloco 🔴 do `0` enganoso).
  */
 export function textoImpactos(impactos: readonly HolidayImpactDto[]): string {
   return impactos
     .map((impacto) => {
       if (!impacto.avisoRetroativo) {
-        return `${dataCurta(impacto.data)} não é uma data passada: nenhum indicador já apurado muda.`
+        return `${dataCurta(impacto.data)} é uma data futura: nenhum indicador já apurado muda.`
       }
       const quantidade = impacto.ticketsFechadosNoDia
       const plural = quantidade === 1 ? 'chamado já fechado' : 'chamados já fechados'
@@ -315,10 +335,13 @@ export function textoConfirmacaoRetroativa(
   estado: EstadoDoImpacto,
 ): string {
   const lista = datas.map(dataCurta).join(' e ')
-  const alvo = datas.length > 1 ? `as datas ${lista}` : `a data ${lista}`
+  const alvo =
+    datas.length > 1
+      ? `as datas ${lista}, de hoje ou anteriores`
+      : `a data ${lista}, de hoje ou anterior`
 
   const base =
-    `${VERBO[acao]} este feriado envolve ${alvo}, anterior a hoje. ` +
+    `${VERBO[acao]} este feriado envolve ${alvo}. ` +
     'Feriados não são versionados: o cálculo de SLA de 1º atendimento dos chamados daquele dia ' +
     'passa a considerar a nova configuração, e indicadores já apurados mudam de valor.'
 

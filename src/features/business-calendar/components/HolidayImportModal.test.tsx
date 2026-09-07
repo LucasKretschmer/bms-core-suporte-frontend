@@ -335,7 +335,7 @@ describe('HolidayImportModal — DD-2 no LOTE (D-1)', () => {
 
     expect(await within(dialogo).findByText(/49 chamados já fechados/)).toBeInTheDocument()
     expect(dialogo).toHaveTextContent('01/01/2026, 21/04/2026')
-    expect(dialogo).toHaveTextContent('2 datas anteriores a hoje')
+    expect(dialogo).toHaveTextContent('2 datas de hoje ou anteriores')
     // 🔴 O ponto de D-1: NADA foi gravado até aqui.
     expect(onImportar).toHaveBeenCalledTimes(1)
 
@@ -399,11 +399,55 @@ describe('HolidayImportModal — DD-2 no LOTE (D-1)', () => {
     expect(onImportar).toHaveBeenCalledTimes(1)
   })
 
-  it('a pré-visualização já avisa quantas datas são passadas, antes de qualquer clique', async () => {
+  it('a pré-visualização já avisa quantas datas são retroativas, antes de qualquer clique', async () => {
+    // 124/`P-6` — travava "…são anteriores a hoje". Reescrito: a contagem passou a incluir
+    // hoje, e a frase antiga deixaria de descrever o que o número conta.
     await ateASimulacao()
-    const aviso = screen.getByText(/2 datas deste arquivo são anteriores a hoje/)
+    const aviso = screen.getByText(/2 datas deste arquivo são de hoje ou anteriores/)
     expect(aviso).toBeInTheDocument()
     expect(aviso.closest('p')).toHaveTextContent('01/01/2026, 21/04/2026')
+  })
+
+  /**
+   * 🔴 124/`P-6` no LOTE — a fronteira também vale para a importação.
+   *
+   * O arquivo traz HOJE (06/09/2026) e HOJE + 1 (07/09/2026). A pré-visualização tem de
+   * contar **uma** data retroativa, e a confirmação tem de consultar **só** a de hoje.
+   *
+   * O que faz este teste ficar vermelho: restaurar `iso < hoje` — o lote de hoje passaria
+   * direto, sem diálogo e sem contagem, enquanto o servidor recalcularia os indicadores dos
+   * chamados fechados hoje de manhã.
+   */
+  it('🔴 lote com HOJE conta como retroativo; hoje + 1 fica de fora (P-6)', async () => {
+    mockGetHolidayImpact.mockImplementation((_c: number, data: string) =>
+      Promise.resolve(impacto(data, true, 9)),
+    )
+    const { onImportar } = renderizar()
+    const usuario = userEvent.setup()
+
+    await usuario.upload(
+      inputDoArquivo(),
+      arquivoCsv('data;nome\n2026-09-06;Hoje\n2026-09-07;Amanha\n'),
+    )
+    await screen.findByText('Hoje')
+    await usuario.click(screen.getByRole('button', { name: 'Simular importação' }))
+    await screen.findByText(/Simulação \(nada foi gravado\)/i)
+
+    // Cardinalidade ASSIMÉTRICA de propósito (1 de 2 linhas): inverter o predicado daria 1
+    // também, mas apontaria a OUTRA data — por isso a data aparece por extenso ao lado.
+    const aviso = screen.getByText(/1 data deste arquivo é de hoje ou anterior/)
+    expect(aviso.closest('p')).toHaveTextContent('06/09/2026')
+    expect(aviso.closest('p')).not.toHaveTextContent('07/09/2026')
+
+    await usuario.click(screen.getByRole('button', { name: 'Confirmar importação' }))
+    const dialogo = await screen.findByRole('alertdialog')
+
+    expect(mockGetHolidayImpact).toHaveBeenCalledWith(3, '2026-09-06')
+    expect(mockGetHolidayImpact).not.toHaveBeenCalledWith(3, '2026-09-07')
+    expect(await within(dialogo).findByText(/9 chamados já fechados/)).toBeInTheDocument()
+    expect(dialogo).toHaveTextContent('Importar 1 feriado em data de hoje ou anterior')
+    // Nada gravado antes da decisão: só o dryRun aconteceu.
+    expect(onImportar).toHaveBeenCalledTimes(1)
   })
 
   it('erro na pré-contagem NÃO trava a confirmação, e diz que não conseguiu consultar', async () => {
@@ -615,9 +659,9 @@ describe('HolidayImportModal — teto de consultas do lote (N-2)', () => {
     expect(mockGetHolidayImpact).not.toHaveBeenCalledWith(3, '2026-02-09')
 
     // A quantidade de datas passadas NÃO é truncada (é local, sem rede).
-    expect(dialogo).toHaveTextContent('40 datas anteriores a hoje')
+    expect(dialogo).toHaveTextContent('40 datas de hoje ou anteriores')
     // ...e o número de chamados é declarado como PISO, com o teto dito por extenso.
-    expect(await within(dialogo).findByText(/Nas 30 primeiras datas passadas/)).toBeInTheDocument()
+    expect(await within(dialogo).findByText(/Nas 30 primeiras dessas datas/)).toBeInTheDocument()
     expect(dialogo).toHaveTextContent('129 chamados já fechados')
     expect(dialogo).toHaveTextContent('as outras 10 não foram consultadas')
     expect(dialogo).toHaveTextContent('o efeito real é maior')
@@ -633,7 +677,7 @@ describe('HolidayImportModal — teto de consultas do lote (N-2)', () => {
     const { dialogo } = await ateOdialogo(12)
 
     await waitFor(() => expect(mockGetHolidayImpact).toHaveBeenCalledTimes(12))
-    expect(dialogo).toHaveTextContent('12 datas anteriores a hoje')
+    expect(dialogo).toHaveTextContent('12 datas de hoje ou anteriores')
     expect(await within(dialogo).findByText(/Ao todo, 111 chamados já fechados/)).toBeInTheDocument()
     // Sem truncamento, nenhuma das frases de piso aparece.
     expect(dialogo).not.toHaveTextContent('não foram consultadas')
@@ -696,7 +740,7 @@ describe('HolidayImportModal — Escape no alertdialog (N-4)', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Ano Novo')).toBeInTheDocument()
     expect(screen.getByText(/Simulação \(nada foi gravado\)/i)).toBeInTheDocument()
-    expect(screen.getByText(/1 data deste arquivo é anterior a hoje/)).toBeInTheDocument()
+    expect(screen.getByText(/1 data deste arquivo é de hoje ou anterior/)).toBeInTheDocument()
     // O `onClose` do modal NÃO foi chamado: não é só "parece aberto", ninguém pediu para fechar.
     expect(onClose).not.toHaveBeenCalled()
     // E nada foi gravado.

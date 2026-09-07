@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   dataCurta,
   dataPorExtenso,
   diaLocalSaoPaulo,
-  ehDiaPassado,
+  ehDiaRetroativo,
   faixaAceitaDeFeriado,
   somarAnos,
 } from './localDay'
@@ -25,16 +25,56 @@ describe('localDay — dia civil em America/Sao_Paulo', () => {
     expect(diaLocalSaoPaulo(new Date('2026-01-05T15:00:00Z'))).toBe('2026-01-05')
   })
 
-  it('ehDiaPassado: ontem sim, hoje NÃO, amanhã não', () => {
+  /**
+   * 124/`P-6` — este bloco travava `ehDiaPassado`: *"ontem sim, hoje NÃO, amanhã não"*.
+   * Foi **reescrito afirmando a correção**, não apagado: a fronteira passou a ser
+   * `<= hoje`, porque um chamado fechado hoje às 09h já tem indicador apurado e cadastrar
+   * hoje como feriado às 15h o altera — dano idêntico ao do caso passado.
+   *
+   * ## Por que a asserção de HOJE é a que importa
+   *
+   * Este predicado é a **segunda** fonte de verdade sobre "o que é retroativo": a primeira
+   * é `avisoRetroativo`, do servidor (`HolidayService.CalcularImpactoAsync`). Ele existe
+   * porque a tela precisa decidir **sem rede** se há o que perguntar — data futura não
+   * gera requisição nenhuma. Duas fontes só são seguras se coincidirem na fronteira, e é
+   * exatamente a fronteira que estes asserts fixam: **hoje ⇒ `true`, hoje + 1 ⇒ `false`**.
+   *
+   * O que faz cada assert ficar vermelho:
+   * - `hoje ⇒ true`: voltar a comparação para `iso < hoje` (o defeito que `P-6` corrige);
+   * - `hoje + 1 ⇒ false`: afrouxar para `iso <= amanhã`, que pediria confirmação em data
+   *   futura e faria a tela consultar impacto para dia que não tem chamado fechado.
+   */
+  it('ehDiaRetroativo: a fronteira é HOJE — ontem sim, HOJE SIM, hoje + 1 não', () => {
     const hoje = '2026-09-06'
-    expect(ehDiaPassado('2026-09-05', hoje)).toBe(true)
-    expect(ehDiaPassado('2026-09-06', hoje)).toBe(false)
-    expect(ehDiaPassado('2026-09-07', hoje)).toBe(false)
+    expect(ehDiaRetroativo('2026-09-05', hoje)).toBe(true)
+    expect(ehDiaRetroativo('2026-09-06', hoje)).toBe(true)
+    expect(ehDiaRetroativo('2026-09-07', hoje)).toBe(false)
   })
 
-  it('ehDiaPassado ignora texto que não é data civil', () => {
-    expect(ehDiaPassado('06/09/2026', '2026-09-06')).toBe(false)
-    expect(ehDiaPassado('', '2026-09-06')).toBe(false)
+  it('ehDiaRetroativo: hoje + 1 é falso mesmo na virada do mês e do ano', () => {
+    // Comparação lexicográfica: sem estes casos, um bug de "somar 1 ao dia" passaria.
+    expect(ehDiaRetroativo('2026-10-01', '2026-09-30')).toBe(false)
+    expect(ehDiaRetroativo('2026-09-30', '2026-09-30')).toBe(true)
+    expect(ehDiaRetroativo('2027-01-01', '2026-12-31')).toBe(false)
+    expect(ehDiaRetroativo('2026-12-31', '2026-12-31')).toBe(true)
+  })
+
+  it('ehDiaRetroativo ignora texto que não é data civil', () => {
+    expect(ehDiaRetroativo('06/09/2026', '2026-09-06')).toBe(false)
+    expect(ehDiaRetroativo('', '2026-09-06')).toBe(false)
+  })
+
+  it('ehDiaRetroativo: sem o 2º argumento, "hoje" é o dia de SÃO PAULO, não o do runner', () => {
+    // 2026-09-07T02:00Z é 06/09 às 23:00 em SP. Um "hoje" tirado do UTC diria 07/09 e
+    // trataria 07/09 como retroativo — pedindo confirmação para uma data FUTURA em SP.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-07T02:00:00Z'))
+    try {
+      expect(ehDiaRetroativo('2026-09-06')).toBe(true)
+      expect(ehDiaRetroativo('2026-09-07')).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('faixa aceita é hoje ±10 anos — o mesmo do HolidayService', () => {

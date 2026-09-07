@@ -44,8 +44,8 @@ vi.mock('../utils/chartTokens', () => ({
  * a tautologia do `rules/tests.md` § expectativa derivada).
  */
 const MENSAGEM_ESPERADA =
-  'SLA de 1ª resposta sem apuração para o período. ' +
-  'O cálculo exige um calendário com expediente cadastrado e uma meta de 1ª resposta — ' +
+  'SLA de 1º atendimento sem apuração para o período. ' +
+  'O cálculo exige um calendário com expediente cadastrado e uma meta de 1º atendimento — ' +
   'do plano do cliente ou, na falta dela, a meta padrão do calendário.'
 
 /** A frase que MORREU com `BE-F4F5`. Se ela voltar, os testes abaixo reprovam. */
@@ -70,7 +70,7 @@ describe('FirstResponseVsSlaChart', () => {
     render(<FirstResponseVsSlaChart respondidosNoPrazo={12} respondidosForaDoPrazo={null} />)
     expect(screen.getByText(MENSAGEM_ESPERADA)).toBeInTheDocument()
     // Não deve renderizar o valor parcial como se fosse gráfico válido.
-    expect(screen.queryByText('Respondidos no prazo')).not.toBeInTheDocument()
+    expect(screen.queryByText('Atendidos no prazo')).not.toBeInTheDocument()
   })
 
   it('estado parcial inverso (no prazo null) → empty honesto', () => {
@@ -131,7 +131,7 @@ describe('FirstResponseVsSlaChart — o empty não manda mais ao Service Hub (12
     render(<FirstResponseVsSlaChart respondidosNoPrazo={null} respondidosForaDoPrazo={null} />)
 
     const texto = screen.getByText(MENSAGEM_ESPERADA).textContent ?? ''
-    expect(texto).toMatch(/meta de 1ª resposta/)
+    expect(texto).toMatch(/meta de 1º atendimento/)
     expect(texto).toMatch(/plano do cliente/)
     expect(texto).toMatch(/calendário com expediente cadastrado/)
   })
@@ -145,7 +145,9 @@ describe('FirstResponseVsSlaChart — o empty não manda mais ao Service Hub (12
     expect(texto).toMatch(/do plano do cliente/)
     expect(texto).toMatch(/a meta padrão do calendário/)
     expect(texto).toMatch(/na falta dela/)
-    expect(texto).not.toMatch(/exige a meta de 1ª resposta no plano do cliente/)
+    expect(texto).not.toMatch(/exige a meta de 1º atendimento no plano do cliente/)
+    // 124/P-7 — o vocabulário antigo não volta pela porta dos fundos.
+    expect(texto).not.toMatch(/1ª resposta/i)
   })
 
   it('a frase NÃO elege causa: sem o discriminador, não afirma "não configurado" nem "sem chamado"', () => {
@@ -266,7 +268,7 @@ describe('FirstResponseVsSlaChart — a pré-condição é UMA frase nas duas te
 
   /** Literal escrito à mão — a terceira fonte, independente das duas de produção. */
   const CLAUSULA_ESPERADA =
-    'O cálculo exige um calendário com expediente cadastrado e uma meta de 1ª resposta — ' +
+    'O cálculo exige um calendário com expediente cadastrado e uma meta de 1º atendimento — ' +
     'do plano do cliente ou, na falta dela, a meta padrão do calendário.'
 
   it('o texto do gráfico contém EXATAMENTE a cláusula que a seção de SLA usa', () => {
@@ -296,5 +298,54 @@ describe('FirstResponseVsSlaChart — a pré-condição é UMA frase nas duas te
     expect(doGrafico).not.toBe(daSecao)
     expect(daSecao).toContain('Nenhum dos 12 chamados')
     expect(doGrafico).not.toContain('Nenhum dos 12 chamados')
+  })
+})
+
+
+/**
+ * 124/`P-7` — a LEGENDA do gráfico, e o limite do jsdom.
+ *
+ * ## O achado, medido (não presumido)
+ *
+ * O Recharts **não renderiza nada** neste ambiente: `ResponsiveContainer` mede 0×0 no
+ * jsdom, e `document.body.textContent` sai **vazio** com o gráfico montado com números
+ * (medido por sonda descartável antes de escrever este bloco). Logo, os `name` das `<Bar>`
+ * — o rótulo da legenda SVG — são **inalcançáveis** por teste de componente aqui. É a
+ * mesma família de `AP-FRONTEND-026`/`027`: propriedade que o ambiente de teste não modela
+ * produz asserção inerte que passa nos dois mundos.
+ *
+ * ## Como isso é coberto sem mentir
+ *
+ * 1. **Efeito, onde ele existe:** o caminho acessível equivalente é o `ChartDrillLegend`
+ *    (WCAG 2.1.1), que renderiza em HTML e é alcançável por `Tab`. Os `actionLabel` dele
+ *    ("Ver tickets **atendidos** no prazo (N)") estão cobertos por teste de componente em
+ *    `chart-keyboard-drill.test.tsx` — mutação `P7-LEGENDA-ACAO`.
+ * 2. **Forma, para o que só existe no SVG:** as duas `name` das barras são travadas
+ *    lendo o **fonte** do componente. Varredura textual é piso, nunca teto
+ *    (`rules/tests.md`) — aqui ela é o único piso possível, e está declarado que é isso.
+ */
+describe('FirstResponseVsSlaChart — a legenda das barras (limite do jsdom, 124/P-7)', () => {
+  const FONTE = readFileSync(
+    'src/features/dashboards/shared/components/FirstResponseVsSlaChart.tsx',
+    'utf8',
+  )
+
+  it('as duas séries se chamam "Atendidos", não "Respondidos"', () => {
+    expect(FONTE).toContain('name="Atendidos no prazo"')
+    expect(FONTE).toContain('name="Atendidos fora do prazo"')
+    expect(FONTE).not.toContain('name="Respondidos no prazo"')
+    expect(FONTE).not.toContain('name="Respondidos fora do prazo"')
+  })
+
+  it('o rótulo do bloco acessível de drill fala de "primeiro atendimento"', () => {
+    expect(FONTE).toContain('label="Abrir tickets por SLA de primeiro atendimento"')
+    expect(FONTE).not.toContain('label="Abrir tickets por SLA de primeira resposta"')
+  })
+
+  it('CONTROLE do próprio detector: ele ainda casa o que existe, e não casa o que não existe', () => {
+    // Sem isto, um `readFileSync` apontando para arquivo errado devolveria string vazia e
+    // todas as negativas acima passariam vacuamente.
+    expect(FONTE).toContain('export const FirstResponseVsSlaChart')
+    expect(FONTE).not.toContain('name="ISTO NAO EXISTE NO ARQUIVO"')
   })
 })

@@ -1,8 +1,11 @@
 /**
- * Seção de 1ª Resposta vs SLA do Dashboard Suporte.
+ * Seção de 1º Atendimento vs SLA do Dashboard Suporte.
  * Derivada dos campos respondidosNoPrazo / respondidosForaDoPrazo do MetricsOverviewDto.
  * Recebe valores prontos — sem chamada própria de API.
- * AP-SECURITY-001: labels "Respondidos no prazo" / "Respondidos fora do prazo" — sem categoria HubSpot.
+ * AP-SECURITY-001: labels "Atendidos no prazo" / "Atendidos fora do prazo" — sem categoria HubSpot.
+ *
+ * 124/P-7: o vocabulário desta seção é "1º atendimento" — as props e as chaves do DTO
+ * continuam `respondidos*` (contrato de wire), o que o usuário lê é que mudou.
  *
  * ## 124/F4 — o que esta seção passou a impedir
  *
@@ -126,7 +129,7 @@ export function SupportSlaSection({
       )}
 
       <ChartCard
-        title="1ª Resposta vs SLA"
+        title="1º Atendimento vs SLA"
         isLoading={isLoading}
         isError={isError}
         errorMessage={errorMessage}
@@ -145,8 +148,8 @@ export function SupportSlaSection({
                       metric: 'tickets-sla',
                       title:
                         sla === 'on'
-                          ? 'Respondidos no prazo (SLA)'
-                          : 'Respondidos fora do prazo',
+                          ? 'Atendidos no prazo (SLA)'
+                          : 'Atendidos fora do prazo',
                       params: { sla },
                     })
                 : undefined

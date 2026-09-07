@@ -226,7 +226,7 @@ describe('Drill de gráfico alcançável por teclado (WCAG 2.1.1)', () => {
     )
 
     ancorar()
-    const fora = screen.getByRole('button', { name: 'Ver tickets respondidos fora do prazo (8)' })
+    const fora = screen.getByRole('button', { name: 'Ver tickets atendidos fora do prazo (8)' })
     await tabularAte(user, fora)
 
     await user.keyboard('{Enter}')
@@ -252,7 +252,7 @@ describe('Drill de gráfico alcançável por teclado (WCAG 2.1.1)', () => {
     )
 
     ancorar()
-    const noPrazo = screen.getByRole('button', { name: 'Ver tickets respondidos no prazo (40)' })
+    const noPrazo = screen.getByRole('button', { name: 'Ver tickets atendidos no prazo (40)' })
     await tabularAte(user, noPrazo)
     await user.keyboard('{Enter}')
 

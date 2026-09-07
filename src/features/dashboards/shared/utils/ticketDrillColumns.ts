@@ -7,6 +7,17 @@
  * é o label do pipeline resolvido pelo backend.
  *
  * `sortKey` reflete a whitelist de ordenação do backend (lowercase do campo do DTO).
+ *
+ * ## 124/P-7 — estes `header` também são os cabeçalhos do EXPORT
+ *
+ * `MetricDrillModal` monta `exportCols` a partir de `c.header`, então o CSV/XLSX sai com
+ * exatamente estas palavras. É o quarto lugar de AP-FRONTEND-028 — e o mais grave, porque
+ * planilha errada o gestor encaminha em vez de recarregar. Por isso "1ª resposta" foi
+ * trocado por "1º atendimento" aqui junto com o resto (`decisoes.md` § `P-7`): o que a
+ * coluna mede é o tempo até o **primeiro apontamento**, não até a resposta ao cliente.
+ *
+ * As `key` (`frHoras`, `frHorasUteis`, `frSla`) **não** mudam: são campos de `TicketRowDto`
+ * e chaves de ordenação do backend.
  */
 
 import { formatDate, formatHours, formatDecimal } from '../../../reports/shared/utils/formatters'
@@ -112,14 +123,14 @@ const colReaberto: ColumnDef<TicketRowDto> = {
 
 const colFrHoras: ColumnDef<TicketRowDto> = {
   key: 'frHoras',
-  header: '1ª resposta (corridas)',
+  header: '1º atendimento (corridas)',
   accessor: (row) => fmtHours(row.frHoras),
   align: 'right',
 }
 
 const colFrHorasUteis: ColumnDef<TicketRowDto> = {
   key: 'frHorasUteis',
-  header: '1ª resposta (úteis)',
+  header: '1º atendimento (úteis)',
   accessor: (row) => fmtHours(row.frHorasUteis),
   align: 'right',
 }
@@ -140,7 +151,7 @@ const colResHorasUteis: ColumnDef<TicketRowDto> = {
 
 const colSla: ColumnDef<TicketRowDto> = {
   key: 'frSla',
-  header: 'SLA 1ª resposta',
+  header: 'SLA 1º atendimento',
   accessor: (row) => fmtSla(row.frSla),
   align: 'center',
 }

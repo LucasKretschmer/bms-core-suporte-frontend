@@ -179,10 +179,15 @@ describe('kpiCatalog — ordenação por cliente nos cards (123/D1)', () => {
       'Taxa de resolução',
       'TMR (corridas)',
       'TMR (horas úteis)',
-      'TME / 1ª resposta (corridas)',
-      '1ª resposta (horas úteis)',
-      'Respondidos no prazo (SLA)',
-      'Respondidos fora do prazo',
+      // 124/P-7 — travava 'TME / 1ª resposta (corridas)', '1ª resposta (horas úteis)',
+      // 'Respondidos no prazo (SLA)' e 'Respondidos fora do prazo'. REESCRITO afirmando a
+      // correção: o indicador conta até o primeiro APONTAMENTO de tempo, não até a resposta
+      // ao cliente. A identidade da lista (e não a contagem) é o que faz a volta do rótulo
+      // antigo reprovar aqui.
+      'TME / 1º atendimento (corridas)',
+      '1º atendimento (horas úteis)',
+      'Atendidos no prazo (SLA)',
+      'Atendidos fora do prazo',
       'Tickets reabertos',
       'CSAT',
       'FCR (1º contato)',
@@ -215,7 +220,8 @@ describe('kpiCatalog — ordenação por cliente nos cards (123/D1)', () => {
 
 /**
  * 124/FE-TXT — os dois `tooltipText` que ficaram FALSOS quando `BE-F4F5` trocou a FONTE
- * do SLA de 1ª resposta e do FCR.
+ * do SLA de 1º atendimento e do FCR. 124/P-7 reescreveu o vocabulário destes mesmos
+ * testes: "1ª resposta" → "1º atendimento".
  *
  * Estes testes existem para que a volta do texto antigo REPROVE. Todo valor esperado é
  * literal escrito à mão — nenhuma constante importada do catálogo (`rules/tests.md` §
@@ -230,18 +236,29 @@ describe('kpiCatalog — a fonte do SLA e do FCR é LOCAL, e o tooltip diz isso 
   }
 
   it('respondidosNoPrazo: aponta para expediente no calendário + meta no plano OU no calendário', () => {
+    // 124/P-7 — travava a mesma frase com "meta de 1ª resposta". REESCRITO afirmando a
+    // correção, com o literal completo escrito à mão.
     expect(tooltipDe('respondidosNoPrazo')).toBe(
-      'Requer expediente no calendário e meta de 1ª resposta no plano ou no calendário',
+      'Requer expediente no calendário e meta de 1º atendimento no plano ou no calendário',
     )
   })
 
   it('respondidosNoPrazo: NÃO manda mais ao Service Hub — e diz o que exige, na mesma execução', () => {
     const texto = tooltipDe('respondidosNoPrazo')
     // POSITIVA primeiro: sem ela, a negativa abaixo passaria com tooltip vazio.
-    expect(texto).toMatch(/meta de 1ª resposta/)
+    expect(texto).toMatch(/meta de 1º atendimento/)
     expect(texto).toMatch(/expediente/)
     expect(texto).toMatch(/calendário/)
     expect(texto).not.toMatch(/service hub/i)
+  })
+
+  it('124/P-7: o tooltip NÃO volta a prometer "1ª resposta" — e o que ele diz está na mesma execução', () => {
+    // O que faz este assert ficar vermelho: restaurar "meta de 1ª resposta" no catálogo.
+    // A positiva ao lado impede que a negativa passe com tooltip vazio ou ausente.
+    const texto = tooltipDe('respondidosNoPrazo')
+    expect(texto).toContain('1º atendimento')
+    expect(texto).not.toMatch(/1ª resposta/i)
+    expect(texto).not.toMatch(/\bresposta\b/i)
   })
 
   it('respondidosNoPrazo: a meta tem DUAS moradas — não só o plano', () => {
@@ -249,8 +266,8 @@ describe('kpiCatalog — a fonte do SLA e do FCR é LOCAL, e o tooltip diz isso 
     // só a meta padrão do calendário está configurado; mandá-lo ao plano é trabalho à toa.
     const texto = tooltipDe('respondidosNoPrazo')
     expect(texto).toMatch(/no plano ou no calendário/)
-    // A redação incompleta, que conhecia só uma das duas.
-    expect(texto).not.toMatch(/meta de 1ª resposta no plano e expediente/)
+    // A redação incompleta, que conhecia só uma das duas (124/P-7 atualizou o vocabulário).
+    expect(texto).not.toMatch(/meta de 1º atendimento no plano e expediente/)
   })
 
   it('fcr: descreve o histórico de movimentação, a fonte real desde AUTO-124-12', () => {

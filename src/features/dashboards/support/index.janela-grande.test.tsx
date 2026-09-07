@@ -1,5 +1,5 @@
 /**
- * 124/FE-P3 — o `422 DATE_RANGE_TOO_LARGE` no CARD "1ª Resposta vs SLA".
+ * 124/FE-P3 — o `422 DATE_RANGE_TOO_LARGE` no CARD "1º Atendimento vs SLA".
  *
  * O mesmo `/metrics/overview` alimenta os KPIs e este card, então o 422 chega aos dois.
  * Este arquivo cobre o segundo caminho, e cobre-o pela PÁGINA (é ela que tem o objeto de

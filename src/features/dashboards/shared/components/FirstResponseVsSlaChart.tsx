@@ -1,15 +1,21 @@
 /**
- * Gráfico 1ª resposta vs SLA (Recharts BarChart).
+ * Gráfico 1º atendimento vs SLA (Recharts BarChart).
  * Derivado dos campos respondidosNoPrazo / respondidosForaDoPrazo do MetricsOverviewDto.
  * Cores via chartTokens (verde / vermelho) — nunca hex literal.
  * Labels sem categoria HubSpot (AP-SECURITY-001).
+ *
+ * ## 124/P-7 — o rótulo diz "1º atendimento", a prop continua `respondidos*`
+ *
+ * As props espelham as chaves do `MetricsOverviewDto` e não mudam. O que o usuário lê,
+ * sim: o indicador conta até o **primeiro apontamento de tempo**, não até a resposta ao
+ * cliente (`decisoes.md` § `P-7`).
  *
  * ## 124/FE-TXT — o empty defensivo deixou de mandar o usuário ao Service Hub
  *
  * Até `BE-F4F5` o SLA era lido de `tickets.frsla` — coluna que a ingestão grava SEMPRE
  * `null` de propósito (`HubSpotClient.cs:1096`, com o motivo escrito lá). Desde então os
- * dois campos são CALCULADOS na leitura, a partir da configuração LOCAL: meta de 1ª
- * resposta no plano do cliente + calendário com expediente cadastrado
+ * dois campos são CALCULADOS na leitura, a partir da configuração LOCAL: meta de 1º
+ * atendimento no plano do cliente + calendário com expediente cadastrado
  * (`MetricsService.cs:860-874`; os 7 caminhos que produzem `null` estão no §3 do
  * `be-f4f5-report.md`). A dependência do Service Hub foi abandonada por decisão
  * (`AUTO-124-12`), e o texto antigo passou a apontar o gestor para o lugar errado —
@@ -70,8 +76,8 @@ type FirstResponseVsSlaChartProps = {
  * nenhum dos dois.
  */
 const MENSAGEM_SLA_SEM_APURACAO =
-  'SLA de 1ª resposta sem apuração para o período. ' +
-  'O cálculo exige um calendário com expediente cadastrado e uma meta de 1ª resposta — ' +
+  'SLA de 1º atendimento sem apuração para o período. ' +
+  'O cálculo exige um calendário com expediente cadastrado e uma meta de 1º atendimento — ' +
   'do plano do cliente ou, na falta dela, a meta padrão do calendário.'
 
 export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaChart({
@@ -89,7 +95,7 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
   }
 
   // Empty conservador (#5): se QUALQUER lado for null, o SLA do período não foi apurado.
-  // Não usar `?? 0` num lado null — mostraria "zero respostas" enganosamente. Defensivo
+  // Não usar `?? 0` num lado null — mostraria "zero atendimentos" enganosamente. Defensivo
   // caso o gráfico seja reusado sem o ChartCard da section.
   if (respondidosNoPrazo === null || respondidosForaDoPrazo === null) {
     return <EmptyState message={MENSAGEM_SLA_SEM_APURACAO} className={className} />
@@ -114,14 +120,14 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
           <Legend />
           <Bar
             dataKey="noPrazo"
-            name="Respondidos no prazo"
+            name="Atendidos no prazo"
             fill={tokens['chart-verde']}
             cursor={onSegmentClick ? 'pointer' : undefined}
             onClick={onSegmentClick ? () => onSegmentClick('on') : undefined}
           />
           <Bar
             dataKey="foraDoPrazo"
-            name="Respondidos fora do prazo"
+            name="Atendidos fora do prazo"
             fill={tokens['chart-vermelho']}
             cursor={onSegmentClick ? 'pointer' : undefined}
             onClick={onSegmentClick ? () => onSegmentClick('late') : undefined}
@@ -132,14 +138,14 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
       {/* WCAG 2.1.1 (WCAG-1): mesmo drill das barras ('on' | 'late'), alcançável por Tab. */}
       {onSegmentClick && (
         <ChartDrillLegend
-          label="Abrir tickets por SLA de primeira resposta"
+          label="Abrir tickets por SLA de primeiro atendimento"
           items={[
             {
               key: 'on',
               label: 'No prazo',
               value: respondidosNoPrazo,
               color: tokens['chart-verde'],
-              actionLabel: `Ver tickets respondidos no prazo (${respondidosNoPrazo})`,
+              actionLabel: `Ver tickets atendidos no prazo (${respondidosNoPrazo})`,
               onSelect: () => onSegmentClick('on'),
             },
             {
@@ -147,7 +153,7 @@ export const FirstResponseVsSlaChart = React.memo(function FirstResponseVsSlaCha
               label: 'Fora do prazo',
               value: respondidosForaDoPrazo,
               color: tokens['chart-vermelho'],
-              actionLabel: `Ver tickets respondidos fora do prazo (${respondidosForaDoPrazo})`,
+              actionLabel: `Ver tickets atendidos fora do prazo (${respondidosForaDoPrazo})`,
               onSelect: () => onSegmentClick('late'),
             },
           ] satisfies ChartDrillLegendItem[]}

@@ -190,3 +190,64 @@ describe('ticketDrillColumns', () => {
     }
   })
 })
+
+
+/**
+ * 124/`P-7` — o VOCABULÁRIO dos cabeçalhos, que é também o do EXPORT.
+ *
+ * `MetricDrillModal` monta `exportCols` com `columns.map((c) => ({ header: c.header, key:
+ * c.key }))` — o mesmo `header` que a tabela desenha viaja para o CSV/XLSX. É o quarto
+ * lugar de `AP-FRONTEND-028`, e o mais grave: planilha errada o gestor **encaminha**.
+ *
+ * Antes desta unidade nenhum teste tocava estes literais: a mutação `P7-COLUNA-DRILL`
+ * (restaurar `'1ª resposta (úteis)'`) ficava **verde na suíte inteira**. Isto é o conserto.
+ *
+ * A asserção é de IDENTIDADE (lista literal na ordem), não de presença: coluna que entre
+ * ou saia reprova aqui e obriga a decisão explícita.
+ */
+describe('ticketDrillColumns — vocabulário "1º atendimento" nos cabeçalhos e no export (124/P-7)', () => {
+  /** Exatamente o que `MetricDrillModal.buildExportRows` produz para o arquivo. */
+  function exportCols(metric: TicketMetricKey): { header: string; key: string }[] {
+    return ticketDrillColumns(metric).map((c) => ({ header: c.header, key: c.key }))
+  }
+
+  it('tickets-tempos: os cabeçalhos de tempo dizem "1º atendimento"', () => {
+    const headers = ticketDrillColumns('tickets-tempos').map((c) => c.header)
+    expect(headers).toContain('1º atendimento (corridas)')
+    expect(headers).toContain('1º atendimento (úteis)')
+    // A negativa acompanhada da positiva acima, na mesma execução.
+    expect(headers).not.toContain('1ª resposta (corridas)')
+    expect(headers).not.toContain('1ª resposta (úteis)')
+  })
+
+  it('tickets-sla: a coluna de SLA diz "SLA 1º atendimento"', () => {
+    const headers = ticketDrillColumns('tickets-sla').map((c) => c.header)
+    expect(headers).toContain('SLA 1º atendimento')
+    expect(headers).not.toContain('SLA 1ª resposta')
+  })
+
+  it('🔴 o EXPORT leva o cabeçalho novo — mesma projeção do MetricDrillModal', () => {
+    // A `key` NÃO muda (é campo do `TicketRowDto` e chave de ordenação do backend); só o
+    // que o humano lê. Par header↔key travado junto, para que trocar um sem o outro caia.
+    expect(exportCols('tickets-tempos')).toEqual(
+      expect.arrayContaining([
+        { header: '1º atendimento (corridas)', key: 'frHoras' },
+        { header: '1º atendimento (úteis)', key: 'frHorasUteis' },
+      ]),
+    )
+    expect(exportCols('tickets-sla')).toEqual(
+      expect.arrayContaining([{ header: 'SLA 1º atendimento', key: 'frSla' }]),
+    )
+  })
+
+  it('nenhum cabeçalho de NENHUMA métrica volta a dizer "resposta" (universo derivado)', () => {
+    // Universo derivado em runtime: métrica nova entra sozinha nesta varredura.
+    const todos = ALL_METRICS.flatMap((m) => ticketDrillColumns(m).map((c) => c.header))
+    // Controle positivo: prova que a lista não está vazia antes da negativa.
+    expect(todos).toContain('1º atendimento (corridas)')
+    expect(todos.filter((h) => /resposta/i.test(h))).toEqual([])
+    expect(todos.filter((h) => /respondid/i.test(h))).toEqual([])
+    // ...e o que mede resposta DE VERDADE não foi renomeado: o CSAT continua lá.
+    expect(todos).toContain('CSAT')
+  })
+})
