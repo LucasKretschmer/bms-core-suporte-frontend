@@ -1,7 +1,20 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TEMA, razaoDoTexto, reprovacoesAA, varrer } from '../../test/medidor-de-contraste'
+import {
+  PADROES,
+  PISO_NAO_TEXTUAL,
+  TEMA,
+  TOKENS,
+  fundosDoAlvo,
+  razaoDoAlvo,
+  razaoDoTexto,
+  reprovacoesAA,
+  reprovacoesDoAnel,
+  varrer,
+  varrerAnel,
+} from '../../test/medidor-de-contraste'
 import { classeDeTextoNaoModelavel, coresDeTextoDaClasse } from '../../utils/contrasteDeTexto'
+import { anelDeFocoDoCss, medirAnelDeFoco } from '../../utils/contrasteDoAnelDeFoco'
 
 const { mockUsePermissions, rotaAtiva } = vi.hoisted(() => ({
   mockUsePermissions: vi.fn(),
@@ -396,5 +409,98 @@ describe('Sidebar — contraste da barra inteira sobre o gradiente (125/FE-A11Y-
     expect(reprovacoesAA(medidas)).toHaveLength(1)
 
     fora.remove()
+  })
+})
+
+/**
+ * 126/FE-FOCO — **o anel de foco da barra, medido no DOM sobre o gradiente.**
+ *
+ * O achado `Q-125-5` do QA da 125 nasceu aqui: `Tab` chegava no link "Consumo de Planos" e
+ * o anel (`outline: 2px solid var(--color-primary)`, `#002f4f`) não se distinguia do
+ * `bg-grad-escuro`. O piso de um indicador de foco é o **não-textual**, 3:1 (WCAG 1.4.11),
+ * e o anel media 1,53:1 na ponta clara e 1,00:1 na escura.
+ *
+ * A `Sidebar` declarava `focus-visible:ring-2 ring-white/70 ring-offset-2` — um anel branco,
+ * correto para este fundo — e ele **não aparecia**: `ring-offset-2 + ring-2` ocupa a mesma
+ * faixa de 2px a 4px que `outline` + `outline-offset: 2px`, e `outline` é pintado por cima
+ * de `box-shadow`. A correção mora no `global.css` (uma camada clara colada no elemento,
+ * uma escura por fora) e vale para a app inteira; estes casos provam que ela **chega aqui**.
+ */
+describe('Sidebar — anel de foco sobre o gradiente (126/FE-FOCO)', () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    rotaAtiva.valor = ''
+  })
+
+  function varrerFocoDaSidebar(ativa: string) {
+    rotaAtiva.valor = ativa
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: true })
+    render(<Sidebar isCollapsed={false} />)
+    return varrerAnel(document.body)
+  }
+
+  it('todo focável da barra é medido sobre as DUAS pontas — e nada é pulado', () => {
+    const { medidas, pulados } = varrerFocoDaSidebar('')
+
+    // `pulados` vazio é o que transforma "não sei medir" em reprovação: se o medidor
+    // deixar de modelar o gradiente, os focáveis somem daqui em vez de passarem.
+    expect(pulados).toEqual([])
+    // Links + botões de grupo da barra, cada um medido uma vez por parada do gradiente.
+    expect(medidas.length).toBeGreaterThan(20)
+    expect(Array.from(new Set(medidas.map((m) => m.fundo))).sort()).toEqual([
+      '#002f4f',
+      '#074b7f',
+    ])
+  })
+
+  it('o link do achado passa a 9,04:1 — era 1,53:1 na mesma ponta', () => {
+    const { medidas } = varrerFocoDaSidebar('')
+
+    expect(reprovacoesDoAnel(medidas)).toEqual([])
+    // O número, e sempre o pior ponto (a ponta clara do gradiente).
+    expect(razaoDoAlvo(medidas, 'Consumo de Planos').toFixed(2)).toBe('9.04')
+    expect(fundosDoAlvo(medidas, 'Consumo de Planos')).toEqual(['#002f4f', '#074b7f'])
+    // Quem carrega o contraste aqui é a camada CLARA; a escura é a que sumia no fundo.
+    const naPontaClara = medidas.filter(
+      (m) => m.alvo.includes('Consumo de Planos') && m.fundo === '#074b7f',
+    )
+    expect(naPontaClara).toHaveLength(1)
+    expect(naPontaClara[0].porCamada.map((c) => `${c.token} ${c.razao.toFixed(2)}`)).toEqual([
+      '--color-white 9.04',
+      '--color-primary 1.53',
+    ])
+  })
+
+  it('estado ATIVO: o item selecionado também passa (o fundo dele é mais claro)', () => {
+    // `activeProps` acrescenta `bg-white/15`, então o fundo atrás do anel muda. É um fundo
+    // a mais, e ele entra na medição sozinho — nenhuma lista de superfícies à mão.
+    const { medidas, pulados } = varrerFocoDaSidebar('/relatorios/consumo-planos')
+
+    expect(pulados).toEqual([])
+    expect(reprovacoesDoAnel(medidas)).toEqual([])
+    expect(razaoDoAlvo(medidas, 'Consumo de Planos')).toBeGreaterThanOrEqual(PISO_NAO_TEXTUAL)
+  })
+
+  it('CONTROLE POSITIVO: o anel de ANTES reprova em TODOS os focáveis da barra', () => {
+    // Sem esta metade, "nenhuma reprovação" seria indistinguível de uma varredura que
+    // parou de alcançar a `Sidebar` — que é literalmente o que aconteceu por quatro
+    // unidades da demanda 125. É a reversão EXATA do defeito, e ela derruba a barra
+    // inteira, não um caso escolhido a dedo.
+    const anelAntigo = anelDeFocoDoCss(
+      ':focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }',
+      TOKENS,
+    )
+    rotaAtiva.valor = ''
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: true })
+    render(<Sidebar isCollapsed={false} />)
+    const { medidas, pulados } = medirAnelDeFoco(document.body, {
+      tema: TEMA,
+      padroes: PADROES,
+      anel: anelAntigo,
+    })
+
+    expect(pulados).toEqual([])
+    expect(reprovacoesDoAnel(medidas)).toHaveLength(medidas.length)
+    expect(razaoDoAlvo(medidas, 'Consumo de Planos').toFixed(2)).toBe('1.00')
   })
 })

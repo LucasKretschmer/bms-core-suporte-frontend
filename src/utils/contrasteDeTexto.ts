@@ -632,16 +632,16 @@ function cadeiaDeAncestrais(elemento: Element): Element[] {
   return cadeia
 }
 
-type Grupo = { opacidade: number; fundoExterno: string }
+export type Grupo = { opacidade: number; fundoExterno: string }
 
 /**
  * Um cenário de pintura completo: o fundo opaco atrás do texto e os grupos `opacity-*` que
  * ainda compõem por cima. Um fundo em gradiente produz **um cenário por parada** — é assim
  * que o pior ponto entra na medição em vez de ser escolhido a dedo.
  */
-type Cenario = { fundoLocal: string; grupos: Grupo[] }
+export type Cenario = { fundoLocal: string; grupos: Grupo[] }
 
-type ContextoDePintura =
+export type ContextoDePintura =
   | { tipo: 'cenarios'; cenarios: Cenario[] }
   | { tipo: 'recusa'; motivo: string }
 
@@ -651,8 +651,16 @@ function deduplicar(cenarios: readonly Cenario[]): Cenario[] {
   return Array.from(vistos.values())
 }
 
-/** Os cenários de pintura do elemento: fundo local + grupos de opacidade acima dele. */
-function contextoDePintura(
+/**
+ * Os cenários de pintura do elemento: fundo local + grupos de opacidade acima dele.
+ *
+ * **Exportada em 126/FE-FOCO** para que o medidor do anel de foco
+ * (`utils/contrasteDoAnelDeFoco.ts`) use **este** modelo de fundo em vez de reimplementar
+ * um. A pergunta do anel é outra (indicador não-textual, piso 3:1), mas o fundo atrás dele
+ * é o mesmo fundo — e dois modelos de fundo mantidos em paralelo divergem, que foi
+ * exatamente a dívida `Q-2` que a 125 fechou.
+ */
+export function contextoDePintura(
   elemento: Element,
   tema: TemaDeTexto,
   fundoPadrao: string,

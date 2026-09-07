@@ -7,6 +7,11 @@ import {
   temaDaCascata,
   type VarreduraDeContraste,
 } from '../utils/contrasteDeTexto'
+import {
+  anelDeFocoDoCss,
+  medirAnelDeFoco,
+  type VarreduraDoAnel,
+} from '../utils/contrasteDoAnelDeFoco'
 
 /**
  * 125/FE-A11Y-2 — cola entre o CSS real do app e os testes de tela.
@@ -47,6 +52,35 @@ export const PADROES = padroesDoBody(CSS_DA_CASCATA, TOKENS)
 export function varrer(raiz: Element): VarreduraDeContraste {
   return medirTextosComHeranca(raiz, { tema: TEMA, padroes: PADROES })
 }
+
+/**
+ * 126/FE-FOCO — o anel de `:focus-visible` **derivado da regra real** do CSS do app.
+ *
+ * Nenhum teste digita a cor, a espessura ou o deslocamento do anel: se a regra mudar (ou
+ * sumir, ou virar `outline: none`), é este valor que muda, e são os invariantes que
+ * reprovam. `anelDeFocoDoCss` **lança** no que não modela — inclusive em duas regras
+ * `:focus-visible` na cascata, onde o vencedor dependeria de camada e especificidade.
+ */
+export const ANEL = anelDeFocoDoCss(CSS_DA_CASCATA, TOKENS)
+
+/** Mede o anel de foco de todo focável da árvore, contra o fundo que está atrás dele. */
+export function varrerAnel(raiz: HTMLElement): VarreduraDoAnel {
+  return medirAnelDeFoco(raiz, { tema: TEMA, padroes: PADROES, anel: ANEL })
+}
+
+export {
+  PISO_NAO_TEXTUAL,
+  camadasSaoContiguas,
+  espessuraTotalPx,
+  fundosDoAlvo,
+  razaoDoAlvo,
+  razaoEntreCamadas,
+  razaoMinimaSobreQualquerFundo,
+  reprovacoesDoAnel,
+  type AnelDeFoco,
+  type MedidaDoAnel,
+  type VarreduraDoAnel,
+} from '../utils/contrasteDoAnelDeFoco'
 
 export {
   CLASSE_DO_BODY,

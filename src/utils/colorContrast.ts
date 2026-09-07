@@ -31,13 +31,24 @@ export function relativeLuminance(hex: string): number {
 }
 
 /**
+ * Razão de contraste WCAG entre duas **luminâncias relativas** (0–1).
+ *
+ * Extraída de `contrastRatio` em 126/FE-FOCO, que passou a delegar aqui — **a fórmula
+ * continua existindo uma vez só**. Existe porque a prova de que o anel de foco atende
+ * WCAG 1.4.11 sobre **qualquer** fundo varre a faixa de luminância inteira
+ * (`contrasteDoAnelDeFoco.ts::razaoMinimaSobreQualquerFundo`), e ali não há hex: o
+ * universo é o contradomínio da luminância, não um conjunto de cores enumerado à mão.
+ */
+export function razaoEntreLuminancias(l1: number, l2: number): number {
+  const lighter = Math.max(l1, l2)
+  const darker = Math.min(l1, l2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+/**
  * Razão de contraste WCAG entre duas cores sólidas "#rrggbb".
  * `(L1 + 0.05) / (L2 + 0.05)`, com L1 = luminância mais clara.
  */
 export function contrastRatio(fgHex: string, bgHex: string): number {
-  const l1 = relativeLuminance(fgHex)
-  const l2 = relativeLuminance(bgHex)
-  const lighter = Math.max(l1, l2)
-  const darker = Math.min(l1, l2)
-  return (lighter + 0.05) / (darker + 0.05)
+  return razaoEntreLuminancias(relativeLuminance(fgHex), relativeLuminance(bgHex))
 }

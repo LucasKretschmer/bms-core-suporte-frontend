@@ -230,10 +230,81 @@ input:-webkit-autofill:focus {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* ── Focus visível global ── */
+/* ── Foco visível global — anel de DUAS camadas (126/FE-FOCO, achado `Q-125-5` do QA da 125) ──
+
+   O QUE ERA, E POR QUE REPROVAVA
+   ------------------------------
+   `outline: 2px solid var(--color-primary)` — UMA cor só, `#002f4f`. Sobre a `Sidebar`
+   (`bg-grad-escuro`, de `#074b7f` a `#002f4f`) o anel media **1,53:1 na ponta clara e
+   1,00:1 na escura**: navy sobre navy. Quem navega por teclado não via onde estava.
+   O piso aqui é o de contraste NÃO-TEXTUAL — **3:1** contra as cores adjacentes
+   (WCAG 1.4.11) —, e não 4,5:1.
+
+   E o defeito não era só da sidebar: com UMA cor ele é impossível de resolver. Uma cor que
+   atinja 3:1 contra `#ffffff` precisa de luminância ≤ 0,30; contra `#002f4f`, ≥ 0,178;
+   contra `#1a79c2` (`--color-primary-light`), ou ≤ 0,031 ou ≥ 0,682. Não existe interseção:
+   **nenhum valor único de cor serve para os fundos que esta app já tem.**
+
+   Pior: o anel de então TAMBÉM APAGAVA os anéis que os componentes tinham. `Sidebar.tsx`
+   declara `focus-visible:ring-2 ring-white/70 ring-offset-2` (um anel branco, correto para o
+   fundo escuro) e o design system declara `ring-primary-light`. `ring-offset-2 + ring-2`
+   ocupa exatamente a faixa de 2px a 4px da borda — a MESMA que `outline` + `outline-offset:
+   2px` —, e `outline` é pintado DEPOIS de `box-shadow`. O anel branco existia e ficava
+   coberto pelo navy. (Regra unlayered de `global.css` vence utilitário do Tailwind, que vive
+   em `@layer utilities`, independentemente da especificidade.)
+
+   O QUE É AGORA
+   -------------
+   Duas camadas contíguas, uma clara e uma escura, como o anel padrão do Chrome:
+
+     [0px, 2px]  `box-shadow`  — claro (`--color-white`), preenche o vão do `outline-offset`
+     [2px, 4px]  `outline`     — escuro (`--color-primary`)
+
+   Isso torna o indicador **independente do fundo**: sobre qualquer superfície, PELO MENOS
+   UMA das camadas se distingue. Medido (`utils/contrasteDoAnelDeFoco.ts`, sobre a cascata
+   real de CSS) — o veredito é a MELHOR camada, e o pior caso é o que manda:
+
+     fundo                                 claro   escuro   vale
+     `#ffffff` card                          1,00   13,82   13,82
+     `#f0f4f7` background                    1,11   12,50   12,50
+     `#074b7f` gradiente, ponta clara        9,04    1,53    9,04   <- media 1,53 antes
+     `#002f4f` gradiente, ponta escura      13,82    1,00   13,82   <- media 1,00 antes
+     `#205d8c` item da sidebar em hover      6,99    1,98    6,99   <- media 1,98 antes
+     `#1a79c2` primary-light                 4,61    3,00    4,61
+     `#4a89c4` primary-light-hover           3,71    3,73    3,73   <- o pior fundo REAL
+     `#ff8500` accent                        2,44    5,66    5,66
+     `#666666` muted                         5,74    2,41    5,74   <- reprovava antes
+
+   E o limite é PROVADO, não amostrado: varrendo a faixa inteira de luminância (0 a 1), o
+   pior fundo CONCEBÍVEL para este par de cores rende **3,72:1** (em L ≈ 0,232). Nenhum fundo
+   que a app venha a ter pode ficar abaixo disso — por isso a correção não depende de manter
+   uma lista de superfícies à mão.
+
+   As duas camadas contrastam **13,82:1 entre si**: quando a de fora some no fundo, a de
+   dentro ainda é lida como borda desenhada, e não como borrão. Espessura total 4px,
+   contígua (sem vão) — a antiga tinha 2px de anel e 2px de vão mostrando o próprio fundo.
+
+   POR QUE ESTA FORMA E NÃO OUTRA
+   ------------------------------
+   - **Não são tokens novos.** As duas cores são `--color-primary` e `--color-white`, que já
+     existem no design system. Token novo aqui só criaria mais um valor para manter em dia.
+   - **Sobre fundo claro o desenho não muda:** o vão de 2px sobre um card branco já mostrava
+     branco; agora mostra `--color-white`. A mudança visível acontece só onde havia defeito.
+   - **`box-shadow` (e não uma segunda `outline`)** porque um elemento só tem uma `outline`.
+     Isto substitui os `focus-visible:ring-*` dos componentes (mesma propriedade, regra
+     unlayered vence) — que é o desejado: um anel só, igual em toda a app, em vez de 25 call
+     sites cada um com a sua ideia de anel.
+   - **Limitação conhecida e medida:** em `<tr>` com `border-collapse: collapse` o navegador
+     pode não pintar `box-shadow`; ali sobra a camada escura. As tabelas da app vivem sobre
+     `--color-card`/`--color-surface-hover`, onde essa camada mede 12,50–13,82:1.
+
+   Travado por `utils/contrasteDoAnelDeFoco.test.tsx` e por `components/layout/Sidebar.test.tsx`,
+   que derivam o anel DESTA regra (não de um valor digitado no teste) e reprovam abaixo de
+   3:1 — com controle positivo que exige que o anel de antes REPROVE na mesma execução. */
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-white);
 }
 
 /* ── Scrollbar personalizada (opcional) ── */
