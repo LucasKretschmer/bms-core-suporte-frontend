@@ -24,10 +24,24 @@
  *     · é a população de `GET /reports/billing-exceptions` (`:1486`), que esta mesma tela
  *       já lista no card de exceções.
  *
- *  3. "apontamento de projeto continua contando pela data do apontamento"
- *     · Consumo de Planos: `:690-692` (elegibilidade), `:769` (usadas), `:786` (faturáveis);
- *     · Relatório do Cliente: `:150-153`.
- *     Projeto não tem chamado, logo não tem data de conclusão de chamado (decisão D2 da 121).
+ *  3. 🔴 131 (decisão do usuário, 08/09/2026) — "apontamento de projeto NÃO consome o
+ *     plano de suporte: projeto é contratado à parte". Lido no backend em 08/09/2026,
+ *     não presumido:
+ *     · Consumo de Planos — `HorasUsadasSeg` é TICKET-ONLY, região
+ *       `⟪131 PLANCONSUMO-HORASUSADAS⟫` (`ReportQueryRepository.cs:771-786`); as outras
+ *       três colunas do plano (restantes, adicionais, percentual) derivam dela;
+ *     · o que SOBROU de projeto nessa tela é a parcela de `HorasFaturaveisSeg` (`:797-803`),
+ *       recortada por `te.InicioEm` — "cobrar por fora" nunca foi consumo de plano. Ou
+ *       seja: o apontamento de projeto continua registrado e continua faturável;
+ *     · a ELEGIBILIDADE mantém o ramo de projeto (`:690-692`): cliente que só teve projeto
+ *       no período continua na listagem, agora com `horasUsadas = 0`;
+ *     · Relatório do Cliente NÃO mudou (ficou fora do escopo da 131): o ramo de projeto
+ *       continua por `InicioEm` (`:146-179`) e continua somado em `PlanoSeg` (`:210`),
+ *       rotulado "Plano de Suporte" na tela. A divergência entre as duas telas é
+ *       deliberada e está declarada em `ReportQueryRepository.cs:749-756`.
+ *     Por isso os dois textos de projeto são CONSTANTES DIFERENTES: até a 131 uma única
+ *     frase servia às duas telas, e ela ficou falsa em UMA delas — o tipo de defeito que
+ *     não aparece em revisão de redação (AP-FRONTEND-022).
  *
  *  4. "as horas entram na fatura da competência em que o chamado for concluído"
  *     · mesma redação já usada e revisada em `billingExceptionsTexts.ts:38` — **nunca**
@@ -78,9 +92,36 @@ export const TEXTO_COMPETENCIA_CONSEQUENCIA =
 export const TEXTO_COMPETENCIA_SEM_CONCLUSAO =
   'Chamado ainda sem data de conclusão não entra em período nenhum: as horas dele entram na fatura da competência em que o chamado for concluído.'
 
-/** A exceção que a coluna de horas mistura sem dizer. Âncora 3. */
-export const TEXTO_COMPETENCIA_PROJETO =
-  'Apontamento de projeto não tem chamado e, por isso, continua contando pela data do próprio apontamento.'
+/**
+ * Rótulo do KPI do Relatório do Cliente que recebe as horas de projeto
+ * (`ClientReportHeader.tsx`, alimentado por `report.horasPlanoSegundos` ← `PlanoSeg`,
+ * `ReportQueryRepository.cs:210`). Mora aqui para que o texto abaixo NOMEIE o cartão a
+ * partir da mesma fonte que o cartão renderiza — renomear o cartão reescreve a frase junto
+ * (AP-FRONTEND-022: texto que afirma comportamento nunca é digitado duas vezes).
+ */
+export const KPI_PLANO_DE_SUPORTE_LABEL = 'Plano de Suporte'
+
+/**
+ * Âncora 3, lado **Consumo de Planos** — a tela onde a 131 mudou a regra.
+ *
+ * ⚠️ Nunca dizer "projeto não é mais cobrado": ele continua registrado e continua
+ * faturável (a parcela de projeto de `HorasFaturaveisSeg` segue na query, `:797-803`).
+ * O que a 131 tirou foi a CONTA DO PLANO — e um texto que sugerisse o contrário seria
+ * pior que o texto antigo.
+ */
+export const TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS =
+  'Apontamento de projeto não consome o plano de suporte: projeto é contratado à parte. Ele continua registrado e continua faturável — só não entra na conta do plano (horas usadas, restantes, adicionais e percentual). O que ainda aparece de projeto nesta tela são as horas marcadas para cobrar fora do plano, contadas pela data do próprio apontamento. Cliente que só teve projeto no período continua na lista, com zero hora usada do plano.'
+
+/**
+ * Âncora 3, lado **Relatório do Cliente** — a tela onde a 131 NÃO mexeu.
+ *
+ * Aqui a frase original continua verdadeira: o ramo de projeto segue recortado por
+ * `TimeEntry.InicioEm` (`:146-179`) e suas horas seguem somadas em `PlanoSeg` (`:210`),
+ * que é o KPI acima. A segunda oração existe porque, a partir da 131, quem comparar as
+ * duas telas encontra números diferentes de propósito.
+ */
+export const TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE =
+  `Apontamento de projeto não tem chamado e, por isso, continua contando pela data do próprio apontamento. Neste relatório essas horas entram no cartão "${KPI_PLANO_DE_SUPORTE_LABEL}"; no relatório Consumo de Planos elas não entram, porque lá projeto é contratado à parte e não consome o plano.`
 
 // ── Frase dinâmica: qual recorte está aplicado agora ──────────────────────────
 
@@ -297,24 +338,36 @@ export function textoPeriodoDoDetalhe(
 // ⚠️ Esta unidade é de TEXTO. Nenhuma consulta trocou de campo de data: a divergência é
 // legítima e some quando explicada — hoje ela só parecia erro.
 //
-// ⚠️ 123/FE-FIX3 (ressalva `F-4`) — A DATA NÃO É A ÚNICA CAUSA. O relatório da 123/FE-PER
-// afirmava que "fora a data, os dois somam o mesmo conjunto de horas". É FALSO, e foi
-// conferido na fonte em 05/09/2026:
+// 🔴 131 (08/09/2026) — A CAUSA "HORAS DE PROJETO" ACABOU; A DIVERGÊNCIA, NÃO.
 //
-//  · `HorasUsadasSeg` (`ReportQueryRepository.cs:755-770`) soma DUAS parcelas:
-//    `c.Tickets.SelectMany(t => t.TimeEntries)` recortada por `Ticket.FechadoEm` **MAIS**
-//    `c.Projects.SelectMany(p => p.TimeEntries)` recortada por `te.InicioEm`.
-//  · `HorasConsumidas` do plan-health (`MetricsQueryRepository.cs:1258-1267`) soma
-//    **só** `c.Tickets.SelectMany(...)`. Não há parcela de `c.Projects` — e
-//    `Client.Projects` existe (`Suporte.Domain/Entities/Client.cs:25`).
+// Até a 131 estes dois textos diziam que a divergência tinha DUAS causas: a data e o fato
+// de o Consumo de Planos somar horas de projeto. A segunda deixou de existir — mas quem
+// concluir daí que "agora os números batem" erra. Conferido na fonte em 08/09/2026:
 //
-// Logo, para cliente com apontamento de PROJETO os dois números divergem **mesmo na mesma
-// data**. São duas causas independentes, e os textos abaixo dizem as duas.
-// O que de fato coincide nos dois lados: ambos exigem `Status == Completed`,
-// `DesativadoEm == null` e `!FatureiFora`, e ambos excluem a categoria Invoicy
-// (`MetricsQueryRepository.cs:1262-1263` × `ReportQueryRepository.cs:755-761`) — por isso
-// nenhum texto fala em "critérios diferentes" de forma vaga: as duas diferenças reais são
-// nomeadas em português (a data, e as horas de projeto).
+//  · **a data, que PERMANECE**: `plan-health` recorta por `te.InicioEm`
+//    (`MetricsQueryRepository.cs:1465-1473`); `plan-consumption` recorta a parcela de
+//    ticket por `Ticket.FechadoEm` (`ReportQueryRepository.cs:777-785`, região
+//    `⟪131 PLANCONSUMO-HORASUSADAS⟫`).
+//  · **quem entra na lista — a TERCEIRA razão, que nenhum texto jamais mencionou**:
+//    `plan-health` só considera cliente COM plano (`c.SupportPlanId != null`,
+//    `MetricsQueryRepository.cs:1459`), enquanto `plan-consumption` também lista cliente
+//    SEM plano que teve consumo real no período (`ReportQueryRepository.cs:683-693`).
+//  · **as horas de projeto, que SAÍRAM**: `HorasUsadasSeg` passou a ser ticket-only
+//    (`:777-785`), como `HorasConsumidas` do plan-health sempre foi (`:1465-1474`). Os
+//    textos passam a dizer isso na afirmativa — "nenhum dos dois conta projeto no plano" —
+//    em vez de apresentá-lo como diferença.
+//
+// ⚠️ Por isso nenhum dos dois textos volta a FECHAR a enumeração num número ("por essas
+// duas razões"). Fechar é afirmar que a lista é completa, e ela não é: além das duas
+// acima, o `plan-consumption` ainda estreita por equipe para o perfil atendente
+// (`ReportQueryRepository.cs:712-719`), enquanto o `plan-health` é sempre global
+// (`MetricsQueryRepository.cs:1454`). Foi exatamente um número fechado — "duas razões" —
+// que ficou falso quando uma das razões sumiu.
+//
+// O que coincide nos dois lados (e por isso nenhum texto fala em "critérios diferentes"
+// de forma vaga): ambos exigem `Status == Completed`, `DesativadoEm == null` e
+// `!FatureiFora`, e ambos excluem a categoria Invoicy
+// (`MetricsQueryRepository.cs:1468-1470` × `ReportQueryRepository.cs:779-782`).
 
 /** Rótulo curto do card Saúde dos Planos — fica visível em todos os estados. */
 export const TEXTO_SAUDE_PLANOS_ROTULO =
@@ -322,8 +375,8 @@ export const TEXTO_SAUDE_PLANOS_ROTULO =
 
 /** Por que este número pode não bater com o do relatório de fatura. */
 export const TEXTO_SAUDE_PLANOS_COMPARACAO =
-  'O relatório Consumo de Planos conta pela data em que o chamado foi concluído, que é a regra da fatura, e soma também as horas lançadas em projetos, que este medidor não inclui. Por essas duas razões os dois podem mostrar números diferentes no mesmo mês — e os dois estão certos.'
+  'O relatório Consumo de Planos conta pela data em que o chamado foi concluído, que é a regra da fatura, e lista também cliente sem plano contratado; este medidor conta pela data em que o time lançou a hora e mostra só quem tem plano. Por diferenças como essas, os dois podem mostrar números diferentes no mesmo mês — e os dois estão certos. Hora de projeto não consome plano em nenhum dos dois: projeto é contratado à parte, e continua registrado e faturável.'
 
 /** O irmão da frase acima, na tela de Consumo de Planos (mesma explicação, outro lado). */
 export const TEXTO_COMPETENCIA_VS_SAUDE_PLANOS =
-  'O gráfico Saúde dos Planos, no painel, conta pela data em que o time lançou a hora, para acompanhar o plano ao vivo, e considera só as horas de chamados, enquanto esta tela soma também as horas de projeto. Por essas duas razões ele pode mostrar um número diferente do desta tela no mesmo mês — e os dois estão certos.'
+  'O gráfico Saúde dos Planos, no painel, conta pela data em que o time lançou a hora, para acompanhar o plano ao vivo, e mostra só clientes com plano contratado; esta tela conta pela data em que o chamado foi concluído, que é a regra da fatura, e lista também cliente sem plano que teve consumo. Por diferenças como essas, ele pode mostrar um número diferente do desta tela no mesmo mês — e os dois estão certos. Nenhum dos dois conta hora de projeto no plano.'

@@ -2,8 +2,11 @@
  * 123/FAT-1 — `CompetenciaNota`, a nota que declara por qual data a tela de fatura recorta.
  *
  * O que deixa cada asserção VERMELHA:
- *  · `incluiProjeto` deixar de ser condicional → a tela de Consumo por Ticket (que não
+ *  · `notaDeProjeto` deixar de ser condicional → a tela de Consumo por Ticket (que não
  *    mistura projeto) passaria a afirmar uma exceção que não se aplica a ela;
+ *  · **131** — os dois valores da união devolverem o MESMO texto: aí uma das duas telas
+ *    volta a afirmar a regra da outra (no Consumo de Planos projeto não consome o plano;
+ *    no Relatório do Cliente continua consumindo, por decisão de escopo do backend);
  *  · a frase de período deixar de reagir às props → volta o defeito de fundo (a tela não
  *    diz qual recorte está aplicado AGORA);
  *  · a nota virar `<div>` sem rótulo → some do modo de leitura por landmarks/rotor, e é
@@ -14,7 +17,8 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CompetenciaNota } from './CompetenciaNota'
 import {
-  TEXTO_COMPETENCIA_PROJETO,
+  TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
+  TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE,
   TEXTO_COMPETENCIA_REGRA,
   TEXTO_COMPETENCIA_SEM_CONCLUSAO,
   TEXTO_COMPETENCIA_TITULO,
@@ -41,17 +45,62 @@ describe('CompetenciaNota', () => {
     ).toBeInTheDocument()
   })
 
-  it('sem `incluiProjeto`, NÃO afirma a exceção de projeto', () => {
+  it('sem `notaDeProjeto`, NÃO afirma nada sobre projeto', () => {
     render(<CompetenciaNota from="2026-07-01" to="2026-07-31" />)
     // Companheira positiva obrigatória: a nota está renderizada de verdade. Sem ela,
     // "não vejo o texto de projeto" seria satisfeito por um componente que não rendeu nada.
     expect(screen.getByText(TEXTO_COMPETENCIA_REGRA)).toBeInTheDocument()
-    expect(screen.queryByText(TEXTO_COMPETENCIA_PROJETO)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE),
+    ).not.toBeInTheDocument()
   })
 
-  it('com `incluiProjeto`, afirma a exceção de projeto', () => {
-    render(<CompetenciaNota from="2026-07-01" to="2026-07-31" incluiProjeto />)
-    expect(screen.getByText(TEXTO_COMPETENCIA_PROJETO)).toBeInTheDocument()
+  it("🔴 131 — `notaDeProjeto=\"fora-do-plano\"` afirma que projeto não consome o plano", () => {
+    render(<CompetenciaNota from="2026-07-01" to="2026-07-31" notaDeProjeto="fora-do-plano" />)
+    expect(screen.getByText(TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS)).toBeInTheDocument()
+    // Discriminador: com o `Record` colapsado (os dois valores apontando para o mesmo
+    // texto) o assert acima ainda passaria; este cai.
+    expect(
+      screen.queryByText(TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE),
+    ).not.toBeInTheDocument()
+  })
+
+  it("🔴 131 — `notaDeProjeto=\"no-plano-por-apontamento\"` mantém a regra do Relatório do Cliente", () => {
+    render(
+      <CompetenciaNota from="2026-07-01" to="2026-07-31" notaDeProjeto="no-plano-por-apontamento" />,
+    )
+    expect(screen.getByText(TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE)).toBeInTheDocument()
+    expect(
+      screen.queryByText(TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS),
+    ).not.toBeInTheDocument()
+  })
+
+  it('🔴 131 — o texto renderizado MUDA com o valor da união (literal escrito à mão)', () => {
+    // Par literal dos dois casos acima, que comparam com a constante: expectativa derivada
+    // da própria fonte é tautologia (`rules/tests.md`). Aqui o fragmento vem da redação
+    // decidida em 08/09/2026, digitado à mão.
+    const { unmount } = render(
+      <CompetenciaNota from="2026-07-01" to="2026-07-31" notaDeProjeto="fora-do-plano" />,
+    )
+    expect(
+      screen.getByText(/não consome o plano de suporte: projeto é contratado à parte/i),
+    ).toBeInTheDocument()
+    // A frase antiga não pode voltar nesta tela — é o defeito que a 131 corrigiu.
+    expect(screen.queryByText(/soma também as horas de projeto/i)).not.toBeInTheDocument()
+    unmount()
+
+    render(
+      <CompetenciaNota from="2026-07-01" to="2026-07-31" notaDeProjeto="no-plano-por-apontamento" />,
+    )
+    expect(
+      screen.getByText(/continua contando pela data do próprio apontamento/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/não consome o plano de suporte: projeto é contratado à parte/i),
+    ).not.toBeInTheDocument()
   })
 
   it('sem `comparaSaudePlanos`, NÃO fala do gráfico do painel (123/D-14)', () => {
@@ -69,10 +118,12 @@ describe('CompetenciaNota', () => {
   })
 
   it('as duas condicionais são INDEPENDENTES entre si', () => {
-    // Vermelho se alguém amarrar `comparaSaudePlanos` a `incluiProjeto` (as duas telas que
+    // Vermelho se alguém amarrar `comparaSaudePlanos` a `notaDeProjeto` (as duas telas que
     // recebem uma não são as mesmas que recebem a outra).
-    render(<CompetenciaNota from="2026-07-01" to="2026-07-31" incluiProjeto />)
-    expect(screen.getByText(TEXTO_COMPETENCIA_PROJETO)).toBeInTheDocument()
+    render(
+      <CompetenciaNota from="2026-07-01" to="2026-07-31" notaDeProjeto="no-plano-por-apontamento" />,
+    )
+    expect(screen.getByText(TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE)).toBeInTheDocument()
     expect(screen.queryByText(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS)).not.toBeInTheDocument()
   })
 

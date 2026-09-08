@@ -187,9 +187,11 @@ export default function PlanConsumptionPage() {
    *    sem abrir, carregando × falhou × zero × N a conferir". Ver o cabeçalho de
    *    `PlanConsumptionHelp.tsx` e `planConsumptionHelpTexts.ts`.
    *
-   * `incluiProjeto` e `comparaSaudePlanos` (123/FE-PER, D-14) passaram a ser decididos dentro
+   * `notaDeProjeto` e `comparaSaudePlanos` (123/FE-PER, D-14) passaram a ser decididos dentro
    * de `PlanConsumptionHelp` — esta tela é a que compara com o gráfico "Saúde dos Planos" do
-   * painel; o Relatório do Cliente usa a MESMA nota sem essa frase.
+   * painel; o Relatório do Cliente usa a MESMA nota sem essa frase. 131: `notaDeProjeto` vale
+   * `'fora-do-plano'` aqui e `'no-plano-por-apontamento'` lá — a afirmação sobre projeto
+   * deixou de ser a mesma nas duas telas.
    */
   const billingExceptionsBanner = (
     <PlanConsumptionHelp from={filters.from} to={filters.to} />

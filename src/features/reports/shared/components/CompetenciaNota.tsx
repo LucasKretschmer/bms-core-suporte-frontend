@@ -2,9 +2,16 @@
  * 123/FAT-1 — nota fixa que declara **por qual data** a tela recorta o período.
  *
  * Genérica de propósito: as duas telas de fatura (Consumo de Planos e Relatório do Cliente)
- * apuram pelo MESMO critério (`Ticket.FechadoEm`), e duas cópias do texto divergiriam na
- * primeira mudança de regra. Todo texto vem de `shared/utils/competenciaTexts.ts`, onde cada
- * afirmação está ancorada no `arquivo:linha` do backend que a sustenta (AP-FRONTEND-022).
+ * apuram o CHAMADO pelo mesmo critério (`Ticket.FechadoEm`), e duas cópias do texto
+ * divergiriam na primeira mudança de regra. Todo texto vem de
+ * `shared/utils/competenciaTexts.ts`, onde cada afirmação está ancorada no `arquivo:linha`
+ * do backend que a sustenta (AP-FRONTEND-022).
+ *
+ * ⚠️ **Ressalva da 131 (08/09/2026): o PROJETO deixou de ser igual nas duas telas.** No
+ * Consumo de Planos ele não consome mais o plano de suporte
+ * (`ReportQueryRepository.cs:771-786`); no Relatório do Cliente nada mudou (`:146-179`,
+ * `:210`). Por isso `notaDeProjeto` é uma união, não um booleano: a nota continua
+ * compartilhada, mas a AFIRMAÇÃO sobre projeto é escolhida pelo call site.
  *
  * É informativa e **não interativa**: `<section>` semântica com `aria-label`, sem foco a
  * capturar e sem estado. Fica sempre visível (inclusive em loading/erro/vazio) quando
@@ -24,7 +31,8 @@
 import { clsx } from 'clsx'
 import {
   TEXTO_COMPETENCIA_CONSEQUENCIA,
-  TEXTO_COMPETENCIA_PROJETO,
+  TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
+  TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE,
   TEXTO_COMPETENCIA_REGRA,
   TEXTO_COMPETENCIA_SEM_CONCLUSAO,
   TEXTO_COMPETENCIA_TITULO,
@@ -32,16 +40,36 @@ import {
   textoPeriodoDeConclusao,
 } from '../utils/competenciaTexts'
 
+/**
+ * 131 — o apontamento de projeto tem DOIS enquadramentos, um por tela, e por isso este
+ * eixo deixou de ser booleano:
+ *  · `'fora-do-plano'` — **Consumo de Planos**: projeto não consome o plano de suporte
+ *    (`ReportQueryRepository.cs:771-786`, região `⟪131 PLANCONSUMO-HORASUSADAS⟫`);
+ *  · `'no-plano-por-apontamento'` — **Relatório do Cliente**: nada mudou ali, projeto
+ *    continua recortado por `InicioEm` (`:146-179`) e somado em `PlanoSeg` (`:210`).
+ *
+ * Com um booleano as duas telas compartilhavam a MESMA frase — foi o que fez o texto
+ * ficar falso em uma delas sem ficar falso na outra. A união obriga o call site a
+ * escolher, e o `Record` abaixo obriga cada valor novo a trazer o seu texto.
+ */
+export type NotaDeProjeto = 'fora-do-plano' | 'no-plano-por-apontamento'
+
+const TEXTO_DE_PROJETO: Record<NotaDeProjeto, string> = {
+  'fora-do-plano': TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
+  'no-plano-por-apontamento': TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE,
+}
+
 type CompetenciaNotaProps = {
   /** Período da tela (YYYY-MM-DD). `null` nas duas pontas = default do backend (mês atual). */
   from: string | null
   to: string | null
-  /**
-   * Declara também a exceção de PROJETO (que recorta pela data do apontamento).
-   * Só faz sentido onde a tela mistura as duas origens numa coluna só — Consumo de Planos
-   * (`ReportQueryRepository.cs:690-692`) e Relatório do Cliente (`:150-153`).
+/**
+   * Declara também o que acontece com o apontamento de PROJETO. Só faz sentido onde a tela
+   * mistura as duas origens — Consumo de Planos (elegibilidade em
+   * `ReportQueryRepository.cs:690-692`) e Relatório do Cliente (`:146-179`) —, e o VALOR
+   * escolhido muda a afirmação, não só a visibilidade. Omitido = a nota não fala de projeto.
    */
-  incluiProjeto?: boolean
+  notaDeProjeto?: NotaDeProjeto
   /**
    * 123/FE-PER (D-14 / AUTO-1) — declara também que o gráfico **Saúde dos Planos** apura o
    * mesmo consumo por OUTRA data (a do apontamento, `MetricsQueryRepository.cs:1264-1265`),
@@ -57,7 +85,7 @@ type CompetenciaNotaProps = {
 export function CompetenciaNota({
   from,
   to,
-  incluiProjeto = false,
+  notaDeProjeto,
   comparaSaudePlanos = false,
   className,
 }: CompetenciaNotaProps) {
@@ -73,7 +101,7 @@ export function CompetenciaNota({
       <ul className="mt-2 flex flex-col gap-1 text-xs text-muted">
         <li>{TEXTO_COMPETENCIA_CONSEQUENCIA}</li>
         <li>{TEXTO_COMPETENCIA_SEM_CONCLUSAO}</li>
-        {incluiProjeto && <li>{TEXTO_COMPETENCIA_PROJETO}</li>}
+        {notaDeProjeto && <li>{TEXTO_DE_PROJETO[notaDeProjeto]}</li>}
         {comparaSaudePlanos && <li>{TEXTO_COMPETENCIA_VS_SAUDE_PLANOS}</li>}
       </ul>
 

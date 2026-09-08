@@ -134,3 +134,44 @@ describe('o card diz que é um medidor ao vivo', () => {
     expect(paragrafo.closest('[role="tooltip"]')).toBeNull()
   })
 })
+
+
+// ─── 131 (08/09/2026) — o medidor deixou de acusar "horas de projeto" ─────────
+
+describe('🔴 131: o card não atribui mais a diferença às horas de projeto', () => {
+  /**
+   * Vítima de COMPONENTE com literal escrito à mão. Os casos acima comparam com
+   * `TEXTO_SAUDE_PLANOS_COMPARACAO` e ficariam verdes se a constante voltasse à redação
+   * antiga; estes fragmentos vêm da redação decidida em 08/09/2026, digitados aqui.
+   */
+  it('a frase antiga não volta — e a nova está no card (companheira positiva)', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: JSON.parse(WIRE_COM_DADOS) as unknown })
+    renderSection()
+    await screen.findByTestId('plan-health-chart')
+
+    // Positiva primeiro: o card renderizou e traz a explicação nova.
+    expect(card()).toHaveTextContent('Por diferenças como essas')
+    expect(card()).toHaveTextContent('Hora de projeto não consome plano em nenhum dos dois')
+    // ⚠️ e sem sugerir que projeto saiu da cobrança.
+    expect(card()).toHaveTextContent('continua registrado e faturável')
+
+    // Negativas: as duas formas revogadas pela 131.
+    expect(card()).not.toHaveTextContent('soma também as horas lançadas em projetos')
+    expect(card()).not.toHaveTextContent('Por essas duas razões')
+  })
+
+  it('o card nomeia a razão que PERMANECE (a data) e a terceira (quem entra na lista)', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: JSON.parse(WIRE_COM_DADOS) as unknown })
+    renderSection()
+    await screen.findByTestId('plan-health-chart')
+
+    // `MetricsQueryRepository.cs:1465-1473` (InicioEm) × `ReportQueryRepository.cs:777-785`
+    // (Ticket.FechadoEm) — lido no backend em 08/09/2026.
+    expect(card()).toHaveTextContent('data em que o chamado foi concluído')
+    expect(card()).toHaveTextContent('data em que o time lançou a hora')
+    // `c.SupportPlanId != null` (`MetricsQueryRepository.cs:1459`) × elegibilidade do
+    // plan-consumption (`ReportQueryRepository.cs:683-693`).
+    expect(card()).toHaveTextContent('lista também cliente sem plano contratado')
+    expect(card()).toHaveTextContent('só quem tem plano')
+  })
+})

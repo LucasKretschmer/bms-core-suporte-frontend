@@ -141,7 +141,9 @@ export function PlanConsumptionHelp({ from, to, className }: PlanConsumptionHelp
       >
         {isOpen && (
           <>
-            <CompetenciaNota from={from} to={to} incluiProjeto comparaSaudePlanos />
+            {/* 131: nesta tela projeto NÃO consome o plano — enquadramento próprio,
+                nunca o mesmo do Relatório do Cliente. */}
+            <CompetenciaNota from={from} to={to} notaDeProjeto="fora-do-plano" comparaSaudePlanos />
             <BillingExceptionsCard from={from} to={to} />
           </>
         )}

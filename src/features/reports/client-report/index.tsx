@@ -260,9 +260,11 @@ export default function ClientReportPage() {
             from={filters.from}
             to={filters.to}
             /* A tela mistura ticket (por conclusão) e projeto (por apontamento) numa
-               listagem só — `ReportQueryRepository.cs:114-118` × `:150-153`. Com o filtro
-               de origem em "Ticket" a exceção de projeto não se aplica e seria ruído. */
-            incluiProjeto={filters.origem !== 'ticket'}
+               listagem só — `ReportQueryRepository.cs:114-118` × `:146-179`. Com o filtro
+               de origem em "Ticket" a exceção de projeto não se aplica e seria ruído.
+               131: aqui NADA mudou — projeto segue somado em `PlanoSeg` (`:210`). O
+               enquadramento "fora do plano" é do Consumo de Planos, e só de lá. */
+            notaDeProjeto={filters.origem !== 'ticket' ? 'no-plano-por-apontamento' : undefined}
           />
         ) : undefined
       }

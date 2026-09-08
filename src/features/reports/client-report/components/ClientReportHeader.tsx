@@ -7,6 +7,7 @@
  */
 
 import type { ClientReportDto } from '../../shared/types/reports'
+import { KPI_PLANO_DE_SUPORTE_LABEL } from '../../shared/utils/competenciaTexts'
 import {
   formatClientName,
   formatMonth,
@@ -76,8 +77,10 @@ export function ClientReportHeader({ report }: ClientReportHeaderProps) {
           label="Tempo total"
           value={formatSeconds(report.totalSegundos)}
         />
+        {/* 131: o rótulo sai da constante que `TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE`
+            interpola — renomear o cartão reescreve a frase junto (AP-FRONTEND-022). */}
         <KpiCard
-          label="Plano de Suporte"
+          label={KPI_PLANO_DE_SUPORTE_LABEL}
           value={formatSeconds(report.horasPlanoSegundos)}
         />
         <KpiCard

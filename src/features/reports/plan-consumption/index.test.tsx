@@ -443,16 +443,34 @@ describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
     ).toBeInTheDocument()
   })
 
-  it('declara a exceção de PROJETO (a coluna de horas mistura as duas bases)', () => {
+  /**
+   * 🔴 131 (08/09/2026) — este caso travava, com literal, a frase
+   * *"Apontamento de projeto não tem chamado e, por isso, continua contando pela data do
+   * próprio apontamento."* Ela era verdadeira sobre a coluna de horas DESTA tela até a
+   * decisão do usuário; depois dela, induz ao erro — aqui a hora de projeto não entra na
+   * conta do plano por data nenhuma (`ReportQueryRepository.cs:777-785`).
+   *
+   * O teste não foi apagado: passou a afirmar a redação nova, com o literal novo, e ficou
+   * MAIS específico — nega explicitamente a frase antiga nesta tela.
+   */
+  it('🔴 131: declara que PROJETO não consome o plano — e a frase antiga não volta', () => {
     mockListagem({ from: '2026-07-01', to: '2026-07-31' })
     renderPage()
     abrirAjuda()
 
     expect(
       screen.getByText(
-        'Apontamento de projeto não tem chamado e, por isso, continua contando pela data do próprio apontamento.',
+        'Apontamento de projeto não consome o plano de suporte: projeto é contratado à parte. Ele continua registrado e continua faturável — só não entra na conta do plano (horas usadas, restantes, adicionais e percentual). O que ainda aparece de projeto nesta tela são as horas marcadas para cobrar fora do plano, contadas pela data do próprio apontamento. Cliente que só teve projeto no período continua na lista, com zero hora usada do plano.',
       ),
     ).toBeInTheDocument()
+
+    // A frase antiga, verbatim, não pode voltar a aparecer NESTA tela — ela continua
+    // válida (e continua sendo asseverada) no Relatório do Cliente, que a 131 não tocou.
+    expect(
+      screen.queryByText(
+        'Apontamento de projeto não tem chamado e, por isso, continua contando pela data do próprio apontamento.',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it.each([
@@ -515,5 +533,63 @@ describe('PlanConsumptionPage — rótulo × Saúde dos Planos (123/D-14)', () =
     abrirAjuda()
 
     expect(screen.getByText(FRASE_SAUDE)).toBeInTheDocument()
+  })
+})
+
+
+// ─── 131 (08/09/2026) — a tela deixou de dizer que soma horas de projeto ──────
+
+describe('PlanConsumptionPage — projeto fora do plano (131)', () => {
+  function abrirAjuda() {
+    fireEvent.click(screen.getByTestId('ajuda-gatilho'))
+  }
+
+  /**
+   * Vítima de COMPONENTE com literal escrito à mão — os testes acima comparam com a
+   * constante e continuariam verdes se alguém reescrevesse a constante de volta. Aqui os
+   * fragmentos são digitados a partir da redação decidida em 08/09/2026, então restaurar a
+   * frase antiga no módulo de textos deixa ESTE arquivo vermelho.
+   */
+  it('🔴 o (?) NÃO afirma mais que esta tela soma as horas de projeto', () => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+    abrirAjuda()
+
+    // Companheira positiva obrigatória na MESMA execução: o painel abriu de verdade.
+    // Sem ela, "não vejo a frase antiga" seria satisfeito por um painel que não renderizou.
+    expect(
+      screen.getByText(/O gráfico Saúde dos Planos, no painel, conta pela data/i),
+    ).toBeInTheDocument()
+
+    expect(screen.queryByText(/soma também as horas de projeto/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Por essas duas razões/i)).not.toBeInTheDocument()
+  })
+
+  it('🔴 o (?) afirma que projeto não consome o plano — e que continua faturável', () => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+    abrirAjuda()
+
+    expect(
+      screen.getByText(/Apontamento de projeto não consome o plano de suporte/i),
+    ).toBeInTheDocument()
+    // ⚠️ O erro do outro lado: um texto que sugerisse "projeto não é mais cobrado" seria
+    // pior que o antigo. Ele continua registrado e continua faturável.
+    expect(screen.getByText(/continua registrado e continua faturável/i)).toBeInTheDocument()
+    expect(screen.queryByText(/não é mais cobrad/i)).not.toBeInTheDocument()
+  })
+
+  it('🔴 o (?) diz a razão que PERMANECE (a data) e a terceira, que nunca foi dita', () => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+    abrirAjuda()
+
+    const comparacao = screen.getByText(/O gráfico Saúde dos Planos, no painel, conta pela data/i)
+    // A data permanece: `MetricsQueryRepository.cs:1465-1473` × `ReportQueryRepository.cs:777-785`.
+    expect(comparacao).toHaveTextContent('data em que o time lançou a hora')
+    expect(comparacao).toHaveTextContent('data em que o chamado foi concluído')
+    // A terceira razão: o plan-health só considera cliente COM plano (`:1459`).
+    expect(comparacao).toHaveTextContent('só clientes com plano contratado')
+    expect(comparacao).toHaveTextContent('lista também cliente sem plano')
   })
 })
