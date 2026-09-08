@@ -21,11 +21,11 @@ export type MovimentacaoDiariaRowDto = {
   /** Família do bucket: aberto|emandamento|fechado|cancelado|novos|resolvidos|cancelados. */
   statusBucket: string
   /** Rótulo legível do stage congelado no snapshot. null nas linhas de fluxo. */
-  statusLabel: string | null
+  statusLabel?: string | null
   /** ID interno da equipe (number). null = "Sem equipe". */
-  equipeId: number | null
+  equipeId?: number | null
   /** Nome da equipe congelado no snapshot. null = "Sem equipe". */
-  equipe: string | null
+  equipe?: string | null
   /** Contagem do bucket/stage/equipe naquele dia (>= 0). */
   quantidade: number
   /** Horário da última atualização do snapshot (ISO com timezone). */

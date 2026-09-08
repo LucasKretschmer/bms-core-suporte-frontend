@@ -2,7 +2,8 @@ import { clsx } from 'clsx'
 import { formatDuration } from '../../../utils/formatDuration'
 
 type DurationLabelProps = {
-  duracaoMs: number | null
+  /** 129 — aceita a chave AUSENTE do wire (`WhenWritingNull`), não só `null`. */
+  duracaoMs: number | null | undefined
   className?: string
 }
 

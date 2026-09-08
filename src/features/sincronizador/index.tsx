@@ -11,12 +11,8 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
 import { usePermissions } from '../../hooks/usePermissions'
 import { ExportButtons } from '../reports/shared/components/ExportButtons'
-import {
-  exportToCsv,
-  exportToXlsx,
-  type ExportColumn,
-  type ExportRow,
-} from '../reports/shared/utils/exportTable'
+import { exportToCsv, exportToXlsx } from '../reports/shared/utils/exportTable'
+import { LOGS_EXPORT_COLUMNS, mapLogToExportRow } from './utils/logExportRow'
 import { fetchAllPaginated, ExportLimitError } from '../reports/shared/utils/fetchAllPaginated'
 import { DurationLabel } from './components/DurationLabel'
 import { LogsTable } from './components/LogsTable'
@@ -28,65 +24,7 @@ import { listSincronizacaoLogs } from './services/sincronizadorService'
 import { useSincronizadorLogs } from './hooks/useSincronizadorLogs'
 import { useSincronizadorStatus } from './hooks/useSincronizadorStatus'
 import { useRunSincronizador } from './hooks/useRunSincronizador'
-import type { LogDto, SyncStatus } from './types/sincronizador'
-
-const STATUS_LABEL: Record<SyncStatus, string> = {
-  executando: 'Executando',
-  concluido: 'Concluído',
-  erro: 'Erro',
-}
-
-/** Colunas de export dos logs — espelham a LogsTable (sem JSX). */
-const LOGS_EXPORT_COLUMNS: ExportColumn[] = [
-  { header: 'Status', key: 'status' },
-  { header: 'Disparo', key: 'disparo' },
-  { header: 'Tipo', key: 'tipo' },
-  { header: 'Iniciado em', key: 'iniciadoEm' },
-  { header: 'Duração', key: 'duracao' },
-  { header: 'Tickets / Projetos', key: 'contadores' },
-  { header: 'Empresas', key: 'empresas' },
-  { header: 'Erro', key: 'mensagemErro' },
-]
-
-const TIPO_LABEL: Record<'tickets' | 'empresas', string> = {
-  tickets: 'Tickets',
-  empresas: 'Empresas',
-}
-
-function formatDateTimeSeconds(iso: string): string {
-  try {
-    return format(parseISO(iso), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })
-  } catch {
-    return iso
-  }
-}
-
-function formatDuracao(duracaoMs: number | null): string {
-  if (duracaoMs === null) return '—'
-  const totalSeconds = Math.round(duracaoMs / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return minutes > 0 ? `${minutes}min ${seconds}s` : `${seconds}s`
-}
-
-function mapLogToExportRow(log: LogDto): ExportRow {
-  const tipo = log.tipo ?? 'tickets'
-  const isEmpresas = tipo === 'empresas'
-  return {
-    status: STATUS_LABEL[log.status] ?? log.status,
-    disparo: log.disparo === 'automatico' ? 'Automático' : 'Manual',
-    tipo: TIPO_LABEL[tipo],
-    iniciadoEm: formatDateTimeSeconds(log.iniciadoEm),
-    duracao: formatDuracao(log.duracaoMs),
-    contadores: isEmpresas
-      ? '—'
-      : `${log.ticketsUpserted}↑ ${log.ticketsIgnorados}↷ / ${log.projetosUpserted}↑ ${log.projetosIgnorados}↷`,
-    empresas: isEmpresas
-      ? `${log.empresasCriadas}+ ${log.empresasAtualizadas}~ ${log.empresasDesativadas}−`
-      : `${log.empresasResolvidas} / ${log.contatosResolvidos}`,
-    mensagemErro: log.mensagemErro ?? '—',
-  }
-}
+import type { LogDto } from './types/sincronizador'
 
 const STATUS_OPTIONS: ComboboxOption[] = [
   { value: '', label: 'Todos' },

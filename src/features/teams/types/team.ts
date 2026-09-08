@@ -21,11 +21,11 @@ export type AgentTeamDto = {
 export type AgentDto = {
   userId: number
   nome: string
-  email: string | null
+  email?: string | null
   /** Equipe principal (retrocompat) — null quando o atendente não tem equipe. */
-  equipeId: number | null
+  equipeId?: number | null
   /** Nome da equipe principal (retrocompat) — null quando sem equipe. */
-  equipeNome: string | null
+  equipeNome?: string | null
   /** "GERENTE" | "COORDENADOR" | "ATENDENTE" | "ADMIN" — vem pronto do backend */
   papel: string
   /** 035 — todas as equipes ativas do atendente (principal primeiro). Pode ser []. */

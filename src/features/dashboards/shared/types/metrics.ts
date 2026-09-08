@@ -25,31 +25,31 @@ export type MetricsBaseParams = {
 export type TeamDto = {
   id: number
   nome: string
-  gerencia: string | null  // 'suporte' | 'onboarding' | null (não classificada)
+  gerencia?: string | null  // 'suporte' | 'onboarding' | null (não classificada)
 }
 
 // ── GET /metrics/overview ────────────────────────────────────────────────────
 
 export type MetricsOverviewDto = {
   tempoTotalSegundos: number
-  ahtSegundos: number | null
-  tempoMedioPausaSegundos: number | null  // adendo Item 1
-  mediaPausasPorAtendimento: number | null
+  ahtSegundos?: number | null
+  tempoMedioPausaSegundos?: number | null  // adendo Item 1
+  mediaPausasPorAtendimento?: number | null
   backlog: number
   ticketsAbertos: number
-  ticketsAbertosVariacaoPercent: number | null
+  ticketsAbertosVariacaoPercent?: number | null
   ticketsResolvidos: number
-  ticketsResolvidosVariacaoPercent: number | null
-  taxaResolucao: number | null
-  tmrHorasCorridas: number | null
-  tmrHorasUteis: number | null
-  tmeHorasCorridas: number | null
-  tmeHorasUteis: number | null
-  respondidosNoPrazo: number | null
-  respondidosForaDoPrazo: number | null
-  ticketsReabertos: number | null
-  csat: number | null
-  fcr: number | null
+  ticketsResolvidosVariacaoPercent?: number | null
+  taxaResolucao?: number | null
+  tmrHorasCorridas?: number | null
+  tmrHorasUteis?: number | null
+  tmeHorasCorridas?: number | null
+  tmeHorasUteis?: number | null
+  respondidosNoPrazo?: number | null
+  respondidosForaDoPrazo?: number | null
+  ticketsReabertos?: number | null
+  csat?: number | null
+  fcr?: number | null
   /**
    * 124/F5 (`R-3`) — `MIN(ticketstatushistory.mudouem)` em ISO-8601 UTC: o instante da
    * transição de estágio mais antiga que o sistema registrou.
@@ -194,10 +194,10 @@ export type PlanHealthResponseDto = {
 export type AgentMetricsDtoItem = {
   userId: number
   nome: string
-  equipe: string | null
+  equipe?: string | null
   nAtendimentos: number
   totalSegundos: number
-  ahtSegundos: number | null
+  ahtSegundos?: number | null
 }
 
 export type ByAgentDto = {
@@ -221,7 +221,7 @@ export type OnboardingProjectStatsDto = {
 export type OnboardingAgentTicketDto = {
   userId: number
   nome: string
-  equipe: string | null
+  equipe?: string | null
   nAtendimentos: number
   totalSegundos: number
 }
@@ -233,11 +233,11 @@ export type OnboardingTicketStatsDto = {
 }
 
 export type OnboardingNpsPlaceholderDto = {
-  npsScore: number | null
-  totalRespondentes: number | null
-  promotores: number | null
-  passivos: number | null
-  detratores: number | null
+  npsScore?: number | null
+  totalRespondentes?: number | null
+  promotores?: number | null
+  passivos?: number | null
+  detratores?: number | null
   observacao: string
 }
 
@@ -263,12 +263,12 @@ export type TimeEntryDrillRowDto = {
   timeEntryId: number
   ticketId: number
   hubspotTicketId: string
-  assunto: string | null
+  assunto?: string | null
   atendente: string
-  equipe: string | null
+  equipe?: string | null
   dataApontamento: string
   totalSegundos: number
-  categorizacaoAtendimento: string | null
+  categorizacaoAtendimento?: string | null
 }
 
 // ── Drill-down paramétrico — família CLIENTE (016 B3) ─────────────────────────
@@ -281,8 +281,8 @@ export type TimeEntryDrillRowDto = {
  */
 export type ClientRowDto = {
   clientId: number
-  nomeFantasia: string | null
-  planNome: string | null
+  nomeFantasia?: string | null
+  planNome?: string | null
   horasContratadas: number
   horasConsumidas: number
   percentualConsumo: number
@@ -297,14 +297,14 @@ export type ClientRowDto = {
  */
 export type ProjectRowDto = {
   projetoId: number
-  nome: string | null
-  clienteNome: string | null
+  nome?: string | null
+  clienteNome?: string | null
   tipo: string
   stage: string
-  ownerNome: string | null
-  equipe: string | null
-  iniciadoEm: string | null
-  concluidoEm: string | null
+  ownerNome?: string | null
+  equipe?: string | null
+  iniciadoEm?: string | null
+  concluidoEm?: string | null
 }
 
 // ── Drill-down paramétrico (016 — GET /metrics/rows?metric=) ─────────────────
@@ -317,22 +317,22 @@ export type ProjectRowDto = {
 export type TicketRowDto = {
   ticketId: number
   hubspotTicketId: string
-  assunto: string | null
-  clienteNome: string | null
-  equipe: string | null
-  ownerNome: string | null
-  status: string | null
-  hsCriadoEm: string | null
-  fechadoEm: string | null
-  reabertoEm: string | null
-  frHoras: number | null
-  frHorasUteis: number | null
-  frSla: string | null
-  resHoras: number | null
-  resHorasUteis: number | null
-  csat: number | null
-  isOneTouch: boolean | null
-  hubspotUrl: string | null
+  assunto?: string | null
+  clienteNome?: string | null
+  equipe?: string | null
+  ownerNome?: string | null
+  status?: string | null
+  hsCriadoEm?: string | null
+  fechadoEm?: string | null
+  reabertoEm?: string | null
+  frHoras?: number | null
+  frHorasUteis?: number | null
+  frSla?: string | null
+  resHoras?: number | null
+  resHorasUteis?: number | null
+  csat?: number | null
+  isOneTouch?: boolean | null
+  hubspotUrl?: string | null
 }
 
 /**

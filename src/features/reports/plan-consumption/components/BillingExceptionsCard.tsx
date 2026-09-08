@@ -5,7 +5,9 @@
  * Por que **aqui** e não numa página nova no menu (§5.3): a conferência acontece
  * enquanto o gestor olha os números da fatura, imediatamente antes de fechar o mês.
  * Página separada só é aberta por quem lembra que ela existe — e o modo de falha que
- * D2 combate é justamente o silêncio.
+ * D2 combate é justamente o silêncio. **Isto continua valendo**: mesmo recolhido pela
+ * 127 (abaixo), o card segue NESTA tela, a um clique do gatilho que fica ao lado dos
+ * números — nunca noutra rota.
  *
  * F-15 — DUAS linhas, com hierarquia visual deliberada:
  *  1. **Precisa ação** (anomalias): o que exige conferência humana. Define o tom do
@@ -15,9 +17,28 @@
  *     misturar as duas listas.
  * Mais a nota do ponto cego (estágio sem cadastro), que é invisível por construção.
  *
- * ⚠️ O card é **sempre renderizado**, inclusive com tudo zerado. Esconder no zero
- * tornaria "não há exceções" indistinguível de "a requisição falhou"
- * (AP-FRONTEND-021).
+ * ⚠️ **REVOGADO EM PARTE — 127/FE-AJUDA (08/09/2026).** O parágrafo original dizia:
+ *
+ *   > "O card é **sempre renderizado**, inclusive com tudo zerado. Esconder no zero
+ *   > tornaria 'não há exceções' indistinguível de 'a requisição falhou'
+ *   > (AP-FRONTEND-021)."
+ *
+ * O que mudou: por decisão do usuário (olhando a tela), o card **deixou de ficar aberto
+ * no topo da tela de Consumo de Planos** — ele e a nota de competência passaram a ficar
+ * recolhidos atrás do botão de ajuda `(?)` (`PlanConsumptionHelp.tsx`), porque os dois
+ * juntos empurravam a tabela para baixo.
+ *
+ * O que NÃO mudou (e é o ponto do parágrafo revogado): **a distinção continua obrigatória
+ * — só mudou de dono.** Este componente segue renderizando os quatro estados sem esconder
+ * nenhum quando é montado (loading · erro · zero · com exceções); e, **enquanto ele está
+ * recolhido**, quem impede que "zero" pareça "falhou" é o **indicador do `(?)`**: o selo
+ * visível (`…` / `!` / `N`) e, sobretudo, o `aria-label` do gatilho, que nomeia a falha em
+ * vez de calar. A regra segue sendo a de sempre: ausência de dado **nunca** é renderizada
+ * como zero (AP-FRONTEND-021/028).
+ *
+ * ⚠️ Quem voltar a montar este card fora do `(?)` (ou revogar o recolhimento) atualiza
+ * ESTE bloco junto — e leva com ele os testes de `PlanConsumptionHelp.test.tsx` e o bloco
+ * "o `(?)` é a porta" de `index.test.tsx`.
  *
  * ⚠️ Endpoints = unidade FAT-4, ainda inexistentes. Escrito contra o contrato §8 +
  * o contrato do resumo que esta unidade congelou (ver `dev-fat-5-report.md`).

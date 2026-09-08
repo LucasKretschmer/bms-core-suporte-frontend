@@ -44,7 +44,11 @@ export function isStatusBucket(value: string): value is StatusBucket {
  * Preferência: statusLabel congelado (estoque por stage) → rótulo do bucket → o
  * valor cru do bucket (fallback para nunca quebrar a tabela).
  */
-export function formatStatusDisplay(statusBucket: string, statusLabel: string | null): string {
+export function formatStatusDisplay(
+  statusBucket: string,
+  /** 129 — a chave `statusLabel` é OMITIDA pelo backend quando nula, não vem `null`. */
+  statusLabel: string | null | undefined,
+): string {
   if (statusLabel && statusLabel.trim().length > 0) return statusLabel
   if (isStatusBucket(statusBucket)) return BUCKET_LABELS[statusBucket]
   return statusBucket

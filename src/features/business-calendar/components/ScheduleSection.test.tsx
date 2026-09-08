@@ -14,6 +14,27 @@ import type { CreateScheduleRequest, ScheduleDto } from '../types/calendar'
 
 const vazio: ScheduleDto = { vigente: null, versoes: [] }
 
+/**
+ * 🔴 129 — a resposta **real** do backend quando não há versão em vigor: a chave `vigente`
+ * **não vem no JSON**. `Suporte.API/Program.cs:211-214` serializa com
+ * `DefaultIgnoreCondition = WhenWritingNull`, e `ScheduleDto.Vigente` é
+ * `ScheduleCurrentDto?` (`CalendarDtos.cs:81-83`).
+ *
+ * O irmão `vazio` (`vigente: null`) **passa nos dois mundos** — passava com `=== null` e
+ * passa com `== null` — e é exatamente por isso que ele deixou o defeito entrar. Este
+ * fixture é o discriminador: com `=== null` o ternário cai no ramo "tem expediente" e a
+ * tela estoura em `vigente.vigenciaInicio`.
+ */
+const semChaveNoWire: ScheduleDto = { versoes: [] }
+
+/**
+ * Idem, com versões cadastradas mas **todas futuras** — nenhuma vigora hoje (D-5). Cobre o
+ * segundo call site do mesmo campo: a marca "(em vigor hoje)" da lista de versões.
+ */
+const semChaveComVersoesFuturas: ScheduleDto = {
+  versoes: [{ id: 12, vigenciaInicio: '2099-01-01', janelasCount: 3 }],
+}
+
 const comVigencia: ScheduleDto = {
   vigente: {
     id: 9,
@@ -108,6 +129,51 @@ describe('ScheduleSection — estados', () => {
     expect(aviso).toBeInTheDocument()
     expect(aviso?.textContent).toContain('SLA de 1º atendimento continua sem apuração')
     expect(screen.queryByText(/nenhum resultado/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('ScheduleSection — 129: a chave `vigente` AUSENTE no wire', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  /**
+   * Discriminador dos fixtures. Sem ele, alguém "conserta" o fixture acrescentando
+   * `vigente: null` e o teste seguinte volta a passar nos dois mundos, em silêncio.
+   */
+  it('os dois fixtures são wires DIFERENTES: um sem a chave, o outro com a chave nula', () => {
+    expect(Object.hasOwn(semChaveNoWire, 'vigente')).toBe(false)
+    expect(Object.hasOwn(semChaveComVersoesFuturas, 'vigente')).toBe(false)
+    // Irmão positivo, na MESMA execução: o `null` explícito continua sendo um wire válido.
+    expect(Object.hasOwn(vazio, 'vigente')).toBe(true)
+    expect(vazio.vigente).toBeNull()
+  })
+
+  it('sem a chave `vigente`, a tela renderiza "Expediente não configurado" e NÃO estoura', () => {
+    renderizar({ schedule: semChaveNoWire })
+    const aviso = screen.getByText(/Expediente não configurado/i).closest('p')
+    expect(aviso).toBeInTheDocument()
+    expect(aviso?.textContent).toContain('SLA de 1º atendimento continua sem apuração')
+    // O ramo errado escreveria "Em vigor desde" — é ele que lia `vigente.vigenciaInicio`.
+    expect(screen.queryByText(/Em vigor desde/i)).not.toBeInTheDocument()
+  })
+
+  it('com a chave `vigente` NULA, a mesma tela aparece (irmão que passa nos dois mundos)', () => {
+    renderizar({ schedule: vazio })
+    expect(screen.getByText(/Expediente não configurado/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Em vigor desde/i)).not.toBeInTheDocument()
+  })
+
+  it('sem a chave, versão FUTURA é listada sem a marca "(em vigor hoje)"', () => {
+    renderizar({ schedule: semChaveComVersoesFuturas })
+    const secao = screen.getByRole('region', { name: 'Versões do expediente' })
+    const linha = within(secao).getByText('2099-01-01').closest('li')
+    expect(linha?.textContent).toContain('3 janela(s)')
+    expect(linha?.textContent).not.toContain('em vigor hoje')
+  })
+
+  it('sem a chave, a grade abre VAZIA e continua editável (nenhuma janela herdada)', () => {
+    renderizar({ schedule: semChaveNoWire })
+    expect(screen.queryByLabelText(/Início da janela 1 de/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Salvar nova vigência' })).toBeEnabled()
   })
 })
 

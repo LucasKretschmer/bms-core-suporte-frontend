@@ -10,7 +10,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { PlanConsumptionItemDto } from '../shared/types/reports'
 import type { ClientTicketItemDto } from '../../client-tickets/types/clientTickets'
@@ -230,17 +230,45 @@ describe('PlanConsumptionPage — repasse do período ao drawer (121/C1)', () =>
 })
 
 /**
- * 121/A2 (§5.3) — o card de exceções vive NESTA tela, acima da tabela, porque a
- * conferência acontece enquanto o gestor olha os números da fatura.
+ * ⚠️ **REESCRITO EM 127/FE-AJUDA (08/09/2026).** Este bloco travava, com estas mesmas
+ * palavras, o comportamento anterior:
  *
- * O ponto mais importante deste bloco: `ReportPageLayout` só renderiza `children` no
- * estado "com dados" — um card posto ali desapareceria exatamente quando a listagem
- * ficasse vazia ou falhasse, que é o silêncio que D2 combate. Por isso ele vai no slot
- * `banner`, e por isso estes 3 casos existem.
+ *   > "continua visível quando a LISTAGEM está VAZIA / em erro / carregando" — o card de
+ *   > exceções renderizado, aberto, no topo da tela, nos três estados da listagem.
+ *
+ * Por decisão do usuário (olhando a tela) a nota de competência e o card passaram a ficar
+ * **recolhidos atrás do botão de ajuda `(?)`**: os dois juntos empurravam a tabela para
+ * baixo. Os casos não foram apagados — foram reescritos **mais específicos**: onde antes
+ * bastava "a região existe", agora se exige (1) que o `(?)` sobreviva ao estado da
+ * listagem, (2) que **o indicador dele continue carregando o número sem abrir nada**, e
+ * (3) que abrir revele o card. O motivo de §5.3 (slot `banner`, nunca `children`) segue
+ * sendo o que faz (1) valer.
+ *
+ * O que deixa cada asserção vermelha: mover o `(?)` para `children` (some no vazio/erro/
+ * loading), zerar/neutralizar o indicador, ou o `(?)` deixar de montar o card.
  */
-describe('PlanConsumptionPage — card de exceções de faturamento (121/A2)', () => {
+describe('PlanConsumptionPage — o (?) é a porta da ajuda e da conferência (127)', () => {
+  function gatilhoDaAjuda(): HTMLElement {
+    return screen.getByTestId('ajuda-gatilho')
+  }
+
+  function abrirAjuda() {
+    fireEvent.click(gatilhoDaAjuda())
+  }
+
   function cardDeExcecoes() {
     return screen.getByRole('region', { name: 'Exceções de faturamento' })
+  }
+
+  /** Resumo com 3 anomalias — número LITERAL, para o indicador ter o que afirmar. */
+  function comTresAnomalias() {
+    mockedResumoExcecoes.mockResolvedValue({
+      anomaliasCount: 3,
+      anomaliasSegundos: 6300, // 1h 45m
+      postergadoCount: 12,
+      postergadoSegundos: 54000, // 15h 0m
+      naoClassificadosCount: 0,
+    })
   }
 
   it('recebe o MESMO período da listagem', async () => {
@@ -254,47 +282,101 @@ describe('PlanConsumptionPage — card de exceções de faturamento (121/A2)', (
     })
   })
 
-  it('continua visível quando a LISTAGEM está VAZIA', async () => {
+  it('FECHADO por padrão: nem a nota nem o card ocupam o topo da tela', async () => {
+    comTresAnomalias()
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    await waitFor(() => expect(gatilhoDaAjuda()).toHaveAttribute('data-estado', 'pendente'))
+    expect(gatilhoDaAjuda()).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Como o período é contado aqui')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Exceções de faturamento' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /conferir/i })).not.toBeInTheDocument()
+    // Mas a informação NÃO sumiu: ela está no nome acessível do gatilho.
+    expect(gatilhoDaAjuda()).toHaveAttribute(
+      'aria-label',
+      'Ajuda e conferência — 3 chamados exigem conferência',
+    )
+  })
+
+  it.each([
+    ['VAZIA', { vazio: true }],
+    ['em ERRO', { isError: true }],
+    ['CARREGANDO', { isLoading: true }],
+  ])(
+    'com a listagem %s o (?) continua na tela, ainda dizendo QUANTOS exigem conferência',
+    async (_estado, flags) => {
+      comTresAnomalias()
+      mockListagem({ from: '2026-07-01', to: '2026-07-31' }, flags)
+      renderPage()
+
+      // (1) o gatilho sobrevive ao estado da listagem (slot `banner`, não `children`)…
+      await waitFor(() =>
+        expect(gatilhoDaAjuda()).toHaveAttribute(
+          'aria-label',
+          'Ajuda e conferência — 3 chamados exigem conferência',
+        ),
+      )
+      // (2) …e abrir revela o card, com o mesmo número.
+      abrirAjuda()
+      expect(within(cardDeExcecoes()).getByTestId('excecoes-anomalias')).toHaveTextContent(
+        'Precisa ação: 3 chamados fechados sem data de conclusão',
+      )
+    },
+  )
+
+  it('com a listagem VAZIA, a mensagem de vazio e o (?) convivem', async () => {
     mockListagem({ from: '2026-07-01', to: '2026-07-31' }, { vazio: true })
     renderPage()
 
     expect(
       screen.getByText('Nenhum cliente com plano encontrado para os filtros selecionados.'),
     ).toBeInTheDocument()
-    await waitFor(() => expect(cardDeExcecoes()).toBeInTheDocument())
+    await waitFor(() => expect(gatilhoDaAjuda()).toBeInTheDocument())
   })
 
-  it('continua visível quando a LISTAGEM está em erro', async () => {
-    mockListagem({ from: '2026-07-01', to: '2026-07-31' }, { isError: true })
-    renderPage()
-
-    await waitFor(() => expect(cardDeExcecoes()).toBeInTheDocument())
-  })
-
-  it('continua visível quando a LISTAGEM está carregando', async () => {
-    mockListagem({ from: '2026-07-01', to: '2026-07-31' }, { isLoading: true })
-    renderPage()
-
-    await waitFor(() => expect(cardDeExcecoes()).toBeInTheDocument())
-  })
-
-  it('mostra as DUAS seções acima da tabela, com os números do resumo', async () => {
-    mockedResumoExcecoes.mockResolvedValue({
-      anomaliasCount: 3,
-      anomaliasSegundos: 6300, // 1h 45m
-      postergadoCount: 12,
-      postergadoSegundos: 54000, // 15h 0m
-      naoClassificadosCount: 0,
-    })
+  it('ABERTO: as DUAS seções do card, com os números do resumo', async () => {
+    comTresAnomalias()
     mockListagem({ from: '2026-07-01', to: '2026-07-31' })
     renderPage()
 
-    const anomalias = await screen.findByTestId('excecoes-anomalias')
-    expect(anomalias).toHaveTextContent(
+    await waitFor(() => expect(gatilhoDaAjuda()).toHaveAttribute('data-estado', 'pendente'))
+    abrirAjuda()
+
+    expect(screen.getByTestId('excecoes-anomalias')).toHaveTextContent(
       'Precisa ação: 3 chamados fechados sem data de conclusão · 1h 45m fora de qualquer fatura',
     )
     expect(screen.getByTestId('excecoes-postergado')).toHaveTextContent(
       'Postergado: 12 chamados ainda abertos · 15h 0m entram na fatura de quando o chamado fechar (não exige ação).',
+    )
+    // E o botão de ação que o pedido da 127 exige atrás do (?).
+    expect(screen.getByRole('button', { name: /conferir/i })).toBeInTheDocument()
+  })
+
+  it('resumo em ERRO: o indicador NOMEIA a falha — nunca vira "nenhum" (a ressalva)', async () => {
+    mockedResumoExcecoes.mockRejectedValue(new Error('500'))
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    await waitFor(() => expect(gatilhoDaAjuda()).toHaveAttribute('data-estado', 'erro'))
+    expect(gatilhoDaAjuda()).toHaveAttribute(
+      'aria-label',
+      'Ajuda e conferência — não foi possível verificar se há chamados a conferir',
+    )
+  })
+
+  it('resumo ZERADO: o indicador é neutro e afirma o zero por escrito', async () => {
+    // O default do `beforeEach` já é tudo zerado — aqui o ponto é a DIFERENÇA em relação
+    // ao caso de erro acima: os dois nomes acessíveis não podem se confundir.
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    await waitFor(() => expect(gatilhoDaAjuda()).toHaveAttribute('data-estado', 'zero'))
+    expect(gatilhoDaAjuda()).toHaveAttribute(
+      'aria-label',
+      'Ajuda e conferência — nenhum chamado exige conferência',
     )
   })
 })
@@ -307,16 +389,37 @@ describe('PlanConsumptionPage — card de exceções de faturamento (121/A2)', (
  * para fechar essa lacuna, e precisa de duas propriedades:
  *  1. usar o período REAL da tela (a mesma fonte da tabela e do export), não um congelado;
  *  2. sobreviver aos estados da LISTAGEM — a lista volta zerada justamente quando o chamado
- *     fechou em outra competência, que é o momento em que a explicação é necessária. Foi
- *     por isso que ela foi para o slot `banner`, e não para `children`.
+ *     fechou em outra competência, que é o momento em que a explicação é necessária.
  *
- * O que deixa cada asserção VERMELHA: mover a nota para `children` (some no vazio/erro/
- * loading), passar `initialFrom`/data fixa em vez de `filters`, ou remover a nota.
+ * ⚠️ **REESCRITO EM 127/FE-AJUDA.** A propriedade 2 dizia, até aqui, "a nota fica **visível**
+ * em vazio/erro/loading". Ela passou a ficar **recolhida atrás do `(?)`** (decisão do
+ * usuário): o que sobrevive aos estados da listagem é o **gatilho**, e a nota está a um
+ * clique dele em todos eles — que é o que estes casos passaram a exigir, abrindo o `(?)`
+ * em cada estado em vez de só procurar o texto na tela.
+ *
+ * O que deixa cada asserção VERMELHA: mover o `(?)` para `children` (some no vazio/erro/
+ * loading), passar `initialFrom`/data fixa em vez de `filters`, ou remover a nota de dentro
+ * do conteúdo recolhido.
  */
 describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
+  function abrirAjuda() {
+    fireEvent.click(screen.getByTestId('ajuda-gatilho'))
+  }
+
+  it('FECHADA por padrão — é o que devolve o espaço à tabela', () => {
+    mockListagem({ from: '2026-07-01', to: '2026-07-31' })
+    renderPage()
+
+    expect(screen.queryByText('Como o período é contado aqui')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
+    ).not.toBeInTheDocument()
+  })
+
   it('declara o recorte por data de conclusão, com o período FILTRADO', () => {
     mockListagem({ from: '2026-07-01', to: '2026-07-31' })
     renderPage()
+    abrirAjuda()
 
     expect(
       screen.getByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
@@ -333,6 +436,7 @@ describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
     // primeiro caso e cairia aqui.
     mockListagem({ from: '2026-08-01', to: '2026-08-31' })
     renderPage()
+    abrirAjuda()
 
     expect(
       screen.getByText('Mostrando os chamados concluídos entre 01/08/2026 e 31/08/2026.'),
@@ -342,6 +446,7 @@ describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
   it('declara a exceção de PROJETO (a coluna de horas mistura as duas bases)', () => {
     mockListagem({ from: '2026-07-01', to: '2026-07-31' })
     renderPage()
+    abrirAjuda()
 
     expect(
       screen.getByText(
@@ -354,9 +459,11 @@ describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
     ['VAZIA', { vazio: true }],
     ['em ERRO', { isError: true }],
     ['CARREGANDO', { isLoading: true }],
-  ])('continua visível com a listagem %s', (_estado, flags) => {
+  ])('continua alcançável pelo (?) com a listagem %s', (_estado, flags) => {
     mockListagem({ from: '2026-07-01', to: '2026-07-31' }, flags)
     renderPage()
+    // O gatilho existe nos três estados — é isso que o slot `banner` garante.
+    abrirAjuda()
 
     expect(
       screen.getByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
@@ -368,6 +475,7 @@ describe('PlanConsumptionPage — nota de competência (123/FAT-1)', () => {
     // mês local. "Mostrando todos" seria uma afirmação falsa sobre o recorte.
     mockListagem({ from: null, to: null })
     renderPage()
+    abrirAjuda()
 
     expect(
       screen.getByText('Sem datas preenchidas: mostrando os chamados concluídos no mês atual.'),
@@ -382,11 +490,16 @@ describe('PlanConsumptionPage — rótulo × Saúde dos Planos (123/D-14)', () =
   // conteúdo da frase; aqui o que se prova é que a PÁGINA a renderiza.
   const FRASE_SAUDE = TEXTO_COMPETENCIA_VS_SAUDE_PLANOS
 
+  function abrirAjuda() {
+    fireEvent.click(screen.getByTestId('ajuda-gatilho'))
+  }
+
   it('explica por que o gráfico do painel mostra outro número', () => {
     // Vermelho se a página parar de passar `comparaSaudePlanos` — e é a página, não a nota,
     // quem decide (o Relatório do Cliente usa a MESMA nota e não deve trazer esta frase).
     mockListagem({ from: '2026-07-01', to: '2026-07-31' })
     renderPage()
+    abrirAjuda()
 
     expect(screen.getByText(FRASE_SAUDE)).toBeInTheDocument()
   })
@@ -395,10 +508,11 @@ describe('PlanConsumptionPage — rótulo × Saúde dos Planos (123/D-14)', () =
     ['VAZIA', { vazio: true }],
     ['em ERRO', { isError: true }],
     ['CARREGANDO', { isLoading: true }],
-  ])('a explicação sobrevive à listagem %s', (_estado, flags) => {
+  ])('a explicação continua a um clique do (?) com a listagem %s', (_estado, flags) => {
     // É justamente quando a tela volta zerada que o usuário conclui "os números não batem".
     mockListagem({ from: '2026-07-01', to: '2026-07-31' }, flags)
     renderPage()
+    abrirAjuda()
 
     expect(screen.getByText(FRASE_SAUDE)).toBeInTheDocument()
   })

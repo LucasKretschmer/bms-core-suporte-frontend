@@ -22,8 +22,12 @@ describe('getPercentClass — cor do % do plano', () => {
     expect(getPercentClass(150)).toBe('red')
   })
 
-  it('retorna "neutral" quando valor é null', () => {
+  it('retorna "neutral" quando valor é null OU ausente (129 — a chave é omitida no wire)', () => {
     expect(getPercentClass(null)).toBe('neutral')
+    // O `null` acima passa com `=== null` e com `== null`: não discrimina. O `undefined`
+    // é o que prova o guard — ver `columns.wire.test.tsx` para o par completo e a
+    // vítima de tabela renderizada.
+    expect(getPercentClass(undefined)).toBe('neutral')
   })
 })
 

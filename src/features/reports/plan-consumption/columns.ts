@@ -10,9 +10,17 @@ import {
 } from '../shared/utils/competenciaTexts'
 import React from 'react'
 
-/** Aplica máscara de CNPJ: XX.XXX.XXX/XXXX-XX */
-function formatCnpj(cnpj: string | null): string {
-  if (!cnpj) return '—'
+/**
+ * Aplica máscara de CNPJ: XX.XXX.XXX/XXXX-XX
+ *
+ * 129/FE-PCT — aceita `undefined` porque o backend omite a chave quando `Cnpj` é nulo
+ * (`WhenWritingNull`, `Program.cs:210-215`). O `!` já cobria os dois casos em runtime;
+ * o que estava errado era a **assinatura**, que obrigava o call site a mentir sobre o wire.
+ */
+function formatCnpj(cnpj: string | null | undefined): string {
+  // `== null` cobre chave ausente E `null`; o `|| ''` mantém o comportamento anterior
+  // (string vazia do wire também é "não informado").
+  if (cnpj == null || cnpj === '') return '—'
   const digits = cnpj.replace(/\D/g, '')
   if (digits.length !== 14) return cnpj
   return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
@@ -23,11 +31,21 @@ function formatCnpj(cnpj: string | null): string {
  * < 80%  → verde
  * 80–95% → amarelo
  * ≥ 95%  → vermelho (pode exceder 100%)
+ * ausente/nulo → **neutro** (ver abaixo)
  */
 export type PercentClass = 'green' | 'yellow' | 'red' | 'neutral'
 
-export function getPercentClass(value: number | null): PercentClass {
-  if (value === null) return 'neutral'
+/**
+ * 129/FE-PCT — o guard é `== null`, e o parâmetro aceita `undefined`, porque
+ * `PercentualPlano` é `decimal?` no backend e a API omite a chave quando é nulo
+ * (`WhenWritingNull`, `Program.cs:210-215`). Com `=== null` e parâmetro estreito, o
+ * `undefined` caía por **todos** os `<` (toda comparação com `undefined` é `false`) e a
+ * função devolvia `'red'`: a tela que decide faturamento pintava de vermelho —
+ * "estourou o plano" — um cliente cujo percentual é **desconhecido**. Desconhecido é
+ * `'neutral'`; a célula ao lado já mostra "—" (`formatPercent`).
+ */
+export function getPercentClass(value: number | null | undefined): PercentClass {
+  if (value == null) return 'neutral'
   if (value < 80) return 'green'
   if (value < 95) return 'yellow'
   return 'red'

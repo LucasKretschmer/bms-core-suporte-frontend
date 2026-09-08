@@ -6,14 +6,13 @@ import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
 import { TeamCombobox } from '../shared/components/TeamCombobox'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
-import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
 import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPaginated'
 import { listProductivity } from '../shared/services/reportsService'
 import { useToast } from '../../../components/ui/Toast'
 import type { AgentMetricDto } from '../shared/types/reports'
 import { productivityColumns } from './columns'
+import { PRODUCTIVITY_EXPORT_COLUMNS, mapToExportRow } from './exportRow'
 import { useProductivity } from './hooks/useProductivity'
-import { formatSeconds, formatDecimal } from '../shared/utils/formatters'
 
 /** Chave única para persistência da ordem das colunas */
 const TABLE_ID = 'productivity'
@@ -40,25 +39,7 @@ export default function ProductivityPage() {
   const [isExporting, setIsExporting] = useState(false)
   const toast = useToast()
 
-  const exportColumns: ExportColumn[] = [
-    { header: 'Analista', key: 'nome' },
-    { header: 'Equipe', key: 'equipe' },
-    { header: 'Atendimentos', key: 'nAtendimentos' },
-    { header: 'Tempo Total', key: 'totalSegundos' },
-    { header: 'AHT (Tempo Médio)', key: 'ahtSegundos' },
-    { header: 'Média de Pausas', key: 'mediaPausas' },
-  ]
-
-  function mapToExportRow(item: AgentMetricDto): ExportRow {
-    return {
-      nome: item.nome,
-      equipe: item.equipe ?? '—',
-      nAtendimentos: item.nAtendimentos,
-      totalSegundos: formatSeconds(item.totalSegundos),
-      ahtSegundos: item.ahtSegundos !== null ? formatSeconds(item.ahtSegundos) : '—',
-      mediaPausas: formatDecimal(item.mediaPausas),
-    }
-  }
+  const exportColumns = PRODUCTIVITY_EXPORT_COLUMNS
 
   /** Busca todas as páginas do conjunto filtrado para export completo */
   const fetchAllForExport = useCallback(

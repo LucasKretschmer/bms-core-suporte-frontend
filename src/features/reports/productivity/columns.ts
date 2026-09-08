@@ -51,8 +51,10 @@ export const productivityColumns: ColumnDef<AgentMetricDto>[] = [
     sortable: true,
     sortKey: 'aht',
     align: 'right',
-    accessor: (row) =>
-      row.ahtSegundos !== null ? formatSeconds(row.ahtSegundos) : '—',
+    // 129 — `== null`, nunca `!== null`: `AgentMetricDto.AhtSegundos` é `long?`
+    // (`MetricsDtos.cs:169`) e o backend OMITE a chave quando é nula. Com `!== null` o
+    // ramo verdadeiro rodava para `undefined` e a célula saía `NaNh NaNm`.
+    accessor: (row) => (row.ahtSegundos == null ? '—' : formatSeconds(row.ahtSegundos)),
   },
   {
     key: 'mediaPausas',

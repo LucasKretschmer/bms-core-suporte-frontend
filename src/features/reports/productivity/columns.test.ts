@@ -109,3 +109,42 @@ describe('productivityColumns — accessors', () => {
     expect(col.accessor({ ...sampleRow, mediaPausas: null })).toBe('—')
   })
 })
+
+/**
+ * 129 — `AgentMetricDto.AhtSegundos` é `long?` (`MetricsDtos.cs:169`) e o backend OMITE
+ * a chave quando é nula. O guard era `row.ahtSegundos !== null`: para a chave ausente ele
+ * dava **verdadeiro**, chamava `formatSeconds(undefined)` e a célula saía `NaNh NaNm`.
+ */
+describe('productivityColumns — chave `ahtSegundos` AUSENTE no wire (129)', () => {
+  /** Discriminador: se alguém "consertar" o fixture pondo `ahtSegundos: null`, isto reprova. */
+  const semAht: AgentMetricDto = {
+    userId: 2,
+    nome: 'Maria Souza',
+    equipe: 'Equipe B',
+    nAtendimentos: 3,
+    totalSegundos: 600,
+    mediaPausas: 0,
+  }
+
+  it('o fixture realmente NÃO tem a chave (o irmão `null` tem)', () => {
+    expect(Object.hasOwn(semAht, 'ahtSegundos')).toBe(false)
+    expect(Object.hasOwn(sampleRow, 'ahtSegundos')).toBe(true)
+  })
+
+  it('coluna AHT exibe "—" com a chave ausente, nunca "NaN"', () => {
+    const col = productivityColumns.find((c) => c.key === 'ahtSegundos')!
+    const saida = String(col.accessor(semAht))
+    expect(saida).toBe('—')
+    expect(saida).not.toContain('NaN')
+  })
+
+  it('coluna AHT exibe "—" com a chave NULA (irmão, mesma execução)', () => {
+    const col = productivityColumns.find((c) => c.key === 'ahtSegundos')!
+    expect(col.accessor({ ...sampleRow, ahtSegundos: null })).toBe('—')
+  })
+
+  it('controle positivo: com valor presente a coluna continua formatando', () => {
+    const col = productivityColumns.find((c) => c.key === 'ahtSegundos')!
+    expect(String(col.accessor(sampleRow))).not.toBe('—')
+  })
+})

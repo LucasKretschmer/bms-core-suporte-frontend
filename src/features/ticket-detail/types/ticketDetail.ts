@@ -21,21 +21,21 @@ export type TicketTimeEntryDto = {
   id: number
   userId: number
   agenteNome: string
-  serviceCategoryId: number | null
-  categorizacaoNome: string | null
+  serviceCategoryId?: number | null
+  categorizacaoNome?: string | null
   billableOutsidePlan: boolean
   status: string // RUNNING | PAUSED | COMPLETED | CANCELLED | DISCARDED (120, D-1)
   startTime: string // ISO Z
-  endTime: string | null // ISO Z
+  endTime?: string | null // ISO Z
   totalSeconds: number
-  note: string | null
+  note?: string | null
   pendingCategory: boolean
   /**
    * Quem cancelou/descartou o apontamento (099/120) — preenchido quando status =
    * CANCELLED ou DISCARDED (campo de auditoria reaproveitado, mesma ação humana).
    */
-  canceladoPorUserId: number | null
-  canceladoPorNome: string | null
+  canceladoPorUserId?: number | null
+  canceladoPorNome?: string | null
   segments: TicketSegmentDto[]
 }
 
@@ -49,15 +49,15 @@ export type TicketOwnerDto = {
 /** Cliente resumido do ticket (ClientDto do backend). */
 export type TicketClientDto = {
   id: number
-  nomeFantasia: string | null
-  razaoSocial: string | null
-  cnpj: string | null
+  nomeFantasia?: string | null
+  razaoSocial?: string | null
+  cnpj?: string | null
 }
 
 /** Solicitante / contato HubSpot do ticket (RequesterDto do backend). */
 export type TicketRequesterDto = {
-  nome: string | null
-  email: string | null
+  nome?: string | null
+  email?: string | null
 }
 
 /**
@@ -70,13 +70,13 @@ export type TicketRequesterDto = {
 export type TicketHeaderDto = {
   id: number
   hubspotTicketId: string
-  assunto: string | null
-  categoria: string | null
-  pipelineStage: string | null
-  owner: TicketOwnerDto | null
-  client: TicketClientDto | null
-  requester: TicketRequesterDto | null
-  hubspotUrl: string | null
-  conteudo: string | null
-  hsCriadoEm: string | null // ISO Z
+  assunto?: string | null
+  categoria?: string | null
+  pipelineStage?: string | null
+  owner?: TicketOwnerDto | null
+  client?: TicketClientDto | null
+  requester?: TicketRequesterDto | null
+  hubspotUrl?: string | null
+  conteudo?: string | null
+  hsCriadoEm?: string | null // ISO Z
 }

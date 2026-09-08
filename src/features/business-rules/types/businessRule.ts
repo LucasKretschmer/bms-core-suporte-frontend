@@ -21,7 +21,7 @@ export type RuleValue = boolean | string | number
 /** DTO de regra retornado pelo backend (valor já desserializado para JS). */
 export type BusinessRuleDto = {
   id: number
-  teamId: number | null
+  teamId?: number | null
   chave: string
   valor: RuleValue
   criadoEm: string

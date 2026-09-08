@@ -173,7 +173,11 @@ function ScheduleEditor({ schedule, podeEditar, onSalvar }: ScheduleEditorProps)
         aria-label="Expediente em vigor"
         className="rounded-card border border-border bg-card p-4"
       >
-        {vigente === null ? (
+        {/* 129 — `== null`, nunca `=== null`: o backend OMITE a chave `vigente` quando
+            não há versão em vigor (`WhenWritingNull`), então o valor chega `undefined`.
+            Com `=== null` este ternário caía no ramo "tem expediente" e a tela estourava
+            em `vigente.vigenciaInicio` (AP-FRONTEND-028). */}
+        {vigente == null ? (
           <p className="text-sm text-foreground">
             <strong>Expediente não configurado.</strong> Enquanto não houver uma versão em
             vigor, o tempo útil não é calculado e o SLA de 1º atendimento continua sem
@@ -348,7 +352,8 @@ function ScheduleEditor({ schedule, podeEditar, onSalvar }: ScheduleEditorProps)
               <li key={versao.id}>
                 A partir de <strong>{versao.vigenciaInicio}</strong> — {versao.janelasCount}{' '}
                 janela(s)
-                {vigente !== null && versao.id === vigente.id ? ' (em vigor hoje)' : ''}
+                {/* 129 — `!= null` cobre a chave ausente; ver o comentário do bloco acima. */}
+                {vigente != null && versao.id === vigente.id ? ' (em vigor hoje)' : ''}
               </li>
             ))}
           </ul>

@@ -251,3 +251,39 @@ describe('ticketDrillColumns — vocabulário "1º atendimento" nos cabeçalhos 
     expect(todos).toContain('CSAT')
   })
 })
+
+/**
+ * 129 — a linha de drill como o backend a serializa: todo campo anulável do
+ * `TicketRowDto` chega com a **chave ausente** (`WhenWritingNull`), não com `null`.
+ * Nenhuma célula pode sair `NaN`, `undefined` ou `Invalid Date`.
+ */
+describe('ticketDrillColumns — chaves AUSENTES no wire (129)', () => {
+  /** Só os campos NÃO anuláveis do contrato. Todo o resto: chave ausente. */
+  const LINHA_SEM_CHAVES = { ticketId: 9, hubspotTicketId: '909' } as TicketRowDto
+
+  it('o fixture realmente não tem as chaves opcionais (discriminador)', () => {
+    for (const chave of ['assunto', 'frHoras', 'frSla', 'csat', 'isOneTouch', 'hsCriadoEm']) {
+      expect(Object.hasOwn(LINHA_SEM_CHAVES, chave)).toBe(false)
+    }
+    expect(Object.hasOwn(BASE_ROW, 'frHoras')).toBe(true)
+  })
+
+  it('nenhuma célula de nenhuma métrica sai com NaN/undefined/Invalid Date', () => {
+    for (const metric of ALL_METRICS) {
+      for (const col of ticketDrillColumns(metric)) {
+        const saida = String(col.accessor(LINHA_SEM_CHAVES) ?? '')
+        expect(saida, `${metric}/${col.key}`).not.toContain('NaN')
+        expect(saida, `${metric}/${col.key}`).not.toContain('undefined')
+        expect(saida, `${metric}/${col.key}`).not.toContain('Invalid Date')
+      }
+    }
+  })
+
+  it('controle positivo: com as chaves presentes as células continuam formatando valor', () => {
+    const cols = ticketDrillColumns(ALL_METRICS[0])
+    const comValor = cols
+      .map((c) => String(c.accessor(BASE_ROW) ?? ''))
+      .filter((v) => v !== '' && v !== '—')
+    expect(comValor.length).toBeGreaterThan(0)
+  })
+})

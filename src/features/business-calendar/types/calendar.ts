@@ -36,8 +36,13 @@ export type CalendarDto = {
   padrao: boolean
   /** `true` em calendário 24/7: os feriados não são descontados. */
   ignorarFeriados: boolean
-  /** Meta global de 1º atendimento. `null` = **não configurado** ⇒ SLA responde `null`. */
-  slaPadraoMinutos: number | null
+  /**
+   * Meta global de 1º atendimento. **Não configurado** ⇒ SLA responde `null`.
+   *
+   * 129 — opcional porque `WhenWritingNull` **omite a chave** quando o backend escreve
+   * nulo (`CalendarDto.SlaPadraoMinutos` é `int?`). Guard: `== null`.
+   */
+  slaPadraoMinutos?: number | null
 }
 
 /** Corpo de `POST`/`PUT /api/v1/calendars` — idênticos (substituição total). */
@@ -82,11 +87,19 @@ export type ScheduleCurrentDto = {
 /**
  * `GET /api/v1/calendars/{id}/schedule`.
  *
- * `vigente` vem `null` quando o calendário ainda não tem versão em vigor — inclusive
- * quando só existem versões **futuras**. É "não configurado", não erro (D-5).
+ * `vigente` é **"não configurado"** quando o calendário ainda não tem versão em vigor —
+ * inclusive quando só existem versões **futuras**. É estado válido, não erro (D-5).
+ *
+ * 🔴 **129 — o campo é OPCIONAL no wire, não `null`.** O backend serializa com
+ * `DefaultIgnoreCondition = WhenWritingNull` (`Suporte.API/Program.cs:211-214`), e
+ * `ScheduleDto.Vigente` é `ScheduleCurrentDto?` (`CalendarDtos.cs:81-83`): quando não há
+ * versão em vigor a **chave não vem no JSON**. Declarar só `| null` fazia `vigente === null`
+ * ser **falso** para `undefined`, o ramo "tem expediente" rodar, e a tela estourar com
+ * `Cannot read properties of undefined (reading 'vigenciaInicio')` em todo calendário
+ * recém-criado. O tipo declara as duas formas e **todo guard é `== null`** — nunca `=== null`.
  */
 export type ScheduleDto = {
-  vigente: ScheduleCurrentDto | null
+  vigente?: ScheduleCurrentDto | null
   /** Todas as versões ativas, da mais recente para a mais antiga. */
   versoes: ScheduleVersionDto[]
 }

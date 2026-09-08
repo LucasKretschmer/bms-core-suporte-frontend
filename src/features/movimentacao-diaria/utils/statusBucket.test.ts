@@ -63,3 +63,19 @@ describe('statusBucket utils', () => {
     })
   })
 })
+
+/**
+ * 129 — `MovimentacaoDiariaRowDto.statusLabel` é `string?` no backend e a chave vem
+ * AUSENTE nas linhas de fluxo (novos/resolvidos/cancelados). O rótulo tem de cair no
+ * nome do bucket, nunca em `undefined` renderizado.
+ */
+describe('formatStatusDisplay — chave `statusLabel` ausente (129)', () => {
+  it('AUSENTE cai no rótulo do bucket', () => {
+    expect(formatStatusDisplay('novos', undefined)).toBe(formatStatusDisplay('novos', null))
+    expect(formatStatusDisplay('novos', undefined)).not.toContain('undefined')
+  })
+
+  it('controle positivo: com `statusLabel` presente, ele vence o rótulo do bucket', () => {
+    expect(formatStatusDisplay('aberto', 'Aguardando cliente')).toBe('Aguardando cliente')
+  })
+})

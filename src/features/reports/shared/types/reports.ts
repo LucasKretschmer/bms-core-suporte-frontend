@@ -6,8 +6,8 @@
 // ── Comuns ──────────────────────────────────────────────────────────────────
 
 export type RequesterDto = {
-  nome: string | null
-  email: string | null
+  nome?: string | null
+  email?: string | null
 }
 
 // ── Configuração ─────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ export type SupportPlanDto = {
   id: number
   nome: string
   horasMes: number
-  precoHoraExtra: number | null
+  precoHoraExtra?: number | null
   moeda: string
   isActive: boolean
 }
@@ -24,43 +24,57 @@ export type SupportPlanDto = {
 export type ClientListItemDto = {
   id: number
   hubspotCompanyId: number
-  cnpj: string | null
-  razaoSocial: string | null
-  nomeFantasia: string | null
-  planNome: string | null
+  cnpj?: string | null
+  razaoSocial?: string | null
+  nomeFantasia?: string | null
+  planNome?: string | null
 }
 
 export type ClientDetailDto = {
   id: number
   hubspotCompanyId: number
-  cnpj: string | null
-  razaoSocial: string | null
-  nomeFantasia: string | null
-  supportPlan: SupportPlanDto | null
-  horasOverride: number | null
-  horasEfetivas: number | null
+  cnpj?: string | null
+  razaoSocial?: string | null
+  nomeFantasia?: string | null
+  supportPlan?: SupportPlanDto | null
+  horasOverride?: number | null
+  horasEfetivas?: number | null
 }
 
 export type TeamDto = {
   id: number
   nome: string
   /** Derivado de appsettings no backend; null p/ equipes sincronizadas. */
-  gerencia: string | null
+  gerencia?: string | null
 }
 
 // ── U3 — Consumo de Planos ───────────────────────────────────────────────────
 
 export type PlanConsumptionItemDto = {
   clientId: number
-  cnpj: string | null
-  nomeFantasia: string | null
-  razaoSocial: string | null
-  nomePlano: string | null
+  /**
+   * 129/FE-PCT — **dívida da FE-WIRE QUITADA.** `Cnpj` é `string?` no backend
+   * (`ReportsDtos.cs:174`) e a API serializa com `DefaultIgnoreCondition =
+   * WhenWritingNull` (`Program.cs:210-215`) ⇒ quando é nulo **a chave é OMITIDA do JSON,
+   * não vem `null`**. Por isso `?` — e todo guard deste campo é `== null`, nunca
+   * `=== null`. Ver `columns.ts::formatCnpj`.
+   */
+  cnpj?: string | null
+  nomeFantasia?: string | null
+  razaoSocial?: string | null
+  nomePlano?: string | null
   qtdePlanoHoras: number
   horasUsadas: number
   horasRestantes: number
   horasAdicionais: number
-  percentualPlano: number | null
+  /**
+   * 129/FE-PCT — `decimal?` no backend (`ReportsDtos.cs:183`) ⇒ **chave omitida** quando o
+   * cliente não tem plano/percentual apurável. O `?` aqui é o que obriga cada call site a
+   * decidir o ramo "desconhecido": `getPercentClass` devolvia `'red'` para `undefined`
+   * (todos os `<` falham) e a tela **afirmava "estourou o plano" sobre um valor que
+   * ninguém sabe**. Guard correto: `== null` ⇒ `'neutral'`.
+   */
+  percentualPlano?: number | null
   horasFaturaveis: number
   horasAnalise: number
 
@@ -97,11 +111,11 @@ export type TicketStatusCategoria = 'aberto' | 'emandamento' | 'fechado' | 'canc
 export type TicketReportItemDto = {
   ticketId: number
   hubspotTicketId: string
-  assunto: string | null
-  clienteNome: string | null
-  equipe: string | null
-  ownerNome: string | null
-  status: string | null
+  assunto?: string | null
+  clienteNome?: string | null
+  equipe?: string | null
+  ownerNome?: string | null
+  status?: string | null
   /**
    * Categoria do HubSpot (ex.: "Problema - Invoicy"). Exibida apenas na TELA
    * (coluna + filtro) desta tela interna — NUNCA no export CSV/Excel (privacidade,
@@ -110,7 +124,7 @@ export type TicketReportItemDto = {
   categoria?: string | null
   totalSeconds: number
   apontamentosCount: number
-  hubspotUrl: string | null
+  hubspotUrl?: string | null
 
   // ── NOVOS (aditivos, 119 — CORR-05/MELH-01/MELH-02) — sempre presentes ──────
   /**
@@ -122,9 +136,9 @@ export type TicketReportItemDto = {
   /** CORR-05 — idem, contagem de apontamentos sem recorte de período. */
   apontamentosCountAllTime: number
   /** MELH-01 — nome cru do stage, sem "(Pipeline)". Não usado nesta entrega (o texto do badge vem de `status`); mantido por paridade de contrato. */
-  statusNome: string | null
+  statusNome?: string | null
   /** MELH-01 — fonte da cor do badge de Status. NUNCA derivar cor de `status` (texto). */
-  statusCategoria: TicketStatusCategoria | null
+  statusCategoria?: TicketStatusCategoria | null
   /** MELH-02 — nomes distintos das categorias do TIMER nos apontamentos da mesma janela de `totalSeconds` (período + Completed). Vazio = nenhum apontamento categorizado no período. */
   categoriasTimer: string[]
 
@@ -198,26 +212,26 @@ export type BillingExceptionTipo = 'anomalia' | 'postergado'
 export type BillingExceptionItemDto = {
   ticketId: number
   hubspotTicketId: string
-  assunto: string | null
-  clientId: number | null
+  assunto?: string | null
+  clientId?: number | null
   /** NomeFantasia ?? RazaoSocial — mesmo coalesce do backend. */
-  clienteNome: string | null
-  equipe: string | null
-  ownerNome: string | null
+  clienteNome?: string | null
+  equipe?: string | null
+  ownerNome?: string | null
   /** Label formatada do stage, com o nome do pipeline. */
-  status: string | null
+  status?: string | null
   /** Nome cru do stage, sem "(Pipeline)". */
-  statusNome: string | null
+  statusNome?: string | null
   /** Fonte da cor do badge de Status — nunca derivar cor do texto de `status`. */
-  statusCategoria: TicketStatusCategoria | null
+  statusCategoria?: TicketStatusCategoria | null
   /** ISO-8601; `max(InicioEm)` dos apontamentos Completed ativos. `null` = nenhum. */
-  ultimaAtividadeEm: string | null
+  ultimaAtividadeEm?: string | null
   segundosPlano: number
   segundosFaturado: number
   segundosAnalise: number
   /** Invariante do backend: == soma dos 3 baldes (não é campo independente). */
   segundosTotais: number
-  hubspotUrl: string | null
+  hubspotUrl?: string | null
 }
 
 /**
@@ -295,12 +309,12 @@ export type OrigemFiltro = 'all' | 'ticket' | 'projeto'
 export type ProjectAppointmentReportItemDto = {
   timeEntryId: number
   projetoId: number
-  projetoNome: string | null
-  stage: string | null
-  clienteNome: string | null
-  equipeAtribuida: string | null
+  projetoNome?: string | null
+  stage?: string | null
+  clienteNome?: string | null
+  equipeAtribuida?: string | null
   atendente: string
-  categorizacaoAtendimento: string | null
+  categorizacaoAtendimento?: string | null
   faturamento: FaturamentoStatus
   dataApontamento: string     // ISO Z
   totalSegundos: number
@@ -322,14 +336,14 @@ export type FaturamentoStatus = 'Plano de Suporte' | 'Faturado' | 'Não faturado
 export type ClientReportItemDto = {
   timeEntryId: number
   origem: OrigemApontamento
-  ticketId: number | null
-  hubspotTicketId: string | null
-  projetoId: number | null
-  projetoNome: string | null
-  stage: string | null
-  assunto: string | null
-  equipeAtribuida: string | null
-  solicitante: RequesterDto | null
+  ticketId?: number | null
+  hubspotTicketId?: string | null
+  projetoId?: number | null
+  projetoNome?: string | null
+  stage?: string | null
+  assunto?: string | null
+  equipeAtribuida?: string | null
+  solicitante?: RequesterDto | null
   atendente: string
   /**
    * Dono/responsável do chamado (owner do ticket) — DISTINTO do `atendente` do
@@ -339,13 +353,13 @@ export type ClientReportItemDto = {
    * fallback de atendentes distintos.
    */
   donoChamado?: string | null
-  categorizacaoAtendimento: string | null
+  categorizacaoAtendimento?: string | null
   /** Propriedade HubSpot 'servico' (118.5.2) — serviço vinculado ao chamado. */
-  servico: string | null
+  servico?: string | null
   /** Propriedade HubSpot 'servico__secundario' (118.5.2). */
-  servicoSecundario: string | null
+  servicoSecundario?: string | null
   faturamento: FaturamentoStatus
-  aberturaDosChamado: string | null  // ISO Z (null p/ projeto)
+  aberturaDosChamado?: string | null  // ISO Z (null p/ projeto)
   dataApontamento: string            // ISO Z
   totalSegundos: number
   /**
@@ -370,14 +384,14 @@ export type ClientReportItemDto = {
 
 export type ClientReportDto = {
   client: ClientDetailDto
-  plano: SupportPlanDto | null
+  plano?: SupportPlanDto | null
   competencia: string         // YYYY-MM
   totalApontamentos: number
   totalSegundos: number
   horasPlanoSegundos: number
   horasFaturadoSegundos: number
   horasNaoFaturadoSegundos: number
-  items: ClientReportItemDto[] | null
+  items?: ClientReportItemDto[] | null
 }
 
 // ── U6 — Produtividade por Analista ─────────────────────────────────────────
@@ -385,9 +399,9 @@ export type ClientReportDto = {
 export type AgentMetricDto = {
   userId: number
   nome: string
-  equipe: string | null
+  equipe?: string | null
   nAtendimentos: number
   totalSegundos: number
-  ahtSegundos: number | null
-  mediaPausas: number | null
+  ahtSegundos?: number | null
+  mediaPausas?: number | null
 }

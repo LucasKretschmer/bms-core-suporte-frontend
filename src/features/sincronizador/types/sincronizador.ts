@@ -22,8 +22,8 @@ export type LogDto = {
   status: SyncStatus
   disparo: SyncDisparo
   iniciadoEm: string
-  finalizadoEm: string | null
-  duracaoMs: number | null
+  finalizadoEm?: string | null
+  duracaoMs?: number | null
   ticketsUpserted: number
   ticketsIgnorados: number
   projetosUpserted: number
@@ -34,7 +34,7 @@ export type LogDto = {
   empresasCriadas: number
   empresasAtualizadas: number
   empresasDesativadas: number
-  mensagemErro: string | null
+  mensagemErro?: string | null
 }
 
 /**
@@ -46,7 +46,7 @@ export type SincronizadorStatusDto = {
   statusSistema: StatusSistema
   emExecucao: boolean
   intervaloMinutos: number
-  ultimaExecucao: LogDto | null
+  ultimaExecucao?: LogDto | null
 }
 
 /** Resultado do run manual (202) — backend só devolve logId. */
@@ -74,10 +74,10 @@ export type SyncEmpresasResultDto = {
 export type TicketManutencaoDto = {
   ticketId: number
   hubspotId: string
-  assunto: string | null
-  pipeline: string | null
-  pipelineStage: string | null
-  hsCriadoEm: string | null
+  assunto?: string | null
+  pipeline?: string | null
+  pipelineStage?: string | null
+  hsCriadoEm?: string | null
   criadoEm: string
   atualizadoEm: string
 }
@@ -86,12 +86,12 @@ export type TicketManutencaoDto = {
 export type ProjetoManutencaoDto = {
   projetoId: number
   hubspotId: string
-  nome: string | null
-  tipo: string | null
-  pipeline: string | null
-  stage: string | null
-  iniciadoEm: string | null
-  concluidoEm: string | null
+  nome?: string | null
+  tipo?: string | null
+  pipeline?: string | null
+  stage?: string | null
+  iniciadoEm?: string | null
+  concluidoEm?: string | null
   criadoEm: string
   atualizadoEm: string
 }

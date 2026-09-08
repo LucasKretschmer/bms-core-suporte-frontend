@@ -24,27 +24,32 @@ import { formatDate, formatHours, formatDecimal } from '../../../reports/shared/
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { TicketMetricKey, TicketRowDto } from '../types/metrics'
 
-function fmtDate(iso: string | null): string {
+/**
+ * 129 — o parâmetro aceita a chave AUSENTE do wire: o backend serializa com
+ * `DefaultIgnoreCondition = WhenWritingNull` e OMITE a chave quando o valor é nulo.
+ * Guard sempre `== null`, que cobre `null` e `undefined` (AP-FRONTEND-028).
+ */
+function fmtDate(iso: string | null | undefined): string {
   return iso ? formatDate(iso) : '—'
 }
 
-function fmtHours(v: number | null): string {
-  return v === null || v === undefined ? '—' : formatHours(v)
+function fmtHours(v: number | null | undefined): string {
+  return v == null ? '—' : formatHours(v)
 }
 
 /** Traduz o valor cru de FrSla do backend ('MET'/'MISSED') para rótulo em português. */
-function fmtSla(v: string | null): string {
+function fmtSla(v: string | null | undefined): string {
   if (v === 'MET') return 'No prazo'
   if (v === 'MISSED') return 'Fora do prazo'
   return '—'
 }
 
-function fmtCsat(v: number | null): string {
-  return v === null || v === undefined ? '—' : formatDecimal(v)
+function fmtCsat(v: number | null | undefined): string {
+  return v == null ? '—' : formatDecimal(v)
 }
 
-function fmtFcr(v: boolean | null): string {
-  if (v === null || v === undefined) return '—'
+function fmtFcr(v: boolean | null | undefined): string {
+  if (v == null) return '—'
   return v ? 'Sim' : 'Não'
 }
 

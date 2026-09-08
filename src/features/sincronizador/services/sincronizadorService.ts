@@ -97,7 +97,8 @@ export async function listRegistrosTickets(
     tipo: 'ticket' as const,
     hubspotId: t.hubspotId,
     assunto: t.assunto ?? '—',
-    pipeline: t.pipeline,
+    // 129 — normaliza "chave ausente" para o `null` do tipo local `RegistroDto`.
+    pipeline: t.pipeline ?? null,
     criadoEm: t.criadoEm,
   }))
 }
@@ -117,7 +118,8 @@ export async function listRegistrosProjetos(
     tipo: 'projeto' as const,
     hubspotId: p.hubspotId,
     assunto: p.nome ?? '—',
-    pipeline: p.pipeline,
+    // 129 — idem: a fronteira wire → tipo local é onde a ausência vira `null`.
+    pipeline: p.pipeline ?? null,
     criadoEm: p.criadoEm,
   }))
 }

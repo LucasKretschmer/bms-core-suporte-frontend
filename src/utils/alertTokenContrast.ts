@@ -402,6 +402,16 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
     porque: 'coluna de consumo em faixa crítica (>= 95%) do relatório Consumo de Planos.',
   },
   {
+    arquivo: 'src/features/reports/plan-consumption/components/PlanConsumptionHelp.tsx',
+    classes: ['bg-error-bg', 'border-error-fg', 'text-error-fg'],
+    porque:
+      '127/FE-AJUDA — selo do botão de ajuda `(?)` no estado de FALHA da verificação de ' +
+      'exceções: glifo "!" em `text-error-fg` sobre `bg-error-bg`, com borda ' +
+      '`border-error-fg/40`. É o par de texto do Badge/Toast reaproveitado, e existe para ' +
+      'que "a requisição falhou" nunca se pareça com "não há exceções" (AP-FRONTEND-021). ' +
+      'Medido no DOM em `PlanConsumptionHelp.test.tsx` (bloco de contraste).',
+  },
+  {
     arquivo: 'src/features/reports/shared/components/PeriodFilter.tsx',
     classes: ['text-error-fg'],
     porque: 'mensagem de erro do filtro de período.',

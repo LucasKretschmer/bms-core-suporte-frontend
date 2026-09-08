@@ -10,7 +10,12 @@ import { formatDate } from '../../../reports/shared/utils/formatters'
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { ProjectRowDto } from '../types/metrics'
 
-function fmtDate(iso: string | null): string {
+/**
+ * 129 — o parâmetro aceita a chave AUSENTE do wire: o backend serializa com
+ * `DefaultIgnoreCondition = WhenWritingNull` e OMITE a chave quando o valor é nulo.
+ * Guard sempre `== null`, que cobre `null` e `undefined` (AP-FRONTEND-028).
+ */
+function fmtDate(iso: string | null | undefined): string {
   return iso ? formatDate(iso) : '—'
 }
 

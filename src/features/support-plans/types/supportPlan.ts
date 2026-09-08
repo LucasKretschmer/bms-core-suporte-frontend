@@ -33,18 +33,18 @@ export type SupportPlanDto = {
   /** Rótulo. **Não é mais o identificador** — ver `hubspotValor` (arquitetura §3). */
   nome: string
   horasMes: number
-  precoHoraExtra: number | null
+  precoHoraExtra?: number | null
   moeda: string
   isActive: boolean
   // ─── aditivos de 124 ───
   /** Chave estável do HubSpot. `null` = o vínculo cliente↔plano ainda casa por NOME. */
-  hubspotValor: string | null
+  hubspotValor?: string | null
   /** `null` = herda `calendarios.slaPadraoMinutos`. */
-  slaPrimeiroAtendimentoMinutos: number | null
+  slaPrimeiroAtendimentoMinutos?: number | null
   /** `true` = plano sem SLA de 1º atendimento (sai do denominador do indicador). */
   slaIsento: boolean
   /** `null` = calendário padrão. */
-  calendarioId: number | null
+  calendarioId?: number | null
   /** Read-only. Alimenta a guarda de rename (R-1) e a coluna da tabela. */
   clientesVinculados: number
 }
@@ -73,7 +73,7 @@ export type UnmatchedPlanDto = {
   /** O texto que o HubSpot mandou e não casou com nenhum plano cadastrado. */
   valorHubspot: string
   clientesAfetados: number
-  exemploClienteId: number | null
+  exemploClienteId?: number | null
 }
 
 /** Opção de calendário para o seletor do plano (`GET /api/v1/calendars`, arquitetura §3). */

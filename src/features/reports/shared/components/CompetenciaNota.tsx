@@ -10,6 +10,15 @@
  * capturar e sem estado. Fica sempre visível (inclusive em loading/erro/vazio) quando
  * renderizada pelo slot `banner` do `ReportPageLayout` — esconder a explicação exatamente
  * quando a tela mostra zero é o silêncio que o relato B2 descreve.
+ *
+ * ⚠️ **Ressalva de 127/FE-AJUDA (08/09/2026) — vale para UMA das duas telas.** O parágrafo
+ * acima continua descrevendo o **Relatório do Cliente** (`client-report/index.tsx:259`),
+ * onde a nota segue aberta no `banner`. No **Consumo de Planos** ela passou a ficar
+ * recolhida atrás do botão de ajuda `(?)` (`plan-consumption/components/PlanConsumptionHelp.tsx`),
+ * por decisão do usuário: lá a nota somava com o card de exceções e empurrava a tabela
+ * para baixo. O `(?)` continua no slot `banner` — portanto continua sobrevivendo aos
+ * estados da listagem —, e é ele que carrega o indicador que impede o silêncio.
+ * Este componente **não sabe** em qual dos dois modos está: quem decide é o call site.
  */
 
 import { clsx } from 'clsx'

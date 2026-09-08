@@ -44,3 +44,23 @@ describe('formatDuration', () => {
     expect(formatDuration(59999)).toBe('60.0s')
   })
 })
+
+/**
+ * 129 — `formatDuration` recebe `LogDto.duracaoMs`, que é `long?` no backend. O
+ * serializador OMITE a chave quando o valor é nulo (`WhenWritingNull`), então o
+ * parâmetro chega `undefined`, não `null`. O guard antigo era `ms === null`: o
+ * `undefined` atravessava as três comparações numéricas e saía `NaNm NaNs`.
+ */
+describe('formatDuration — as DUAS formas de ausente (129)', () => {
+  it('chave AUSENTE (undefined) vira "—", nunca NaN', () => {
+    expect(formatDuration(undefined)).toBe('—')
+  })
+
+  it('chave NULA vira "—" — o irmão que passa nos dois mundos, na mesma execução', () => {
+    expect(formatDuration(null)).toBe('—')
+  })
+
+  it('controle positivo: valor presente continua formatado (o guard não engoliu tudo)', () => {
+    expect(formatDuration(125_000)).toBe('2m 5s')
+  })
+})

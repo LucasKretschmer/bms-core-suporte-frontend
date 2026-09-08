@@ -240,3 +240,66 @@ describe('consolidateClientReport — data de conclusão do chamado (123/FAT-1)'
     expect(rows[1].fechadoEmChamado).toBe('2024-05-09T13:00:00Z')
   })
 })
+
+/**
+ * 129 — o wire REAL do `ClientReportItemDto`: todo campo `string?`/`int?` do backend chega
+ * com a **chave ausente**, não com `null` (`DefaultIgnoreCondition = WhenWritingNull`).
+ * A consolidação é a fronteira onde "ausente" tem de virar o `null` que
+ * `ConsolidatedClientReportRow` declara — senão `undefined` vaza para as colunas e para o
+ * PDF, onde vira "undefined" impresso.
+ */
+describe('consolidateClientReport — chaves AUSENTES no wire (129)', () => {
+  /** Linha de PROJETO como o backend a serializa: sem ticketId/assunto/solicitante/etc. */
+  const itemProjetoSemChaves = {
+    timeEntryId: 90,
+    origem: 'projeto',
+    atendente: 'Ana',
+    faturamento: 'Plano de Suporte',
+    dataApontamento: '2024-03-10T09:00:00Z',
+    totalSegundos: 300,
+    projetoId: 7,
+  } as ClientReportItemDto
+
+  it('o fixture realmente não tem as chaves (discriminador do teste)', () => {
+    for (const chave of [
+      'ticketId',
+      'hubspotTicketId',
+      'assunto',
+      'stage',
+      'equipeAtribuida',
+      'solicitante',
+      'categorizacaoAtendimento',
+      'servico',
+      'servicoSecundario',
+      'aberturaDosChamado',
+      'projetoNome',
+    ]) {
+      expect(Object.hasOwn(itemProjetoSemChaves, chave)).toBe(false)
+    }
+  })
+
+  it('a linha consolidada normaliza TODA chave ausente para `null`, nunca `undefined`', () => {
+    const [linha] = consolidateClientReport([itemProjetoSemChaves])
+    expect(linha.ticketId).toBeNull()
+    expect(linha.hubspotTicketId).toBeNull()
+    expect(linha.assunto).toBeNull()
+    expect(linha.stage).toBeNull()
+    expect(linha.equipeAtribuida).toBeNull()
+    expect(linha.solicitante).toBeNull()
+    expect(linha.categorizacaoAtendimento).toBeNull()
+    expect(linha.servico).toBeNull()
+    expect(linha.servicoSecundario).toBeNull()
+    expect(linha.aberturaDosChamado).toBeNull()
+    expect(linha.projetoNome).toBeNull()
+    expect(linha.fechadoEmChamado).toBeNull()
+    // Nenhum `undefined` escapou para a linha que alimenta colunas, export e PDF.
+    expect(Object.values(linha).some((v) => v === undefined)).toBe(false)
+  })
+
+  it('controle positivo: com as chaves presentes, os valores continuam passando', () => {
+    const [linha] = consolidateClientReport([makeItem({})])
+    expect(linha.ticketId).toBe(100)
+    expect(linha.assunto).toBe('Assunto')
+    expect(linha.solicitante).not.toBeNull()
+  })
+})

@@ -176,20 +176,24 @@ export function consolidateClientReport(
     return {
       chaveChamado: chave,
       origem: latest.origem,
-      ticketId: latest.ticketId,
-      hubspotTicketId: latest.hubspotTicketId,
-      projetoId: latest.projetoId,
-      projetoNome: latest.projetoNome,
-      stage: latest.stage,
-      assunto: latest.assunto,
-      equipeAtribuida: latest.equipeAtribuida,
-      solicitante: latest.solicitante,
+      // 129 — `?? null` em TODO campo vindo do wire: o backend serializa com
+      // `DefaultIgnoreCondition = WhenWritingNull` e OMITE a chave quando o valor é nulo.
+      // Esta é a fronteira onde "ausente" vira o `null` que o tipo consolidado declara —
+      // e é por isso que quem consome a linha tem um único ramo a tratar.
+      ticketId: latest.ticketId ?? null,
+      hubspotTicketId: latest.hubspotTicketId ?? null,
+      projetoId: latest.projetoId ?? null,
+      projetoNome: latest.projetoNome ?? null,
+      stage: latest.stage ?? null,
+      assunto: latest.assunto ?? null,
+      equipeAtribuida: latest.equipeAtribuida ?? null,
+      solicitante: latest.solicitante ?? null,
       atendente,
-      categorizacaoAtendimento: latest.categorizacaoAtendimento,
-      servico: latest.servico,
-      servicoSecundario: latest.servicoSecundario,
+      categorizacaoAtendimento: latest.categorizacaoAtendimento ?? null,
+      servico: latest.servico ?? null,
+      servicoSecundario: latest.servicoSecundario ?? null,
       faturamento,
-      aberturaDosChamado: latest.aberturaDosChamado,
+      aberturaDosChamado: latest.aberturaDosChamado ?? null,
       // `?? null` normaliza a chave AUSENTE do wire para `null` — o tipo consolidado declara
       // um campo obrigatório nullable, então quem consome tem um único ramo a tratar.
       fechadoEmChamado: latest.fechadoEmChamado ?? null,
