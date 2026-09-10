@@ -23,18 +23,42 @@ export const MOTIVO_DE_SISTEMA_EXPLICACAO =
 /**
  * Ação sugerida no `409 MOTIVO_EM_USO`.
  *
- * ⚠️ **Não diz "desative o motivo"** — e é de propósito. A tela de motivos **não tem** como
- * desativar: o contrato desta demanda não expõe `PATCH` nem `isActive` no corpo do `PUT`
- * (`arquitetura.md:880-884`, `analise-backend.md` §7.3 — `PUT { nome }`). Mandar o usuário
- * fazer algo que a interface não oferece é exatamente o `AP-FRONTEND-022`. A ação abaixo
- * existe de verdade: os créditos são excluíveis na tela de Créditos
- * (`DELETE /api/v1/hour-credits/{id}`).
+ * 🔴 **Corrigido na 138/B1.** O texto anterior dizia *"Exclua **ou estorne** os créditos"* —
+ * e estornar é, ao mesmo tempo, **ineficaz** e **inexecutável**:
  *
- * Divergência registrada para o Manager: `analise-frontend.md` §8 sugere *"desative em vez
- * de excluir"*.
+ * - **Não libera o motivo.** A guarda é `TemCreditoVivoAsync` = `motivoid = @id AND
+ *   desativadoem IS NULL` (`MotivoCreditoRepository.cs:67-70`), e o estorno só carimba
+ *   `estornadoem` (`CreditoAutomaticoService.cs:596-597`) — a linha continua viva. O próprio
+ *   contrato diz isso por extenso: *"Crédito estornado conta como em uso… só o soft delete do
+ *   crédito o tira da contagem"* (`IMotivoCreditoRepository.cs:42-50`).
+ * - **Não existe botão nenhum.** Não há `POST /hour-credits/{id}/estornar`, não há
+ *   `EstornarAsync` no service, não há ação de estorno na UI. O único write site de
+ *   `EstornadoEm` é a reconciliação automática. Medido pelo QA backend da 132.
+ *
+ * ⚠️ **Também não diz "reclassifique"**, embora trocar o `motivoId` no `PUT
+ * /api/v1/hour-credits/{id}` de fato libere o motivo: a listagem de créditos **não aceita
+ * filtro por `motivoId`** (nem controller, nem DTO, nem repositório, nem `search`, que só
+ * cobre cliente/CNPJ/chamado) ⇒ o usuário não tem como **encontrar** os créditos daquele
+ * motivo. Instrução verdadeira e inalcançável é o mesmo `AP-FRONTEND-022` com outro verbo.
+ *
+ * ⚠️ **Também não diz "desative o motivo"** — não existe `PATCH` nem `isActive` no corpo do
+ * `PUT` de motivo (`PUT { nome }`, `analise-backend.md` §7.3).
+ *
+ * ⇒ Sobra **uma** ação executável de ponta a ponta hoje: excluir os créditos, pelo botão
+ * *excluir* da tela de Créditos (`DELETE /api/v1/hour-credits/{id}`). "na tela de Créditos"
+ * diz **onde**: o erro aparece em `/motivos-credito`, a ação vive em `/creditos`.
+ *
+ * 🔴 **Esta frase é a MESMA que o servidor devolve**, verbatim, em
+ * `FaturamentoConflitos.MotivoEmUso()` (backend). Não é coincidência nem duplicação
+ * descuidada: `getHourCreditReasonErrorMessage` concatena a mensagem do servidor com esta
+ * ação quando o `includes` **não** casa (`hourCreditReasonErrorMessage.ts:73-75`), e foi
+ * exatamente isso que produzia um toast com **duas** instruções contraditórias na mesma
+ * frase. As duas pontas convergirem é o que faz o toast dizer **uma** coisa só — e há teste
+ * de convergência dedicado a isso (`hourCreditReasonErrorMessage.test.ts`). **Ao mudar este
+ * texto, mude `FaturamentoConflitos.MotivoEmUso()` no mesmo passo.**
  */
 export const MOTIVO_EM_USO_ACAO =
-  'Exclua ou estorne os créditos que usam este motivo antes de excluí-lo.'
+  'Exclua os créditos que usam este motivo, na tela de Créditos, antes de excluí-lo.'
 
 /** Ação do `409 MOTIVO_DUPLICADO` — unicidade case-insensitive entre motivos vivos. */
 export const MOTIVO_DUPLICADO_ACAO = 'Escolha um nome diferente.'
