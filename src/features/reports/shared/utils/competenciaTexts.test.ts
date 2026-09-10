@@ -3,16 +3,18 @@
  *
  * O que cada asserção existe para deixar VERMELHO (a pergunta de `rules/tests.md`):
  *
- *  1. `textoPeriodoDeConclusao` com as duas pontas → data errada, ordem trocada, formato
+ *  1. `textoPeriodoDeApontamento` com as duas pontas → data errada, ordem trocada, formato
  *     ISO cru ou fuso deslocado (o clássico `new Date('2026-07-01')` → 30/06).
  *  2. cada ramo de ponta faltante → dizer "a partir de X" (janela aberta) onde o backend
- *     fecha a outra ponta no mês atual (`FusoSaoPaulo.Resolver:152-159`). É o único jeito de
- *     esta frase mentir sem ninguém notar, porque ela *parece* certa.
+ *     fecha a outra ponta no mês atual (`FusoSaoPaulo.Resolver`). É o único jeito de esta
+ *     frase mentir sem ninguém notar, porque ela *parece* certa.
  *  3. os quatro ramos são MUTUAMENTE distintos → um `if` colapsado devolveria a mesma frase
  *     para dois estados de filtro diferentes, e o teste por conteúdo passaria em um deles.
- *  4. os textos da regra dizem "conclu…" → é a palavra que carrega a informação inteira;
- *     um texto reescrito como "no período" (a redação ANTERIOR, que é o defeito relatado)
- *     reprova aqui.
+ *  4. 🔴 **132/D1** — os textos da regra dizem "apontad…", e **nenhum** volta a afirmar a
+ *     regra revogada ("chamados concluídos no período", "data de conclusão do chamado",
+ *     "plano contratado"). Este item era o inverso até a 132: exigia `/conclu/`. Foi
+ *     **invertido, não apagado**, e ganhou controle positivo sobre as redações antigas
+ *     escritas verbatim — sem ele a inversão seria indistinguível de afrouxamento.
  *  5. nenhum texto afirma prazo/periodicidade ("próxima fatura", "todo mês", "em até")
  *     — AP-FRONTEND-022: por D1 a competência pode ser dali a vários meses.
  *  6. **131 (08/09/2026)** — nenhum texto volta a afirmar que a conta do plano soma horas
@@ -33,10 +35,11 @@ import {
   TEXTO_COMPETENCIA_CONSEQUENCIA,
   TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
   TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE,
+  TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO,
   TEXTO_COMPETENCIA_REGRA,
-  TEXTO_COMPETENCIA_SEM_CONCLUSAO,
   TEXTO_COMPETENCIA_VS_SAUDE_PLANOS,
   TEXTO_DIVERGENCIA_KPI_TABELA,
+  TEXTO_QTDE_TICKETS_RECORTE_PROPRIO,
   TEXTO_SAUDE_PLANOS_COMPARACAO,
   TEXTO_SAUDE_PLANOS_ROTULO,
   TOOLTIP_BALDE_ANALISE,
@@ -48,33 +51,34 @@ import {
   TOOLTIP_HORAS_FATURAVEIS,
   TOOLTIP_HORAS_RESTANTES,
   TOOLTIP_HORAS_USADAS,
-  textoPeriodoDeConclusao,
-  KPI_EM_ABERTO_LABEL,
-  KPI_EM_ABERTO_TEXTO,
+  TOOLTIP_KPI_HORAS_ADICIONAIS,
+  TOOLTIP_QTDE_PLANO,
+  TOOLTIP_QTDE_TICKETS,
+  textoPeriodoDeApontamento,
   textoPeriodoDoDetalhe,
 } from './competenciaTexts'
 
-describe('textoPeriodoDeConclusao — as duas pontas preenchidas', () => {
+describe('textoPeriodoDeApontamento — as duas pontas preenchidas', () => {
   it('formata as datas em dd/MM/yyyy, na ordem de/até, sem deslocar o dia', () => {
     // Literal escrito à mão (nunca derivado da entrada): expectativa derivada seria
     // tautologia. 01/07 é justamente o dia que um `new Date(iso)` em UTC vira 30/06.
-    expect(textoPeriodoDeConclusao({ from: '2026-07-01', to: '2026-07-31' })).toBe(
-      'Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.',
+    expect(textoPeriodoDeApontamento({ from: '2026-07-01', to: '2026-07-31' })).toBe(
+      'Mostrando as horas apontadas entre 01/07/2026 e 31/07/2026.',
     )
   })
 
   it('a virada de ano não embaralha os dois limites', () => {
-    expect(textoPeriodoDeConclusao({ from: '2025-12-31', to: '2026-01-01' })).toBe(
-      'Mostrando os chamados concluídos entre 31/12/2025 e 01/01/2026.',
+    expect(textoPeriodoDeApontamento({ from: '2025-12-31', to: '2026-01-01' })).toBe(
+      'Mostrando as horas apontadas entre 31/12/2025 e 01/01/2026.',
     )
   })
 })
 
-describe('textoPeriodoDeConclusao — ponta faltante NÃO é janela aberta', () => {
+describe('textoPeriodoDeApontamento — ponta faltante NÃO é janela aberta', () => {
   it('só `from`: fecha no fim do mês atual, e a frase diz isso', () => {
-    const texto = textoPeriodoDeConclusao({ from: '2026-07-01', to: null })
+    const texto = textoPeriodoDeApontamento({ from: '2026-07-01', to: null })
     expect(texto).toBe(
-      'Mostrando os chamados concluídos de 01/07/2026 até o fim do mês atual.',
+      'Mostrando as horas apontadas de 01/07/2026 até o fim do mês atual.',
     )
     // O erro que este assert impede: "a partir de 01/07/2026", que afirma uma janela
     // aberta. `FusoSaoPaulo.Resolver:156-159` fecha a ponta ausente no último dia do mês.
@@ -82,15 +86,15 @@ describe('textoPeriodoDeConclusao — ponta faltante NÃO é janela aberta', () 
   })
 
   it('só `to`: abre no primeiro dia do mês atual, e a frase diz isso', () => {
-    const texto = textoPeriodoDeConclusao({ from: null, to: '2026-07-31' })
+    const texto = textoPeriodoDeApontamento({ from: null, to: '2026-07-31' })
     expect(texto).toBe(
-      'Mostrando os chamados concluídos do primeiro dia do mês atual até 31/07/2026.',
+      'Mostrando as horas apontadas do primeiro dia do mês atual até 31/07/2026.',
     )
   })
 
   it('nenhuma das duas: o período é o mês atual, nunca "todos"', () => {
-    const texto = textoPeriodoDeConclusao({ from: null, to: null })
-    expect(texto).toBe('Sem datas preenchidas: mostrando os chamados concluídos no mês atual.')
+    const texto = textoPeriodoDeApontamento({ from: null, to: null })
+    expect(texto).toBe('Sem datas preenchidas: mostrando as horas apontadas no mês atual.')
     // "mostrando todos" seria falso: `Resolver:152-159` sempre monta uma janela.
     expect(texto).not.toContain('todos')
   })
@@ -100,16 +104,16 @@ describe('textoPeriodoDeConclusao — ponta faltante NÃO é janela aberta', () 
     // frase para dois estados diferentes, e os asserts por conteúdo acima ainda passariam
     // para o ramo sobrevivente.
     const frases = [
-      textoPeriodoDeConclusao({ from: '2026-07-01', to: '2026-07-31' }),
-      textoPeriodoDeConclusao({ from: '2026-07-01', to: null }),
-      textoPeriodoDeConclusao({ from: null, to: '2026-07-31' }),
-      textoPeriodoDeConclusao({ from: null, to: null }),
+      textoPeriodoDeApontamento({ from: '2026-07-01', to: '2026-07-31' }),
+      textoPeriodoDeApontamento({ from: '2026-07-01', to: null }),
+      textoPeriodoDeApontamento({ from: null, to: '2026-07-31' }),
+      textoPeriodoDeApontamento({ from: null, to: null }),
     ]
     expect(new Set(frases).size).toBe(4)
   })
 
   it('data ilegível cai no valor cru, sem lançar e sem "Invalid Date"', () => {
-    const texto = textoPeriodoDeConclusao({ from: 'nao-e-data', to: '2026-07-31' })
+    const texto = textoPeriodoDeApontamento({ from: 'nao-e-data', to: '2026-07-31' })
     expect(texto).toContain('nao-e-data')
     expect(texto).not.toContain('Invalid')
   })
@@ -117,18 +121,38 @@ describe('textoPeriodoDeConclusao — ponta faltante NÃO é janela aberta', () 
 
 describe('os textos declaram POR QUAL DATA o período recorta', () => {
   /**
-   * Universo NOMINAL (nunca padrão de nome): cada texto que a UI usa para explicar uma
-   * coluna/cartão de horas apuradas. Todos derivam do mesmo predicado
-   * (`Ticket.FechadoEm ∈ [from, to)`) e por isso todos têm de declará-lo.
+   * 🔴 **132/D1 — este bloco foi INVERTIDO, e a inversão é o teste.**
    *
-   * Entrada nova nesta lista responde à pergunta "esta superfície apura por conclusão?".
+   * Universo NOMINAL (nunca padrão de nome): cada texto que a UI usa para explicar uma
+   * coluna/cartão de horas apuradas. Até a 132 todos derivavam de
+   * `Ticket.FechadoEm ∈ [from, to)` e o assert exigia a palavra "conclu…". O predicado
+   * passou a ser `TimeEntry.InicioEm ∈ [from, to)` (`ReportQueryRepository.cs:883-943`), e o
+   * assert antigo passou a **defender a regra revogada**: ele deixaria vermelho justamente o
+   * texto correto.
+   *
+   * Entrada nova nesta lista responde à pergunta "esta superfície apura pelo apontamento?".
    * Se um dia alguma passar a apurar por outra data, ela SAI da lista no mesmo commit —
    * a saída é a declaração, não o afrouxamento do assert.
+   *
+   * 🔴 **135/G1 — `TOOLTIP_QTDE_TICKETS` e `TEXTO_QTDE_TICKETS_RECORTE_PROPRIO` NÃO
+   * entram nesta lista, e a ausência é DECLARADA aqui de propósito.** A pergunta do record é
+   * "esta superfície apura pelo apontamento?", e para a coluna "Qtde. Tickets" a resposta é
+   * **não**: ela apura pela **data de abertura** do chamado
+   * (`Ticket.HsCriadoEm ∈ [from, toExclusive)` — 135/G1), que é o único recorte diferente da
+   * tela. Pô-los aqui deixaria a identidade de baixo vermelha **e** faria a lista afirmar o
+   * que não é. Sem esta frase, o próximo leitor "corrige" a ausência
+   * (`135/analise-frontend.md` §6.6 / R-9). Os dois textos têm detector próprio no fim
+   * deste arquivo.
+   *
+   * ⚠️ `TOOLTIP_CONCLUIDO_EM` **continua na lista** e é o caso mais interessante: a coluna
+   * "Concluído em" fica, e o texto dela agora declara o recorte pela NEGATIVA — diz que
+   * aquela data **não** decide mais o período, e nomeia quem decide. Tirá-la da lista seria
+   * deixar de vigiar exatamente o texto onde a regra velha era mais convincente.
    */
-  const TEXTOS_QUE_DECLARAM_CONCLUSAO: Record<string, string> = {
+  const TEXTOS_QUE_DECLARAM_APONTAMENTO: Record<string, string> = {
     TEXTO_COMPETENCIA_REGRA,
     TEXTO_COMPETENCIA_CONSEQUENCIA,
-    TEXTO_COMPETENCIA_SEM_CONCLUSAO,
+    TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO,
     TOOLTIP_HORAS_USADAS,
     TOOLTIP_HORAS_RESTANTES,
     TOOLTIP_HORAS_ADICIONAIS,
@@ -140,24 +164,25 @@ describe('os textos declaram POR QUAL DATA o período recorta', () => {
     TOOLTIP_BALDE_ANALISE,
   }
 
-  it.each(Object.entries(TEXTOS_QUE_DECLARAM_CONCLUSAO))(
-    '%s fala de conclusão do chamado',
+  it.each(Object.entries(TEXTOS_QUE_DECLARAM_APONTAMENTO))(
+    '%s declara o apontamento como a data que conta',
     (_nome, texto) => {
       // Vermelho quando o texto volta a ser genérico ("no período", sem dizer qual data) —
-      // que é literalmente o defeito relatado em B2.
-      expect(texto.toLowerCase()).toMatch(/conclu/)
+      // que é literalmente o defeito relatado em B2 — e quando volta a apontar para a data
+      // de conclusão.
+      expect(texto.toLowerCase()).toMatch(/apontad|apontament/)
     },
   )
 
-  it('o conjunto de textos que declaram conclusão é nominalmente este', () => {
+  it('o conjunto de textos que declaram o apontamento é nominalmente este', () => {
     // Identidade, não cardinalidade: `it.each` encolhe em silêncio (menos parâmetros nunca
     // é erro para o runner — `rules/tests.md`). Aqui, tanto remover quanto renomear uma
     // entrada reprova.
-    expect(new Set(Object.keys(TEXTOS_QUE_DECLARAM_CONCLUSAO))).toEqual(
+    expect(new Set(Object.keys(TEXTOS_QUE_DECLARAM_APONTAMENTO))).toEqual(
       new Set([
         'TEXTO_COMPETENCIA_REGRA',
         'TEXTO_COMPETENCIA_CONSEQUENCIA',
-        'TEXTO_COMPETENCIA_SEM_CONCLUSAO',
+        'TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO',
         'TOOLTIP_HORAS_USADAS',
         'TOOLTIP_HORAS_RESTANTES',
         'TOOLTIP_HORAS_ADICIONAIS',
@@ -169,6 +194,45 @@ describe('os textos declaram POR QUAL DATA o período recorta', () => {
         'TOOLTIP_BALDE_ANALISE',
       ]),
     )
+  })
+
+  it('🔴 132/D1 — a regra nomeia as DUAS datas: a que passou a contar e a que saiu', () => {
+    // Literal escrito à mão. Uma frase que só dissesse "conta pela data do apontamento"
+    // seria lida como a regra velha por quem já a conhecia — a informação está no contraste.
+    expect(TEXTO_COMPETENCIA_REGRA).toBe(
+      'A hora conta no período em que foi apontada — não no período em que o chamado foi concluído.',
+    )
+    // E o chamado em aberto deixou de ser exceção: é o efeito que a demanda existe para
+    // produzir (D7 removeu o conceito de "hora fora de qualquer fatura").
+    expect(TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO).toContain('também entra')
+    expect(TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO).not.toMatch(/não entra em per[íi]odo/i)
+  })
+
+  it('🔴 132/D11 — a coluna do plano declara a COMPETÊNCIA e nomeia o crédito', () => {
+    // O tooltip nasceu na 132/F4b: antes a coluna "Qtde. Plano (h)" não tinha nenhum, porque
+    // era dado de cadastro. O crédito a fez depender do período.
+    expect(TOOLTIP_QTDE_PLANO).toMatch(/compet[êe]ncia/i)
+    expect(TOOLTIP_QTDE_PLANO).toContain('Crédito de Suporte')
+    // "quando há": a tela NUNCA promete crédito — em período não-mensal ele é zero por
+    // fail-closed (D20).
+    expect(TOOLTIP_QTDE_PLANO).toContain('Quando há')
+    // E nomeia as três derivadas que o crédito muda, porque é isso que o usuário confere.
+    expect(TOOLTIP_QTDE_PLANO).toContain('restantes')
+    expect(TOOLTIP_QTDE_PLANO).toContain('percentual')
+  })
+
+  it('🔴 132/D11 — os tooltips das derivadas param de dizer "plano contratado"', () => {
+    // `horasRestantes`/`horasAdicionais`/`percentualPlano` saem da CalculadoraPlanoEfetivo
+    // sobre `contrato + crédito` (`ReportQueryRepository.cs:1021-1023`). "Contratado" nomeia
+    // o divisor errado, e é o tipo de erro que só aparece na conferência da fatura.
+    for (const texto of [TOOLTIP_HORAS_RESTANTES, TOOLTIP_HORAS_ADICIONAIS]) {
+      expect(texto).not.toContain('plano contratado')
+      expect(texto).toContain('Crédito de Suporte')
+      expect(texto).toContain('quando há')
+    }
+    // O cartão "Extras (estouro)" do painel do parceiro é o MESMO número — e o alias garante
+    // que ele não volte a ter texto próprio digitado inline (AP-FRONTEND-022).
+    expect(TOOLTIP_KPI_HORAS_ADICIONAIS).toBe(TOOLTIP_HORAS_ADICIONAIS)
   })
 
   /**
@@ -219,23 +283,80 @@ describe('os textos declaram POR QUAL DATA o período recorta', () => {
     expect(TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS).toContain('nesta tela')
   })
 
-  it('a divergência KPI × tabela nomeia AS DUAS datas e diz que é proposital', () => {
-    expect(TEXTO_DIVERGENCIA_KPI_TABELA).toContain('data de conclusão do chamado')
+  /**
+   * 🔴 **132/D1 — INVERTIDO, e é o caso mais delicado do arquivo.**
+   *
+   * O caso anterior exigia que o texto nomeasse **as duas datas** e chamasse a divergência de
+   * **proposital**. As duas exigências ficaram falsas ao mesmo tempo: as duas janelas passaram
+   * a recortar pela mesma data (`⟪132 JANELA-OPERACIONAL⟫` × `⟪132 JANELA-COMPETENCIA⟫`,
+   * `ReportQueryRepository.cs:1395-1456`), logo não há divergência de datas a chamar de
+   * proposital.
+   *
+   * ⚠️ E o teste NÃO passou a exigir "agora os números batem": os cartões medem consumo do
+   * plano (ticket-only, sem cobrar-por-fora e sem isentas) e a coluna mede todo o tempo
+   * apontado — prometer igualdade seria trocar uma afirmação falsa por outra. O que se exige
+   * é que o texto descreva **o que cada número mede**.
+   */
+  it('🔴 132/D1 — a divergência de DATAS saiu do texto; o que cada número mede, entrou', () => {
+    // A negativa: as duas afirmações revogadas.
+    expect(TEXTO_DIVERGENCIA_KPI_TABELA).not.toContain('data de conclusão do chamado')
+    expect(TEXTO_DIVERGENCIA_KPI_TABELA).not.toContain('não fecham')
+    expect(TEXTO_DIVERGENCIA_KPI_TABELA).not.toContain('proposital')
+    // ⚠️ Companheira POSITIVA obrigatória: sem ela os três `not.toContain` acima passariam
+    // sobre string vazia (`rules/tests.md` § asserção negativa satisfeita pelo vazio).
+    expect(TEXTO_DIVERGENCIA_KPI_TABELA).toContain('medem o consumo do plano')
+    expect(TEXTO_DIVERGENCIA_KPI_TABELA).toContain('todo o tempo apontado')
     expect(TEXTO_DIVERGENCIA_KPI_TABELA).toContain('data do apontamento')
-    expect(TEXTO_DIVERGENCIA_KPI_TABELA).toContain('proposital')
+    // E não promete igualdade — o outro lado do erro.
+    expect(TEXTO_DIVERGENCIA_KPI_TABELA).not.toMatch(/batem|fecham entre si|mesmo n[úu]mero/i)
+  })
+
+  it('controle positivo: os detectores pegam a redação ANTIGA, verbatim', () => {
+    // Escrita à mão a partir do `git show HEAD:` do módulo. Sem isto, os `not.toContain`
+    // acima seriam indistinguíveis de um teste vazio.
+    const ANTIGO =
+      'Os cartões acima contam pela data de conclusão do chamado (é o que vai para a fatura). A coluna "Tempo no período" da tabela conta pela data do apontamento (é o trabalho realizado). Os dois números não fecham entre si, e isso é proposital.'
+    expect(ANTIGO).toContain('data de conclusão do chamado')
+    expect(ANTIGO).toContain('não fecham')
+    expect(ANTIGO).toContain('proposital')
+    // E o detector discrimina: o texto novo não casa nenhum dos três.
+    for (const proibido of ['data de conclusão do chamado', 'não fecham', 'proposital']) {
+      expect(TEXTO_DIVERGENCIA_KPI_TABELA).not.toContain(proibido)
+    }
   })
 })
 
-describe('os baldes se identificam como totais DO CHAMADO, não do período', () => {
+/**
+ * 🔴 **132/D1 — INVERTIDO.** Os três baldes eram somas **all-time** (a competência era a do
+ * próprio chamado) e passaram a ser recortados pela janela pedida, região
+ * `⟪132 JANELA-COMPETENCIA⟫` (`ReportQueryRepository.cs:1423-1456`). O assert antigo exigia
+ * literalmente `'sem recorte de período'` no tooltip — a frase que virou falsa.
+ *
+ * O cabeçalho `(chamado)` **fica**, e continua sendo asseverado: ele diz de quem é a soma, e
+ * as três colunas continuam repartindo a mesma janela em três destinos de cobrança.
+ */
+describe('os baldes se identificam como somas DESTE CHAMADO dentro do período', () => {
   it.each([
     ['plano', HEADER_BALDE_PLANO, TOOLTIP_BALDE_PLANO],
     ['faturado', HEADER_BALDE_FATURADO, TOOLTIP_BALDE_FATURADO],
     ['análise', HEADER_BALDE_ANALISE, TOOLTIP_BALDE_ANALISE],
-  ])('balde %s: cabeçalho marca "(chamado)" e o tooltip nega o recorte', (_n, header, tooltip) => {
-    // Sem o "(chamado)" no cabeçalho, o usuário soma estas colunas com "Tempo no período",
-    // que é outra janela (`ReportQueryRepository.cs:1198-1204` × `:1168-1176`).
+  ])('balde %s: cabeçalho marca "(chamado)" e o tooltip AFIRMA o recorte', (_n, header, tooltip) => {
     expect(header).toContain('(chamado)')
-    expect(tooltip).toContain('sem recorte de período')
+    // A positiva primeiro: o tooltip declara a janela.
+    expect(tooltip).toContain('dentro do período filtrado')
+    expect(tooltip).toContain('deste chamado')
+    // E a negativa: a afirmação revogada não voltou.
+    expect(tooltip).not.toContain('sem recorte de período')
+    expect(tooltip).not.toContain('data de conclusão do chamado')
+  })
+
+  it('controle positivo: o detector pega o SUFIXO antigo, verbatim', () => {
+    const ANTIGO =
+      'Soma dos apontamentos concluídos do chamado, sem recorte de período — a competência é a data de conclusão do chamado, não a de cada apontamento.'
+    expect(ANTIGO).toContain('sem recorte de período')
+    expect(ANTIGO).toContain('data de conclusão do chamado')
+    // Discrimina: o sufixo novo não casa nenhum dos dois.
+    expect(TOOLTIP_BALDE_PLANO).not.toContain('sem recorte de período')
   })
 })
 
@@ -246,6 +367,37 @@ describe('textos do toggle "só o que entra na fatura"', () => {
     // e o outro é justamente o DEFAULT.
     expect(TEXTO_APENAS_FATURA_INFO).toContain('Desligado')
     expect(TEXTO_APENAS_FATURA_INFO).toContain('Ligado')
+  })
+
+  /**
+   * 🔴 **132/D1 — INVERTIDO, e a inversão é de SENTIDO, não de palavra.**
+   *
+   * O predicado era "o chamado foi concluído dentro do período" e virou "a soma dos
+   * apontamentos ativos e concluídos do chamado na janela é maior que zero"
+   * (`ReportQueryRepository.cs:1257-1264`). O XML-doc do backend registra a consequência em
+   * `:1140-1141`: *"chamado em aberto com hora no período agora PASSA por este filtro — antes
+   * era exatamente o que ele excluía"*.
+   *
+   * O assert antigo exigia a substring `'em aberto'`, que continua no texto novo — só que
+   * dizendo o **contrário**. Por isso o caso não podia ser mantido como estava: ele passaria
+   * nas duas redações, a certa e a errada. Agora ele casa a AFIRMAÇÃO.
+   */
+  it('🔴 132/D1 — o texto diz que chamado em aberto ENTRA, e não que fica de fora', () => {
+    expect(TEXTO_APENAS_FATURA_INFO).toContain('chamado em aberto entra igual')
+    expect(TEXTO_APENAS_FATURA_INFO).toContain('horas apontadas no período')
+    // As revogadas: o critério de conclusão saiu das duas pontas da frase.
+    expect(TEXTO_APENAS_FATURA_INFO).not.toContain('concluídos em outra competência')
+    expect(TEXTO_APENAS_FATURA_INFO).not.toContain('chamados concluídos dentro do período')
+  })
+
+  it('controle positivo: o detector pega a redação ANTIGA, verbatim', () => {
+    const ANTIGO =
+      'Desligado, a lista mostra também os chamados ainda em aberto e os concluídos em outra competência — é a visão de conferência. Ligado, ficam só os chamados concluídos dentro do período filtrado, que são os que entram nesta fatura.'
+    expect(ANTIGO).toContain('concluídos em outra competência')
+    expect(ANTIGO).toContain('chamados concluídos dentro do período')
+    // ⚠️ E aqui está a prova de que o assert antigo NÃO discriminava: a substring que ele
+    // exigia aparece nas DUAS redações.
+    expect(ANTIGO).toContain('em aberto')
     expect(TEXTO_APENAS_FATURA_INFO).toContain('em aberto')
   })
 })
@@ -296,8 +448,23 @@ describe('nenhum texto afirma prazo ou periodicidade (AP-FRONTEND-022)', () => {
     'HEADER_BALDE_FATURADO',
     'HEADER_BALDE_PLANO',
     'HEADER_CONCLUIDO_EM',
-    'KPI_EM_ABERTO_LABEL',
-    'KPI_EM_ABERTO_TEXTO',
+    // 🔴 132/F3 (D1/D11) — TRÊS mudanças neste piso, todas declaradas:
+    //  · `TEXTO_COMPETENCIA_SEM_CONCLUSAO` → `TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO`: o nome
+    //    descrevia a ausência de conclusão como o estado que tirava as horas de todo período,
+    //    e esse estado deixou de existir (D1). Renomear é a declaração; manter o nome antigo
+    //    faria o piso vigiar uma constante que mente pelo próprio nome;
+    //  · `TOOLTIP_QTDE_PLANO` (novo, 132/F4b) e `TOOLTIP_KPI_HORAS_ADICIONAIS` (novo, 132/F3)
+    //    ENTRAM: o primeiro nasceu porque a coluna do plano passou a depender do período; o
+    //    segundo porque o texto do cartão "Extras (estouro)" estava DIGITADO INLINE no
+    //    painel do parceiro e, digitado, escapava de todos os detectores deste arquivo.
+    //
+    // 🔴 132/F2 (D7) — `KPI_EM_ABERTO_LABEL` e `KPI_EM_ABERTO_TEXTO` saíram deste piso
+    // porque saíram do MÓDULO: o cartão "Em aberto (não faturável ainda)" foi removido do
+    // painel do parceiro e o campo que o alimentava saiu do wire (132/B1+B2). Este piso
+    // reprova "nomeando a constante" quando um export some sem declaração — foi
+    // exatamente o que ele fez, e esta é a declaração. Encolher o piso é a única saída
+    // correta: mantê-lo apontando para constantes que não existem faria a lista MENTIR
+    // (`AP-QA-044`), e afrouxar o mecanismo cegaria os outros ~20 textos que ele cobre.
     'TEXTO_APENAS_FATURA_INFO',
     'TEXTO_APENAS_FATURA_LABEL',
     'KPI_PLANO_DE_SUPORTE_LABEL',
@@ -306,11 +473,16 @@ describe('nenhum texto afirma prazo ou periodicidade (AP-FRONTEND-022)', () => {
     // é declarada aqui de propósito — é para isso que este piso existe.
     'TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS',
     'TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE',
+    'TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO',
     'TEXTO_COMPETENCIA_REGRA',
-    'TEXTO_COMPETENCIA_SEM_CONCLUSAO',
     'TEXTO_COMPETENCIA_TITULO',
     'TEXTO_COMPETENCIA_VS_SAUDE_PLANOS',
     'TEXTO_DIVERGENCIA_KPI_TABELA',
+    // 🔴 135/G1 — os dois textos da coluna "Qtde. Tickets" ENTRAM neste piso (mas NÃO em
+    // `TEXTOS_QUE_DECLARAM_APONTAMENTO`: eles apuram pela data de ABERTURA). Entrar aqui é
+    // o que impede que eles SAIAM em silêncio depois; `PADROES_DE_PRAZO` já os cobre
+    // sozinho, porque o universo é derivado dos exports do módulo.
+    'TEXTO_QTDE_TICKETS_RECORTE_PROPRIO',
     'TEXTO_SAUDE_PLANOS_COMPARACAO',
     'TEXTO_SAUDE_PLANOS_ROTULO',
     'TOOLTIP_BALDE_ANALISE',
@@ -322,9 +494,12 @@ describe('nenhum texto afirma prazo ou periodicidade (AP-FRONTEND-022)', () => {
     'TOOLTIP_HORAS_FATURAVEIS',
     'TOOLTIP_HORAS_RESTANTES',
     'TOOLTIP_HORAS_USADAS',
+    'TOOLTIP_KPI_HORAS_ADICIONAIS',
     'TOOLTIP_KPI_HORAS_FATURAVEIS',
     'TOOLTIP_KPI_HORAS_RESTANTES',
     'TOOLTIP_KPI_HORAS_USADAS',
+    'TOOLTIP_QTDE_PLANO',
+    'TOOLTIP_QTDE_TICKETS',
   ]
 
   it('o universo sai do MÓDULO (anti-vacuidade) e não encolhe em silêncio', () => {
@@ -400,7 +575,7 @@ describe('textoPeriodoDoDetalhe — imprime a janela EFETIVA', () => {
   it('as duas pontas preenchidas: imprime exatamente as datas do filtro', () => {
     // Vermelho com data trocada, ordem invertida, ISO cru ou off-by-one de fuso.
     expect(textoPeriodoDoDetalhe({ from: '2026-07-01', to: '2026-07-31' }, AGORA)).toBe(
-      'Período em uso: 01/07/2026 a 31/07/2026. A tabela e os cartões abaixo usam este mesmo período — menos o cartão "Em aberto (não faturável ainda)", que é um total acumulado.',
+      'Período em uso: 01/07/2026 a 31/07/2026. A tabela e os cartões abaixo usam este mesmo período.',
     )
   })
 
@@ -408,21 +583,21 @@ describe('textoPeriodoDoDetalhe — imprime a janela EFETIVA', () => {
     // A frase que a D-2 exige. Vermelho se o default voltar a ser invisível, ou se a tela
     // passar a imprimir "—"/"sem filtro" para o estado em que ela usa o mês atual.
     expect(textoPeriodoDoDetalhe({ from: null, to: null }, AGORA)).toBe(
-      'Período em uso: 01/09/2026 a 30/09/2026. A tabela e os cartões abaixo usam este mesmo período — menos o cartão "Em aberto (não faturável ainda)", que é um total acumulado. ' +
+      'Período em uso: 01/09/2026 a 30/09/2026. A tabela e os cartões abaixo usam este mesmo período. ' +
         'É o mês atual, que é o padrão da tela — troque as datas no filtro para ver outro período.',
     )
   })
 
   it('só o início em branco: diz de onde saiu o valor que a tela usou', () => {
     expect(textoPeriodoDoDetalhe({ from: null, to: '2026-07-31' }, AGORA)).toBe(
-      'Período em uso: 01/09/2026 a 31/07/2026. A tabela e os cartões abaixo usam este mesmo período — menos o cartão "Em aberto (não faturável ainda)", que é um total acumulado. ' +
+      'Período em uso: 01/09/2026 a 31/07/2026. A tabela e os cartões abaixo usam este mesmo período. ' +
         'A data inicial ficou em branco, então vale o primeiro dia do mês atual.',
     )
   })
 
   it('só o fim em branco: idem, do outro lado', () => {
     expect(textoPeriodoDoDetalhe({ from: '2026-07-01', to: null }, AGORA)).toBe(
-      'Período em uso: 01/07/2026 a 30/09/2026. A tabela e os cartões abaixo usam este mesmo período — menos o cartão "Em aberto (não faturável ainda)", que é um total acumulado. ' +
+      'Período em uso: 01/07/2026 a 30/09/2026. A tabela e os cartões abaixo usam este mesmo período. ' +
         'A data final ficou em branco, então vale o último dia do mês atual.',
     )
   })
@@ -470,15 +645,23 @@ describe('textoPeriodoDoDetalhe — imprime a janela EFETIVA', () => {
     expect(/sem filtro/i.test('mostrando sem filtro de data')).toBe(true)
   })
 
-  it('123/FE-FIX3 (F-2): a frase EXCETUA o cartão "Em aberto", que não reage ao período', () => {
-    // O QA achou as duas frases na mesma dobra: esta dizia "os cartões … usam este mesmo
-    // período" e o subtexto do cartão "Em aberto" dizia "independe do período". As duas
-    // verdadeiras isoladamente, contraditórias juntas.
-    //
-    // O que deixa isto vermelho: (a) a exceção sumir da frase; (b) o cartão ser renomeado
-    // sem que a frase acompanhe — impossível por construção, já que o rótulo sai da MESMA
-    // constante que o cartão renderiza, e este teste compara com a constante, não com um
-    // literal repetido.
+  /**
+   * 🔴 **INVERTIDO em 132/F2 (D7).** Aqui viviam DOIS casos de 123/FE-FIX3 (`F-2`) que
+   * asseveravam o **contrário**: que a frase **excetuava** o cartão "Em aberto" e que, por
+   * isso, ela e o subtexto do cartão deixavam de se contradizer na mesma dobra.
+   *
+   * Os dois eram corretos e agora são impossíveis: **o cartão não existe.** O campo
+   * `horasEmAbertoNaoFaturadas` saiu do wire (132/B1+B2) e o cartão saiu do painel
+   * (132/F2) — com `TimeEntry.InicioEm` como competência (D1), não há hora fora de fatura
+   * esperando um chamado fechar. A contradição que a `F-2` resolvia **dissolveu-se pela
+   * outra ponta**: sobrou uma frase só, e ela é verdadeira sem ressalva nenhuma.
+   *
+   * Foram invertidos, não apagados: o defeito que a `F-2` registrou (a tela afirmando que
+   * "os cartões usam este mesmo período" com um cartão que não usava) volta no instante em
+   * que alguém acrescentar à grade um cartão de recorte próprio — e é este caso que
+   * obriga a decidir de novo, em vez de deixar a frase mentir em silêncio.
+   */
+  it('🔴 a frase NÃO excetua mais cartão nenhum — e não sobrou frase órfã (132/F2)', () => {
     const frases = [
       textoPeriodoDoDetalhe({ from: '2026-07-01', to: '2026-07-31' }, AGORA),
       textoPeriodoDoDetalhe({ from: null, to: null }, AGORA),
@@ -486,20 +669,19 @@ describe('textoPeriodoDoDetalhe — imprime a janela EFETIVA', () => {
       textoPeriodoDoDetalhe({ from: '2026-07-01', to: null }, AGORA),
     ]
     for (const frase of frases) {
-      expect(frase).toContain(KPI_EM_ABERTO_LABEL)
-      expect(frase).toContain('menos o cartão')
-      // A frase antiga, sem ressalva, não pode voltar: ela é o defeito F-2.
-      expect(frase).not.toContain('Os cartões e a tabela abaixo usam este mesmo período.')
-    }
-  })
+      // Companheira POSITIVA primeiro, em cada iteração: a frase existe e afirma o que
+      // deve. Sem ela, os `not.toContain` abaixo passariam sobre string vazia
+      // (`rules/tests.md` § padrão 1 — asserção negativa satisfeita pelo vazio).
+      expect(frase).toContain('A tabela e os cartões abaixo usam este mesmo período.')
+      expect(frase).toContain('Período em uso:')
 
-  it('123/FE-FIX3 (F-2): as duas frases da mesma dobra deixaram de se contradizer', () => {
-    // O subtexto do cartão continua dizendo que ele independe do período — e agora a frase
-    // de período concorda com ele, em vez de afirmar o contrário três linhas acima.
-    expect(KPI_EM_ABERTO_TEXTO).toContain('independe do período')
-    const frase = textoPeriodoDoDetalhe({ from: null, to: null }, AGORA)
-    // Controle: a frase nomeia o MESMO cartão de que o subtexto fala.
-    expect(frase).toContain(KPI_EM_ABERTO_LABEL)
+      // As NEGATIVAS: nenhum resíduo da exceção. `'menos o cartão'` pega a cláusula mesmo
+      // que alguém troque o rótulo interpolado; o rótulo literal pega o caso de alguém
+      // digitar de novo o texto que a constante deixou de fornecer.
+      expect(frase).not.toContain('menos o cartão')
+      expect(frase).not.toContain('Em aberto (não faturável ainda)')
+      expect(frase).not.toContain('total acumulado')
+    }
   })
 
   it('afirma que as DUAS metades da tela usam a mesma janela (é o requisito da D-2)', () => {
@@ -510,7 +692,7 @@ describe('textoPeriodoDoDetalhe — imprime a janela EFETIVA', () => {
       textoPeriodoDoDetalhe({ from: '2026-07-01', to: null }, AGORA),
     ]
     for (const frase of frases) {
-      expect(frase).toContain('A tabela e os cartões abaixo usam este mesmo período — menos o cartão "Em aberto (não faturável ainda)", que é um total acumulado.')
+      expect(frase).toContain('A tabela e os cartões abaixo usam este mesmo período.')
     }
   })
 })
@@ -525,16 +707,14 @@ describe('rótulos que separam o medidor ao vivo da visão de fatura', () => {
     expect(TEXTO_SAUDE_PLANOS_ROTULO).toContain('o time a lançou')
   })
 
-  it('Saúde dos Planos nomeia a OUTRA tela, a outra data, e afirma que as duas estão certas', () => {
+  it('Saúde dos Planos nomeia a OUTRA tela e afirma que as duas estão certas', () => {
     expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('Consumo de Planos')
-    expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('chamado foi concluído')
     // Sem esta frase, "números diferentes" só tem uma leitura: o sistema está errado.
     expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('os dois estão certos')
   })
 
-  it('Consumo de Planos nomeia a OUTRA tela, a outra data, e afirma o mesmo', () => {
+  it('Consumo de Planos nomeia a OUTRA tela e afirma o mesmo', () => {
     expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('Saúde dos Planos')
-    expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('o time lançou a hora')
     expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('os dois estão certos')
   })
 
@@ -555,16 +735,63 @@ describe('rótulos que separam o medidor ao vivo da visão de fatura', () => {
    * Estes testes não foram apagados: passaram a afirmar a redação nova e ficaram MAIS
    * específicos (a razão que permanece, a que sumiu, e a que nunca foi dita).
    */
-  it('🔴 131: as duas frases mantêm a razão que PERMANECE — a data', () => {
-    expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('data em que o chamado foi concluído')
-    expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('data em que o time lançou a hora')
-    expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('data em que o time lançou a hora')
-    expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('data em que o chamado foi concluído')
+  /**
+   * 🔴 **132/D1 — INVERTIDO: a "razão que permanece" da 131 deixou de existir.**
+   *
+   * O caso anterior exigia que as duas frases nomeassem as duas datas diferentes. Medido na
+   * fonte em 2026-09-09: os dois lados recortam por `te.InicioEm` com predicado literalmente
+   * idêntico (`MetricsQueryRepository.cs:1465-1474` × `ReportQueryRepository.cs:900-914` —
+   * `Completed`, `DesativadoEm == null`, `Categoria != Invoicy`, `!FatureiFora`, ticket-only,
+   * mesma janela half-open). Manter o assert antigo obrigaria as frases a nomear uma
+   * diferença inexistente, e mandaria o usuário procurar o erro no lugar errado.
+   *
+   * Em dois meses, DUAS das causas enumeradas por estes textos deixaram de existir (as horas
+   * de projeto na 131, a data na 132) — é a prova concreta de por que nenhuma das duas frases
+   * pode fechar a enumeração num número.
+   */
+  it('🔴 132/D1: as duas frases AFIRMAM que a data é a MESMA nos dois lados', () => {
+    // A positiva.
+    expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('pela mesma data deste medidor')
+    expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('pela mesma data desta tela')
+    for (const texto of [TEXTO_SAUDE_PLANOS_COMPARACAO, TEXTO_COMPETENCIA_VS_SAUDE_PLANOS]) {
+      expect(texto).toContain('a do apontamento')
+      // A negativa: a data revogada saiu das duas.
+      expect(texto).not.toContain('data em que o chamado foi concluído')
+    }
   })
 
-  it('🔴 131: as duas frases dizem a TERCEIRA razão — quem entra na lista', () => {
+  it('🔴 132/R-12: a razão NOVA é o crédito, e as duas frases a nomeiam pelo rótulo público', () => {
+    // `plan-consumption` mede o plano EFETIVO (`ReportQueryRepository.cs:1006-1043`);
+    // `plan-health` mede só o contratado e não conhece crédito (`MetricsDtos.cs:137-148`,
+    // com o gatilho de reabertura nomeado). É a diferença que o gerente VAI notar.
+    expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('Crédito de Suporte')
+    expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('Crédito de Suporte')
+    // Cada lado descreve o SEU comportamento, não o do vizinho:
+    expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('só as horas contratadas')
+    expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('soma o crédito da competência')
+    // ⚠️ D15 — nem aqui a categoria interna aparece.
+    for (const texto of [TEXTO_SAUDE_PLANOS_COMPARACAO, TEXTO_COMPETENCIA_VS_SAUDE_PLANOS]) {
+      expect(texto).not.toContain('Problema - Invoicy')
+    }
+  })
+
+  it('controle positivo: as redações ANTERIORES à 132 seriam reprovadas', () => {
+    // Escritas à mão a partir do `git show HEAD:` do módulo — sem isto, os `not.toContain`
+    // acima seriam indistinguíveis de asserts sobre string vazia.
+    const ANTIGA_PAINEL =
+      'O relatório Consumo de Planos conta pela data em que o chamado foi concluído, que é a regra da fatura, e lista também cliente sem plano contratado; este medidor conta pela data em que o time lançou a hora e mostra só quem tem plano. Por diferenças como essas, os dois podem mostrar números diferentes no mesmo mês — e os dois estão certos. Hora de projeto não consome plano em nenhum dos dois: projeto é contratado à parte, e continua registrado e faturável.'
+    const ANTIGA_CONSUMO =
+      'O gráfico Saúde dos Planos, no painel, conta pela data em que o time lançou a hora, para acompanhar o plano ao vivo, e mostra só clientes com plano contratado; esta tela conta pela data em que o chamado foi concluído, que é a regra da fatura, e lista também cliente sem plano que teve consumo. Por diferenças como essas, ele pode mostrar um número diferente do desta tela no mesmo mês — e os dois estão certos. Nenhum dos dois conta hora de projeto no plano.'
+    for (const antiga of [ANTIGA_PAINEL, ANTIGA_CONSUMO]) {
+      expect(antiga).toContain('data em que o chamado foi concluído')
+      expect(antiga).not.toContain('Crédito de Suporte')
+    }
+  })
+
+  it('🔴 131: as duas frases dizem a razão de LISTA — quem entra', () => {
     // Sempre existiu e nunca foi dita: `plan-health` só lista cliente com plano
-    // (`MetricsQueryRepository.cs:1459`).
+    // (`MetricsQueryRepository.cs:1459`). É a única das razões enumeradas por estes textos
+    // que sobreviveu às duas demandas.
     expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('lista também cliente sem plano contratado')
     expect(TEXTO_SAUDE_PLANOS_COMPARACAO).toContain('só quem tem plano')
     expect(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS).toContain('só clientes com plano contratado')
@@ -774,5 +1001,89 @@ describe('🔴 131: nenhum texto sugere que projeto deixou de ser cobrado', () =
         p.test('o apontamento de projeto deixou de ser faturado'),
       ),
     ).toBe(true)
+  })
+})
+
+// ─── 135/G1 — os dois textos da coluna "Qtde. Tickets" ────────────────────────
+
+/**
+ * 🔴 **O recorte desta coluna é a data de ABERTURA do chamado, e é o ÚNICO da tela que não
+ * é o apontamento** (PRD §2 / 135/G1). Por isso estes dois textos ficam **fora** de
+ * `TEXTOS_QUE_DECLARAM_APONTAMENTO` — a não-entrada está declarada no docblock daquele
+ * record — e ganham detector próprio aqui.
+ *
+ * O que cada asserção deixa vermelho está escrito ao lado. Um `/apontad/` global sobre
+ * estes dois só passaria se o texto fosse **redigido para agradar ao teste**, que é a
+ * inversão de causa que `rules/tests.md` proíbe.
+ */
+const JARGAO_DE_ENTIDADE = [/HsCriadoEm/i, /CriadoEm/i, /FechadoEm/i, /InicioEm/i, /TimeEntry/i]
+
+describe('135/G1 — TOOLTIP_QTDE_TICKETS declara o recorte de ABERTURA', () => {
+  it('🔴 é o literal do cabeçalho, verbatim', () => {
+    // Vermelho quando o texto vira string inline na coluna (aí este literal deixa de ser o
+    // que a tela mostra) ou quando alguém reescreve o recorte.
+    expect(TOOLTIP_QTDE_TICKETS).toBe(
+      'Chamados abertos no período, pela data de abertura, em qualquer status atual.',
+    )
+  })
+
+  it('declara a ABERTURA e o "qualquer status" — as duas coisas que o número exige', () => {
+    // Sem "abertura", o usuário lê a contagem com o recorte das colunas de horas e conclui
+    // que o sistema perdeu chamado (é o relato que o PRD §2 existe para evitar).
+    expect(TOOLTIP_QTDE_TICKETS).toMatch(/abertura/i)
+    expect(TOOLTIP_QTDE_TICKETS).toMatch(/qualquer status/i)
+  })
+
+  it('🔴 NÃO diz "apontadas" — dizer isso seria afirmar o recorte errado', () => {
+    // É a razão pela qual este texto não entra em `TEXTOS_QUE_DECLARAM_APONTAMENTO`.
+    expect(TOOLTIP_QTDE_TICKETS).not.toMatch(/apontad|apontament/i)
+    // Nem a regra revogada pela 132/D1.
+    expect(TOOLTIP_QTDE_TICKETS).not.toMatch(/conclu[íi]d/i)
+  })
+
+  it('cabe no balão do InfoIcon (whitespace-nowrap ⇒ ~90 caracteres)', () => {
+    // Restrição MEDIDA (132/§3.3): o clamp reposiciona, não quebra linha ⇒ texto longo sai
+    // numa linha só e estoura a viewport. Vermelho quando alguém "explica melhor" no
+    // cabeçalho em vez de usar o parágrafo do (?).
+    expect(TOOLTIP_QTDE_TICKETS.length).toBeLessThanOrEqual(90)
+  })
+
+  it.each(JARGAO_DE_ENTIDADE)('não vaza jargão de entidade/banco: %s', (padrao) => {
+    // Nenhuma regex atual de `columns.competencia.test.ts` pega `HsCriadoEm`, e é
+    // justamente o nome que o autor do texto tem na cabeça ao escrevê-lo.
+    expect(padrao.test(TOOLTIP_QTDE_TICKETS)).toBe(false)
+  })
+
+  it('controle positivo: os detectores acima ainda mordem', () => {
+    // Sem isto, um erro nas regexes tornaria os asserts vacuamente verdes.
+    expect(/apontad|apontament/i.test('horas apontadas no período')).toBe(true)
+    expect(JARGAO_DE_ENTIDADE.some((p) => p.test('conta por t.HsCriadoEm no período'))).toBe(true)
+  })
+})
+
+describe('135/G1 — TEXTO_QTDE_TICKETS_RECORTE_PROPRIO explica o CONTRASTE', () => {
+  it('🔴 nomeia os DOIS recortes, e é o contraste que informa', () => {
+    // Uma frase que só dissesse "conta os chamados abertos" seria lida como explicação da
+    // coluna, não do porquê de os números não baterem — que é a pergunta do usuário e o
+    // motivo de o parágrafo existir (PRD §2 / R-12: o QA reprovaria como inconsistência).
+    expect(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO).toMatch(/data de abertura/i)
+    expect(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO).toMatch(/APONTADAS no per[íi]odo/)
+    expect(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO).toContain('não se explicam entre si')
+  })
+
+  it('dá o exemplo dos dois meses e o caso do chamado sem hora', () => {
+    // Os dois casos concretos são o que impede a leitura "então um deles está errado".
+    expect(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO).toContain('agosto')
+    expect(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO).toContain('setembro')
+    expect(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO).toMatch(/sem nenhuma hora/i)
+  })
+
+  it.each(JARGAO_DE_ENTIDADE)('não vaza jargão de entidade/banco: %s', (padrao) => {
+    expect(padrao.test(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO)).toBe(false)
+  })
+
+  it('não afirma prazo nem periodicidade (AP-FRONTEND-022)', () => {
+    // Redundante com o detector derivado — de propósito: aqui a falha NOMEIA o texto.
+    expect(PADROES_DE_PRAZO.filter((p) => p.test(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO))).toEqual([])
   })
 })

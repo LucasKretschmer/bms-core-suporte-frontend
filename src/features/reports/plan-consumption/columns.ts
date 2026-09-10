@@ -7,7 +7,10 @@ import {
   TOOLTIP_HORAS_FATURAVEIS,
   TOOLTIP_HORAS_RESTANTES,
   TOOLTIP_HORAS_USADAS,
+  TOOLTIP_QTDE_PLANO,
+  TOOLTIP_QTDE_TICKETS,
 } from '../shared/utils/competenciaTexts'
+import { PlanoComCredito } from './components/PlanoComCredito'
 import React from 'react'
 
 /**
@@ -104,10 +107,20 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
   {
     key: 'qtdePlanoHoras',
     header: 'Qtde. Plano (h)',
+    // 🔴 132/F4b — a coluna passou a declarar o recorte, porque o CRÉDITO é por competência
+    // (`creditoshoras.competencia`): o plano exibido depende do período filtrado, e antes da
+    // 132 não dependia. Ver a justificativa nova em `columns.competencia.test.ts`.
+    headerInfo: TOOLTIP_QTDE_PLANO,
     sortable: true,
+    // ⚠️ A ordenação continua sendo pelo plano BASE (`qtdeplano` é a whitelist do backend,
+    // `ReportQueryRepository.cs`): não há coluna de plano efetivo na ordenação, e inventar
+    // uma chave aqui devolveria 400. Declarado para quem estranhar a diferença.
     sortKey: 'qtdeplano',
     align: 'right',
-    accessor: (row) => formatHours(row.qtdePlanoHoras),
+    // 132/D11 — `15h + 2h`, com o crédito em verde + reforço textual + ⓘ (D15).
+    // `columns.ts` é `.ts` e usa `React.createElement` de propósito (ver `percentualPlano`
+    // abaixo): renomear para `.tsx` mexeria em 5 imports e nos 4 arquivos de teste.
+    accessor: (row) => React.createElement(PlanoComCredito, { item: row }),
   },
   {
     key: 'horasUsadas',
@@ -164,5 +177,45 @@ export const planConsumptionColumns: ColumnDef<PlanConsumptionItemDto>[] = [
     sortKey: 'horasanalise',
     align: 'right',
     accessor: (row) => formatHours(row.horasAnalise),
+  },
+  {
+    key: 'qtdeTickets',
+    // Literal do usuário (`prd.md` §1/§7): "Tickets" no cabeçalho, "chamados" na prosa.
+    // Divergência DELIBERADA, registrada em `analise-frontend.md` P-8.
+    header: 'Qtde. Tickets',
+    // 🔴 135/G1 — a ÚNICA coluna desta tela cujo recorte é a data de ABERTURA do chamado
+    // (`Ticket.HsCriadoEm`), e não o apontamento. O número **não explica** as horas ao lado,
+    // de propósito (PRD §2) — e é o tooltip que impede a leitura "então um deles está errado".
+    // O padrão que este texto tem de declarar é `/abertura/i`, NUNCA `/apontad/`
+    // (`columns.competencia.test.ts`).
+    headerInfo: TOOLTIP_QTDE_TICKETS,
+    sortable: true,
+    // `qtdetickets` (minúscula) é a 12ª chave da whitelist de ordenação do backend
+    // (`ReportQueryRepository.cs:1272`), servindo os dois caminhos — ao vivo e snapshot.
+    // 🔴 `sortable: true` com chave FORA da whitelist é **seta que mente**: o backend cai no
+    // default (`horasusadas desc`) em silêncio, sem erro, sem log e sem teste vermelho. A
+    // coluna nasce ordenável PORQUE a entrada da whitelist entra no mesmo commit do backend —
+    // e a identidade do token front↔backend vive em `columns.test.ts`.
+    // ⚠️ Dependência de DEPLOY (tracker R-7): as duas pontas sobem juntas.
+    sortKey: 'qtdetickets',
+    // Precedente de célula de contagem em tabela: `movimentacao-diaria/columns.tsx:63-71`.
+    align: 'right',
+    width: '120px',
+    // 🔴 O guard é `== null`, NUNCA `=== undefined` (AP-FRONTEND-028): cobre a chave AUSENTE
+    // do backend anterior à 135 — o estado normal entre dois deploys — e também um `null` que
+    // o serializador não deveria mandar.
+    // 🔴 E `0` renderiza `'0'`, nunca `'—'`: a partir da 135, `0` é o valor NORMAL de um
+    // cliente sem chamado aberto no período. `0` × ausência são telas DIFERENTES
+    // (`tracker.md` R-10), ao contrário do crédito da 132.
+    // 🔴 O ramo proibido é o **falsy check** — `if (!v)`, `v || '—'` —: é ele que colapsa
+    // `0` em ausência e afirma "não sei" sobre um zero conhecido. MEDIDO: a mutação M-2 da
+    // U2 (`|| '—'`) deixa 2 casos vermelhos em `columns.qtdeTickets.test.tsx`.
+    // ⚠️ `?? '—'` **não é esse defeito**: `0 ?? '—'` continua `0`. A mutação M-2eq provou a
+    // equivalência (0 vermelhos). O ternário explícito fica porque **nomeia os dois ramos**,
+    // não porque `??` estaria errado — a `analise-frontend.md` §7.2/M-2 diz `?? '—'` e é
+    // impreciso; está reportado ao Manager, e o contrato de R-10 continua intacto.
+    // Número CRU, sem `Intl`: não existe `formatInteger` no repo e `formatDecimal` imprimiria
+    // `12,0` para 12 chamados. Criar formatador de inteiro está fora do pedido.
+    accessor: (row) => (row.qtdeTickets == null ? '—' : row.qtdeTickets),
   },
 ]

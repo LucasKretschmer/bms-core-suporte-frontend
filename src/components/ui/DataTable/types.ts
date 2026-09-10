@@ -25,6 +25,21 @@ export type ColumnDef<TRow> = {
   headerInfo?: string
   /** Função que extrai o valor de exibição da linha */
   accessor: (row: TRow) => React.ReactNode
+  /**
+   * 134 — duração da linha em SEGUNDOS (inteiro >= 0) ou `null` para ausência,
+   * para o export calculável (CSV `H:mm:ss` / XLSX numérico com `numFmt [h]:mm:ss`).
+   *
+   * PRESENTE ⇒ a coluna é de duração: quem exporta usa este número e IGNORA `accessor`.
+   * AUSENTE ⇒ coluna de texto, comportamento de sempre.
+   *
+   * A TELA continua usando `accessor` (`'2h 44m'`) — este campo NÃO afeta a renderização
+   * (a `DataTable` não o lê). O valor vem sempre de um dos helpers do núcleo
+   * (`durationCell`, `durationCellFromHours`, `durationCellFromMillis`), nunca de
+   * conversão à mão: é ali que mora o guard `== null` (AP-FRONTEND-028).
+   *
+   * Campo OPCIONAL e aditivo: nenhuma coluna existente precisa mudar.
+   */
+  durationSeconds?: (row: TRow) => number | null
   /** Se a coluna pode ser ordenada */
   sortable?: boolean
   /** Chave enviada ao backend (deve estar na whitelist do backend) */

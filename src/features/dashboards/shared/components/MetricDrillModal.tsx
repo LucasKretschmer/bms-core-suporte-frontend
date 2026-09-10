@@ -22,6 +22,11 @@ import { ErrorState } from '../../../../components/ui/ErrorState'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { ExportButtons } from '../../../reports/shared/components/ExportButtons'
 import { exportToCsv, exportToXlsx } from '../../../reports/shared/utils/exportTable'
+import type {
+  ExportCellValue,
+  ExportColumn,
+  ExportRow,
+} from '../../../reports/shared/utils/exportTable'
 import {
   fetchAllPaginated,
   ExportLimitError,
@@ -51,6 +56,39 @@ type MetricDrillModalProps<T> = {
   onStreamPause?: () => void
   /** Retoma SSE ao fechar (passar stream.resume). */
   onStreamResume?: () => void
+}
+
+/**
+ * 134 — projeção das colunas da tabela para as colunas do ARQUIVO.
+ *
+ * A presença de `durationSeconds` na `ColumnDef` **é** o discriminador de duração: nada de
+ * lista de chaves mantida à mão (`AP-QA-019`). Exportada (junto com `buildDrillExportRows`)
+ * para que o teste use ESTA função, e não uma reimplementação que pode divergir em silêncio.
+ */
+export function buildDrillExportColumns<T>(columns: ColumnDef<T>[]): ExportColumn[] {
+  return columns.map((c) => ({
+    header: c.header,
+    key: c.key,
+    ...(c.durationSeconds ? { type: 'duration' as const } : {}),
+  }))
+}
+
+/**
+ * 134 — projeção das linhas para o arquivo.
+ *
+ * Coluna de duração: o número em SEGUNDOS (ou `null` = ausência ⇒ célula vazia), e o
+ * `accessor` é IGNORADO — é o que mantém a TELA intocada enquanto o arquivo vira calculável.
+ * Coluna de texto: o `accessor` de sempre, bit-a-bit.
+ */
+export function buildDrillExportRows<T>(columns: ColumnDef<T>[], rows: T[]): ExportRow[] {
+  return rows.map((row) =>
+    Object.fromEntries(
+      columns.map((c) => [
+        c.key,
+        c.durationSeconds ? c.durationSeconds(row) : (c.accessor(row) as ExportCellValue),
+      ]),
+    ),
+  )
 }
 
 export function MetricDrillModal<T>({
@@ -118,13 +156,10 @@ export function MetricDrillModal<T>({
         pageSize,
       }),
     )
-    const exportCols = columns.map((c) => ({ header: c.header, key: c.key }))
-    const exportRows = all.map((row) =>
-      Object.fromEntries(
-        columns.map((c) => [c.key, c.accessor(row) as string | number | null | undefined]),
-      ),
-    )
-    return { exportCols, exportRows }
+    return {
+      exportCols: buildDrillExportColumns(columns),
+      exportRows: buildDrillExportRows(columns, all),
+    }
   }
 
   async function runExport(kind: 'csv' | 'xlsx') {

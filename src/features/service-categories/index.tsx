@@ -8,6 +8,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Input } from '../../components/ui/Input'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { Switch } from '../../components/ui/Switch'
 import { PageWrapper } from '../../components/layout/PageWrapper'
 import { useToast } from '../../components/ui/Toast'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -25,6 +26,7 @@ import { useCategoryMutations } from './hooks/useCategoryMutations'
 import { useServiceCategories } from './hooks/useServiceCategories'
 import {
   newCategorySchema,
+  rotuloCobrancaForaDoPlano,
   type NewCategoryFormValues,
   type ServiceCategoryDto,
 } from './types/serviceCategory'
@@ -33,18 +35,37 @@ import {
  * F6 — Categorias do Atendimento (CRUD + toggle).
  * Visível para CoordenadorPlus (UX); backend é a fonte de verdade.
  */
-/** Colunas de export — espelham a tabela (sem campos internos). */
+/**
+ * Colunas de export — espelham a tabela (sem campos internos).
+ *
+ * 133: `cobrancaForaDoPlano` é o **quarto lugar** onde a flag aparece (coluna, modal de
+ * edição, form de criação e aqui) — e o mais grave dos quatro (`AP-FRONTEND-028`): a
+ * planilha sai do sistema e é encaminhada, sem volta. O rótulo vem de
+ * `rotuloCobrancaForaDoPlano`, a MESMA função da coluna da tabela, para que os dois nunca
+ * divirjam.
+ */
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Categoria', key: 'nome' },
   { header: 'Situação', key: 'situacao' },
+  { header: 'Cobrança fora do plano', key: 'cobrancaForaDoPlano' },
 ]
 
 function mapCategoryToExportRow(category: ServiceCategoryDto): ExportRow {
   return {
     nome: category.nome,
     situacao: category.isActive ? 'Ativa' : 'Inativa',
+    cobrancaForaDoPlano: rotuloCobrancaForaDoPlano(category),
   }
 }
+
+/**
+ * id do texto de apoio da flag no form de criação (133) — o `<p>` e o `aria-describedby`
+ * do switch leem a MESMA constante, para o atributo nunca ficar órfão.
+ */
+const ID_APOIO_NOVA_FORCA = 'nova-categoria-forca-apoio'
+
+/** Estado inicial do form de criação — usado no `defaultValues` e no `reset`. */
+const NOVA_CATEGORIA_PADRAO: NewCategoryFormValues = { nome: '', forcesBillableOutsidePlan: false }
 
 export default function ServiceCategoriesPage() {
   const { isCoordenadorOuAcima } = usePermissions()
@@ -63,14 +84,20 @@ export default function ServiceCategoriesPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<NewCategoryFormValues>({
     resolver: zodResolver(newCategorySchema),
-    defaultValues: { nome: '' },
+    defaultValues: NOVA_CATEGORIA_PADRAO,
   })
 
+  const novaForcaCobranca = watch('forcesBillableOutsidePlan')
+
   function onSubmit(values: NewCategoryFormValues) {
-    create.mutate(values.nome, { onSuccess: () => reset({ nome: '' }) })
+    // Os dois campos vão juntos, e o `reset` repõe os dois — repor só o nome deixaria o
+    // switch ligado para a próxima categoria digitada.
+    create.mutate(values, { onSuccess: () => reset(NOVA_CATEGORIA_PADRAO) })
   }
 
   function handleOpenEdit(category: ServiceCategoryDto) {
@@ -148,21 +175,44 @@ export default function ServiceCategoriesPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="flex items-start gap-2"
+            className="flex flex-col gap-1"
             aria-label="Adicionar nova categoria"
           >
-            <div className="w-72">
-              <Input
-                id="nova-categoria"
-                placeholder="Nova categoria…"
-                aria-label="Nome da nova categoria"
-                error={errors.nome?.message}
-                {...register('nome')}
-              />
+            <div className="flex items-start gap-2">
+              <div className="w-72">
+                <Input
+                  id="nova-categoria"
+                  placeholder="Nova categoria…"
+                  aria-label="Nome da nova categoria"
+                  error={errors.nome?.message}
+                  {...register('nome')}
+                />
+              </div>
+              <Button type="submit" variant="primary" isLoading={isSubmitting || create.isPending}>
+                Adicionar
+              </Button>
             </div>
-            <Button type="submit" variant="primary" isLoading={isSubmitting || create.isPending}>
-              Adicionar
-            </Button>
+
+            {/* 133 — a flag já na criação: categoria de consultoria/plantão nasce travada. */}
+            <div className="flex items-start gap-2">
+              <Switch
+                label="Cobrar sempre fora do plano"
+                checked={novaForcaCobranca}
+                onChange={(checked) =>
+                  setValue('forcesBillableOutsidePlan', checked, { shouldDirty: true })
+                }
+                describedById={ID_APOIO_NOVA_FORCA}
+              />
+              <div className="max-w-md">
+                <p className="text-sm font-medium text-foreground">
+                  Cobrar sempre fora do plano
+                </p>
+                <p id={ID_APOIO_NOVA_FORCA} className="text-xs text-foreground/70">
+                  Apontamentos com esta categoria serão sempre marcados como cobrados fora do
+                  plano; o atendente não poderá desmarcar.
+                </p>
+              </div>
+            </div>
           </form>
 
           {data && data.length > 0 && (
@@ -198,7 +248,7 @@ export default function ServiceCategoriesPage() {
 
       <EditCategoryModal
         category={toEdit}
-        onRename={(category, nome) => update.mutateAsync({ id: category.id, nome })}
+        onSave={(category, values) => update.mutateAsync({ id: category.id, ...values })}
         onClose={handleCloseEdit}
       />
 

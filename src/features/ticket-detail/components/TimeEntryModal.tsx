@@ -28,6 +28,17 @@ type TimeEntryModalProps = {
   entry?: TicketTimeEntryDto
   agentOptions: ComboboxOption[]
   categoryOptions: ComboboxOption[]
+  /**
+   * 133 — ids (string, casando com `ComboboxOption.value`) das categorias que forçam
+   * cobrança fora do plano. Vem de `useModalOptions`, que o monta a partir da flag
+   * `forcesBillableOutsidePlan` do servidor.
+   *
+   * **Obrigatória de propósito, sem default.** Prop opcional com `new Set()` de default é
+   * exatamente o modo de falha desta demanda: esquecer de ligar o fio no `index.tsx` e
+   * nada ficar vermelho. Obrigatória, é o `tsc -b` do `npm run build` que reprova o
+   * esquecimento no único call site de produção.
+   */
+  categoriasQueForcam: ReadonlySet<string>
   optionsLoading?: boolean
   /** Pode trocar o atendente (Coordenador+); atendente comum só lança para si */
   canChangeAgent: boolean
@@ -75,6 +86,14 @@ function PlusIcon() {
   )
 }
 
+/**
+ * 133 — id do parágrafo que explica o estado da caixa "Cobrar por fora do plano".
+ * Constante (e não literal repetido) porque o mesmo valor é o `aria-describedby` do switch:
+ * são duas pontas do mesmo contrato de acessibilidade. O modal é singleton na página, então
+ * um id estático é único no documento.
+ */
+const TRAVA_APOIO_ID = 'te-billable-apoio'
+
 /** Monta os valores iniciais do form (modo create vs edit). */
 function buildDefaults(
   mode: 'create' | 'edit',
@@ -118,6 +137,7 @@ export function TimeEntryModal({
   entry,
   agentOptions,
   categoryOptions,
+  categoriasQueForcam,
   optionsLoading = false,
   canChangeAgent,
   currentUserId,
@@ -157,6 +177,33 @@ export function TimeEntryModal({
   const userId = watch('userId')
   const serviceCategoryId = watch('serviceCategoryId')
   const billableOutsidePlan = watch('billableOutsidePlan')
+
+  /**
+   * 133 — a categoria selecionada força cobrança fora do plano? (R-133)
+   * `nomeCategoria` sai do próprio combo: o texto da trava **nomeia** a categoria, e o
+   * nome tem de vir da mesma fonte que o usuário acabou de escolher.
+   */
+  const categoriaForca = categoriasQueForcam.has(serviceCategoryId)
+  const nomeCategoria =
+    categoryOptions.find((o) => o.value === serviceCategoryId)?.label ?? ''
+
+  /**
+   * Catraca de sentido único: só empurra para `true`, **nunca** para `false` — é a mesma
+   * semântica de R-133 no servidor (`arquitetura.md` §2).
+   *
+   * Em `useEffect`, e não só no `onChange` do combo, porque as opções chegam **depois** da
+   * abertura do modal (`useModalOptions(enabled)` só busca quando o modal abre): travar no
+   * `onChange` deixaria de fora o caso "modal abre em modo edit com a categoria já
+   * selecionada" e o caso "a query resolve depois da seleção".
+   *
+   * Ao trocar para uma categoria **sem** flag o valor **não** volta para `false`
+   * (decisão D-133-1, opção (c)): o switch destrava e quem edita decide se desmarca.
+   */
+  useEffect(() => {
+    if (categoriaForca && !billableOutsidePlan) {
+      setValue('billableOutsidePlan', true, { shouldDirty: false })
+    }
+  }, [categoriaForca, billableOutsidePlan, setValue])
 
   function addBlock() {
     const works = getValues('works')
@@ -223,18 +270,28 @@ export function TimeEntryModal({
             />
           </div>
 
-          {/* Toggle cobrar por fora */}
+          {/* Toggle cobrar por fora — com a trava da 133 quando a categoria força */}
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-foreground">Cobrar por fora do plano</p>
-              <p className="text-xs text-foreground/70">
-                Marca este apontamento como faturável fora do plano (consultoria, treinamento, etc.).
+              {/*
+                O `id` é estático e o parágrafo é renderizado SEMPRE (travado ou não): o que
+                muda é o conteúdo. `aria-describedby` que aparece e some é mais fácil de
+                quebrar. E a explicação da trava é texto **visível e permanente** — nunca
+                `title`, hover ou foco (PRD §4.2.2).
+              */}
+              <p id={TRAVA_APOIO_ID} className="text-xs text-foreground/70">
+                {categoriaForca
+                  ? `A categoria "${nomeCategoria}" é sempre cobrada fora do plano de suporte. A marcação é obrigatória e não pode ser desmarcada.`
+                  : 'Marca este apontamento como faturável fora do plano (consultoria, treinamento, etc.).'}
               </p>
             </div>
             <Switch
               label="Cobrar por fora do plano"
               checked={billableOutsidePlan}
               onChange={(checked) => setValue('billableOutsidePlan', checked)}
+              ariaDisabled={categoriaForca}
+              describedById={TRAVA_APOIO_ID}
             />
           </div>
 

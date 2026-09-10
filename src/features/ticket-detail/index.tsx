@@ -63,7 +63,12 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
   const [cancelTarget, setCancelTarget] = useState<TicketTimeEntryDto | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [restoreTarget, setRestoreTarget] = useState<TicketTimeEntryDto | null>(null)
-  const { agentOptions, categoryOptions, isLoading: optionsLoading } = useModalOptions(modal.open)
+  const {
+    agentOptions,
+    categoryOptions,
+    categoriasQueForcam,
+    isLoading: optionsLoading,
+  } = useModalOptions(modal.open)
 
   /**
    * 122/A11Y-2 — §5.3 ("modal com foco preso E devolve o foco ao gatilho"): a
@@ -257,6 +262,7 @@ export default function TicketDetailPage({ ticketId, from, clientId }: TicketDet
           entry={modal.mode === 'edit' ? modal.entry : undefined}
           agentOptions={agentOptions}
           categoryOptions={categoryOptions}
+          categoriasQueForcam={categoriasQueForcam}
           optionsLoading={optionsLoading}
           canChangeAgent={isCoordenadorOuAcima}
           currentUserId={currentUserId}

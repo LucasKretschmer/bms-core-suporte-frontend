@@ -31,8 +31,7 @@ import {
   listTeams,
   listTicketsReport,
 } from '../shared/services/reportsService'
-import { formatSeconds } from '../shared/utils/formatters'
-import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
+import { durationCell, exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
 import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPaginated'
 import { usePermissions } from '../../../hooks/usePermissions'
@@ -58,6 +57,12 @@ const SCOPE_OPTIONS = [
 // Exportado para teste (107): garante que a categoria HubSpot NUNCA entra no
 // arquivo exportável desta tela (privacidade — só aparece na tela). D7 (119):
 // "Tempo total"/"Categoria do atendimento" entram (dado interno de gestão).
+//
+// 134: as duas colunas de tempo são `type: 'duration'` — o mapper entrega
+// SEGUNDOS CRUS e a formatação (`[h]:mm:ss` no XLSX, `H:mm:ss` no CSV) mora no
+// núcleo (`exportTable.ts`). Nunca pré-formatar aqui. "Apontamentos (período)" e
+// "Apontamentos (total)" são CONTAGENS, não durações — seguem sem `type`.
+// A TELA não muda: `columns.tsx` continua exibindo "2h 44m" via `formatSeconds`.
 export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket', key: 'ticket' },
   { header: 'Assunto', key: 'assunto' },
@@ -66,8 +71,8 @@ export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Atendente', key: 'owner' },
   { header: 'Categoria do atendimento', key: 'categoriaAtendimento' },
   { header: 'Status', key: 'status' },
-  { header: 'Tempo (período)', key: 'tempo' },
-  { header: 'Tempo total', key: 'tempoTotal' },
+  { header: 'Tempo (período)', key: 'tempo', type: 'duration' },
+  { header: 'Tempo total', key: 'tempoTotal', type: 'duration' },
   { header: 'Apontamentos (período)', key: 'apontamentos' },
   { header: 'Apontamentos (total)', key: 'apontamentosTotal' },
 ]
@@ -81,8 +86,8 @@ export function mapToExportRow(item: TicketReportItemDto): ExportRow {
     owner: item.ownerNome ?? '',
     categoriaAtendimento: item.categoriasTimer.join('; '),
     status: item.status ?? '',
-    tempo: formatSeconds(item.totalSeconds),
-    tempoTotal: formatSeconds(item.totalSecondsAllTime),
+    tempo: durationCell(item.totalSeconds),
+    tempoTotal: durationCell(item.totalSecondsAllTime),
     apontamentos: item.apontamentosCount,
     apontamentosTotal: item.apontamentosCountAllTime,
   }

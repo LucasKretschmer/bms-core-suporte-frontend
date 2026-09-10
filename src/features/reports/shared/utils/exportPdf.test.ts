@@ -11,9 +11,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactElement, ReactNode } from 'react'
 import type { ClientReportDto, ClientReportItemDto } from '../types/reports'
+import { ROTULO_CREDITO_PUBLICO } from './creditoTexts'
 
 // ── Mock de @react-pdf/renderer ──────────────────────────────────────────────
-let capturedTexts: string[] = []
+// `const`: a lista nunca é reatribuída — é esvaziada por `.length = 0` (ESLint `prefer-const`,
+// erro pré-existente do arquivo, corrigido junto com o bloco de 132/F9).
+const capturedTexts: string[] = []
 
 function TextMock(props: { children?: ReactNode }) {
   const text = Array.isArray(props.children)
@@ -287,5 +290,140 @@ describe('generateClientReportPdf — coluna "Concluído" (123/FAT-1)', () => {
     // 1 linha de dados: tudo que vem depois dos headers são as células dela.
     const celulas = capturedTexts.slice(iHeader + headers.length)
     expect(celulas).toHaveLength(headers.length)
+  })
+})
+
+// ── T-PDF (134) — o PDF continua em "2h 44m" ─────────────────────────────────
+
+/**
+ * A demanda 134 troca o formato de duração no CSV/XLSX. O PDF monta as próprias linhas
+ * (`PdfRow`) com `formatSeconds` e NÃO importa o mapper do CSV. Este caso fica vermelho
+ * se alguém ligar o PDF ao mapper do export tabular.
+ */
+describe('T-PDF · a duração do PDF não mudou com a 134', () => {
+  it('9840 s continua saindo "2h 44m", nunca "02:44:00" nem o número cru', async () => {
+    await generateClientReportPdf({
+      report: REPORT,
+      items: [makeItem({ timeEntryId: 1, totalSegundos: 9840 })],
+      type: 'detalhado',
+    })
+    // Positiva primeiro: sem ela as negativas abaixo seriam satisfeitas pelo vazio.
+    expect(capturedTexts).toContain('2h 44m')
+    expect(capturedTexts).not.toContain('02:44:00')
+    expect(capturedTexts).not.toContain('9840')
+  })
+})
+
+// ── 132/F9 — o CRÉDITO DE SUPORTE nos KPIs do PDF ────────────────────────────
+
+/**
+ * O PDF é o artefato que **sai do sistema e vai para o cliente**: tela errada o gestor
+ * recarrega, documento errado ele já encaminhou (AP-FRONTEND-028). Daí a forma destes casos:
+ *
+ *  · **regressão zero com companheira positiva na mesma execução** — os três payloads
+ *    (chave ausente · `0` · `2`) são gerados no mesmo teste, com cardinalidades 0/0/1. Só a
+ *    metade negativa passaria com um gerador que não imprime KPI nenhum;
+ *  · **identidade dos rótulos E dos valores**, com literais escritos à mão — cardinalidade
+ *    passa quando um KPI entra e outro sai;
+ *  · **a unidade**: `creditoHoras` é HORAS. `formatSeconds(2)` imprimiria "0h 0m", que é
+ *    plausível o suficiente para nunca ser notado numa fatura.
+ */
+describe('generateClientReportPdf — crédito de horas nos KPIs (132/F9)', () => {
+  /**
+   * Números distintos entre si de propósito, para que nenhum assert passe por coincidência:
+   * "2h 0m" (o crédito) não é o valor de nenhum outro cartão.
+   */
+  function relatorio(overrides: Partial<ClientReportDto> = {}): ClientReportDto {
+    return {
+      ...REPORT,
+      client: { ...REPORT.client, horasEfetivas: 15 },
+      totalApontamentos: 3,
+      totalSegundos: 13500,
+      horasPlanoSegundos: 9900,
+      horasFaturadoSegundos: 3600,
+      horasNaoFaturadoSegundos: 0,
+      ...overrides,
+    }
+  }
+
+  async function gerar(report: ClientReportDto): Promise<string[]> {
+    capturedTexts.length = 0
+    await generateClientReportPdf({
+      report,
+      items: [makeItem({ totalSegundos: 600 })],
+      type: 'detalhado',
+    })
+    return [...capturedTexts]
+  }
+
+  it('as TRÊS variantes na mesma execução: ausente e 0 não imprimem o KPI; 2 imprime', async () => {
+    const semChave = await gerar(relatorio())
+    const zero = await gerar(relatorio({ creditoHoras: 0, horasPlanoEfetivas: 15 }))
+    const comCredito = await gerar(relatorio({ creditoHoras: 2, horasPlanoEfetivas: 17 }))
+
+    expect(semChave).not.toContain(ROTULO_CREDITO_PUBLICO)
+    expect(zero).not.toContain(ROTULO_CREDITO_PUBLICO)
+
+    // A companheira positiva: sem ela, as duas negativas acima seriam satisfeitas por um
+    // documento que não imprime KPI nenhum.
+    expect(comCredito).toContain(ROTULO_CREDITO_PUBLICO)
+    const iCredito = comCredito.indexOf(ROTULO_CREDITO_PUBLICO)
+    // O box de KPI emite dois `Text`: rótulo e, imediatamente depois, valor.
+    expect(comCredito[iCredito + 1]).toBe('2h 0m')
+    // A unidade errada: `formatSeconds(2)` daria isto.
+    expect(comCredito[iCredito + 1]).not.toBe('0h 0m')
+  })
+
+  it('regressão zero LITERAL: "não sei" e "não há" geram o mesmo documento; o com crédito difere em 2 nós', async () => {
+    const semChave = await gerar(relatorio())
+    const zero = await gerar(relatorio({ creditoHoras: 0, horasPlanoEfetivas: 15 }))
+    const comCredito = await gerar(relatorio({ creditoHoras: 2, horasPlanoEfetivas: 17 }))
+
+    // Identidade do documento inteiro, não "não contém crédito": qualquer texto novo,
+    // deslocamento de coluna ou rótulo alterado no ramo sem crédito reprova aqui.
+    expect(zero).toEqual(semChave)
+    // E o ramo com crédito difere EXATAMENTE pelo par (rótulo, valor) do KPI novo.
+    expect(comCredito).toHaveLength(semChave.length + 2)
+  })
+
+  it('identidade dos 5 KPIs de sempre + o crédito por último, rótulos E valores', async () => {
+    const textos = await gerar(relatorio({ creditoHoras: 2, horasPlanoEfetivas: 17 }))
+
+    // A fileira de KPIs vive entre o subtítulo e o cabeçalho da tabela ('Origem').
+    const bloco = textos.slice(
+      textos.indexOf('Apontamentos'),
+      textos.indexOf('Origem'),
+    )
+    const rotulos = bloco.filter((_, i) => i % 2 === 0)
+    const valores = bloco.filter((_, i) => i % 2 === 1)
+
+    expect(rotulos).toEqual([
+      'Apontamentos',
+      'Tempo Total',
+      'Plano de Suporte',
+      'Faturado',
+      'Não Faturado',
+      ROTULO_CREDITO_PUBLICO,
+    ])
+    // Literais escritos à mão: o crédito não altera nenhum dos números que já saíam.
+    expect(valores).toEqual(['3', '3h 45m', '2h 45m', '1h 0m', '0h 0m', '2h 0m'])
+  })
+
+  it('crédito fracionário: 2,75 h ⇒ "2h 45m" no documento', async () => {
+    const textos = await gerar(relatorio({ creditoHoras: 2.75, horasPlanoEfetivas: 17.75 }))
+
+    const iCredito = textos.indexOf(ROTULO_CREDITO_PUBLICO)
+    expect(iCredito).toBeGreaterThanOrEqual(0)
+    expect(textos[iCredito + 1]).toBe('2h 45m')
+  })
+
+  it('D15: o documento traz o rótulo PÚBLICO e nada do motivo interno do crédito', async () => {
+    const textos = await gerar(relatorio({ creditoHoras: 2, horasPlanoEfetivas: 17 }))
+
+    // Positiva primeiro — sem ela as negativas passariam pelo vazio.
+    expect(textos).toContain(ROTULO_CREDITO_PUBLICO)
+    const documento = textos.join(' | ')
+    expect(documento).not.toContain('Invoicy')
+    expect(documento).not.toContain('Estorno')
   })
 })

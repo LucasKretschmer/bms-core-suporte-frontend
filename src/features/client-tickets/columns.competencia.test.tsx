@@ -2,6 +2,14 @@
  * 123/FAT-1 — coluna "Concluído em" e os 3 baldes de fatura do chamado, no detalhe do
  * parceiro.
  *
+ * 🔴 **132/D1 — o que este arquivo NÃO prova mais.** Ele nunca asseverou o TEXTO dos
+ * tooltips (isso é de `competenciaTexts.test.ts`), então a inversão da regra não o derrubou.
+ * Mas duas premissas dos comentários mudaram e estão corrigidas abaixo: a data de conclusão
+ * deixou de decidir a competência, e os 3 baldes deixaram de ser all-time — agora são
+ * recortados pela janela pedida (região `⟪132 JANELA-COMPETENCIA⟫`,
+ * `ReportQueryRepository.cs:1423-1456`). O CONSUMO dos quatro campos, que é o que este
+ * arquivo trava, não mudou em nada.
+ *
  * Os quatro campos (`fechadoEm`, `faturaPlanoSegundos`, `faturaFaturadoSegundos`,
  * `faturaAnaliseSegundos`) o backend JÁ emitia — grep no painel dava zero usos fora dos
  * tipos. Este arquivo trava o consumo deles.
@@ -99,9 +107,16 @@ describe('coluna "Concluído em" — três ramos, não dois', () => {
     )
   })
 
-  it('a data de conclusão pode ser de mês DIFERENTE do apontamento — é o caso do relato', () => {
-    // O cenário inteiro da queixa: apontamento em julho, chamado fechado em agosto. A
-    // coluna existe para tornar isso legível na linha.
+  it('a data de conclusão pode ser de mês DIFERENTE do apontamento — e hoje isso é só informação', () => {
+    // O cenário inteiro da queixa de 121: apontamento em julho, chamado fechado em agosto.
+    //
+    // 🔴 **132/D1 — o FATO continua; a CONSEQUÊNCIA acabou.** As duas datas continuam podendo
+    // divergir, e a coluna continua exibindo a de conclusão. O que mudou é que ela deixou de
+    // DECIDIR a fatura: a hora de julho é faturada em julho, chamado fechado ou não
+    // (`ReportQueryRepository.cs:122-124` diz que `Ticket.FechadoEm` não participa de nenhuma
+    // decisão de fatura). A coluna FICA porque "quando o chamado encerrou" é dado operacional
+    // legítimo; quem carregava a afirmação revogada era o TOOLTIP, reescrito em 132/F3
+    // (`TOOLTIP_CONCLUIDO_EM`, travado em `competenciaTexts.test.ts`).
     expect(textoDaCelula('concluidoEm', ticket({ fechadoEm: '2026-08-01T02:00:00Z' }))).toBe(
       '31/07/2026',
     )

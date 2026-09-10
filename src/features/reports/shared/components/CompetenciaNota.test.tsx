@@ -20,7 +20,7 @@ import {
   TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
   TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE,
   TEXTO_COMPETENCIA_REGRA,
-  TEXTO_COMPETENCIA_SEM_CONCLUSAO,
+  TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO,
   TEXTO_COMPETENCIA_TITULO,
   TEXTO_COMPETENCIA_VS_SAUDE_PLANOS,
 } from '../utils/competenciaTexts'
@@ -30,9 +30,9 @@ describe('CompetenciaNota', () => {
     render(<CompetenciaNota from="2026-07-01" to="2026-07-31" />)
 
     expect(screen.getByText(TEXTO_COMPETENCIA_REGRA)).toBeInTheDocument()
-    expect(screen.getByText(TEXTO_COMPETENCIA_SEM_CONCLUSAO)).toBeInTheDocument()
+    expect(screen.getByText(TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO)).toBeInTheDocument()
     expect(
-      screen.getByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
+      screen.getByText('Mostrando as horas apontadas entre 01/07/2026 e 31/07/2026.'),
     ).toBeInTheDocument()
   })
 
@@ -41,7 +41,7 @@ describe('CompetenciaNota', () => {
     // cairia aqui.
     render(<CompetenciaNota from="2026-08-01" to="2026-08-31" />)
     expect(
-      screen.getByText('Mostrando os chamados concluídos entre 01/08/2026 e 31/08/2026.'),
+      screen.getByText('Mostrando as horas apontadas entre 01/08/2026 e 31/08/2026.'),
     ).toBeInTheDocument()
   })
 

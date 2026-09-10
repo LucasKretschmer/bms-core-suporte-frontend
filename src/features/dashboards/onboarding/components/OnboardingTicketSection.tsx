@@ -17,6 +17,7 @@ import { KpiCard } from '../../shared/components/KpiCard'
 import { KpiCardGrid } from '../../shared/components/KpiCardGrid'
 import { ExportButtons } from '../../../reports/shared/components/ExportButtons'
 import {
+  durationCell,
   exportToCsv,
   exportToXlsx,
   type ExportColumn,
@@ -49,7 +50,13 @@ function formatCount(v: number): string {
   return intlPtBr.format(v)
 }
 
-/** Converte segundos para string "Xh Ym" */
+/**
+ * Converte segundos para string "Xh Ym" — formatacao **de TELA apenas**.
+ *
+ * 134: o export NAO passa mais por aqui. Coluna de duracao viaja como numero cru
+ * (segundos) via `durationCell`, e quem formata e o nucleo (`exportTable.ts`).
+ * Nao usar esta funcao em nenhum mapper de export.
+ */
 function formatSeconds(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -64,7 +71,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Atendente', key: 'atendente' },
   { header: 'Equipe', key: 'equipe' },
   { header: 'Atendimentos', key: 'atendimentos' },
-  { header: 'Horas', key: 'horas' },
+  { header: 'Horas', key: 'horas', type: 'duration' },
 ]
 
 function mapAgentToExportRow(agent: OnboardingAgentTicketDto, index: number): ExportRow {
@@ -73,7 +80,7 @@ function mapAgentToExportRow(agent: OnboardingAgentTicketDto, index: number): Ex
     atendente: agent.nome,
     equipe: agent.equipe ?? '—',
     atendimentos: intlPtBr.format(agent.nAtendimentos),
-    horas: formatSeconds(agent.totalSegundos),
+    horas: durationCell(agent.totalSegundos),
   }
 }
 

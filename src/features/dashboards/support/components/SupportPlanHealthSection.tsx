@@ -6,6 +6,9 @@
  *
  * Export (017 Fase D): baixa o conjunto FILTRADO de planos já em memória (data.data),
  * sem ida extra ao backend. Nunca expõe categoria HubSpot — só nome do cliente/plano e métricas.
+ *
+ * 134: as duas colunas de HORAS do arquivo saem calculáveis (número + `[h]:mm:ss` no XLSX,
+ * `H:mm:ss` no CSV). A TELA não muda — este card desenha faixas/contagens, não horas.
  */
 
 import { useState } from 'react'
@@ -14,12 +17,13 @@ import { PlanHealthChart } from '../../shared/components/PlanHealthChart'
 import { ChartCard } from '../../shared/components/ChartCard'
 import { ExportButtons } from '../../../reports/shared/components/ExportButtons'
 import {
+  durationCellFromHours,
   exportToCsv,
   exportToXlsx,
   type ExportColumn,
   type ExportRow,
 } from '../../../reports/shared/utils/exportTable'
-import { formatHours, formatPercent } from '../../../reports/shared/utils/formatters'
+import { formatPercent } from '../../../reports/shared/utils/formatters'
 import {
   hasExportablePlanRows,
   hasPlanHealthData,
@@ -57,20 +61,13 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Cliente', key: 'cliente' },
   { header: 'Plano', key: 'plano' },
   { header: 'Consumo', key: 'consumo' },
-  { header: 'Horas do plano', key: 'horasPlano' },
-  { header: 'Horas usadas', key: 'horasUsadas' },
+  // 134: duração calculável no arquivo. A ORIGEM aqui está em HORAS DECIMAIS
+  // (`horasContratadas`/`horasConsumidas`), e a unidade canônica da linha é SEGUNDO
+  // INTEIRO (analise-frontend §2.1) — por isso `durationCellFromHours`, nunca `durationCell`.
+  { header: 'Horas do plano', key: 'horasPlano', type: 'duration' },
+  { header: 'Horas usadas', key: 'horasUsadas', type: 'duration' },
   { header: 'Saúde', key: 'saude' },
 ]
-
-/**
- * Horas → "Xh Ym", com traço quando o número não veio (chave de wire divergente ou
- * `null`): planilha com `NaN` viaja por e-mail e não tem como ser corrigida depois
- * (AP-FRONTEND-028). O `typeof` é proposital — o tipo diz `number`, o wire é que manda.
- */
-function formatHorasOuTraco(horas: number | null | undefined): string {
-  if (typeof horas !== 'number' || !Number.isFinite(horas)) return '—'
-  return formatHours(horas)
-}
 
 /** Nomes de campo = os que o backend emite (`MetricsDtos.cs:120-126`) — ver 123/D4. */
 function mapPlanToExportRow(item: PlanHealthItemDto): ExportRow {
@@ -78,8 +75,12 @@ function mapPlanToExportRow(item: PlanHealthItemDto): ExportRow {
     cliente: item.nomeFantasia ?? '—',
     plano: item.planNome ?? '—',
     consumo: formatPercent(item.percentualConsumo),
-    horasPlano: formatHorasOuTraco(item.horasContratadas),
-    horasUsadas: formatHorasOuTraco(item.horasConsumidas),
+    // 134: o mapper para de pré-formatar e entrega o NÚMERO cru pelo helper do núcleo.
+    // O guard de ausência (`== null`, `Number.isFinite`, clamp em 0) mora dentro dele —
+    // o traço da coluna de texto continua, a hora ausente vira célula VAZIA (§6),
+    // e o `0` legítimo continua sendo `0` (nunca ausência). Nada de conversão local.
+    horasPlano: durationCellFromHours(item.horasContratadas),
+    horasUsadas: durationCellFromHours(item.horasConsumidas),
     saude: FAIXA_LABEL[item.faixa] ?? '—',
   }
 }

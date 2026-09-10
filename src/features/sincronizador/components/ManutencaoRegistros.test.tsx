@@ -48,6 +48,24 @@ vi.mock('../../../components/ui/Toast', () => ({
   }),
 }))
 
+/**
+ * 134 · U9 — o export é **espionado**, não reescrito: `reports/shared/utils/exportTable` é
+ * território de outra unidade desta demanda (U0) e este arquivo não o edita. O mock existe
+ * só para ler as colunas que a tela entrega ao utilitário.
+ * `vi.hoisted` é obrigatório: a factory do `vi.mock` roda antes do corpo do módulo, e uma
+ * referência direta a `const` daqui cairia em TDZ.
+ */
+const { mockExportToCsv, mockExportToXlsx } = vi.hoisted(() => ({
+  mockExportToCsv: vi.fn(),
+  mockExportToXlsx: vi.fn(),
+}))
+vi.mock('../../reports/shared/utils/exportTable', () => ({
+  exportToCsv: mockExportToCsv,
+  exportToXlsx: mockExportToXlsx,
+}))
+
+import { chavesDeDuracao } from '../../../test/duracaoExport'
+import type { ExportColumn } from '../../reports/shared/utils/exportTable'
 import { ManutencaoRegistros } from './ManutencaoRegistros'
 
 function makeRegistro(overrides?: Partial<RegistroDto>): RegistroDto {
@@ -159,5 +177,68 @@ describe('ManutencaoRegistros', () => {
     await waitFor(() => {
       expect(mockHandleBusca).toHaveBeenCalledWith('busca teste')
     })
+  })
+})
+
+/**
+ * 134 · U9 — veredito "SEM duração" (análise §1.2).
+ *
+ * Manutenção de registros exporta Tipo · ID HubSpot · Assunto · Pipeline · Criado em.
+ * `Criado em` é **instante** (`formatDate`), não duração — PRD §2.4 separa os dois. Logo
+ * esta superfície fica FORA da conversão para `[h]:mm:ss`, e o veredito é travado aqui.
+ *
+ * 🔴 `toEqual([])` é asserção negativa, satisfeita pelo vazio (`rules/tests.md` § padrão 1):
+ * passaria se o clique não exportasse nada, se as colunas viessem `[]` ou se o detector
+ * estivesse morto. Por isso as duas positivas na MESMA execução (P1 e P2 abaixo).
+ */
+describe('ManutencaoRegistros — veredito "sem duração" no export (134)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockQueryState = {
+      data: [makeRegistro(), makeRegistro({ tipo: 'projeto', hubspotId: '999', pipeline: null })],
+      isFetching: false,
+      isError: false,
+      refetch: mockRefetch,
+    }
+  })
+
+  it('nenhuma das colunas do CSV/XLSX é de duração', async () => {
+    render(<ManutencaoRegistros />, { wrapper: createWrapper() })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar CSV' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar Excel' }))
+    await waitFor(() => expect(mockExportToXlsx).toHaveBeenCalledTimes(1))
+
+    const colunasCsv = mockExportToCsv.mock.calls[0][1] as ExportColumn[]
+    const colunasXlsx = mockExportToXlsx.mock.calls[0][1] as ExportColumn[]
+    const ESPERADAS = ['tipo', 'hubspotId', 'assunto', 'pipeline', 'criadoEm']
+
+    // P1 · positiva com literal à mão: a superfície REAL chegou ao utilitário de export.
+    // Vermelho se uma coluna nascer, sumir ou mudar de chave — inclusive uma de tempo.
+    expect(colunasCsv.map((c) => c.key)).toEqual(ESPERADAS)
+    expect(colunasXlsx.map((c) => c.key)).toEqual(ESPERADAS)
+
+    // P2 · o detector DISCRIMINA: marcadas, estas mesmas colunas voltam não-vazias.
+    expect(chavesDeDuracao(colunasCsv.map((c) => ({ ...c, type: 'duration' as const })))).toEqual(
+      ESPERADAS,
+    )
+
+    // VEREDITO · vermelho se alguém marcar qualquer coluna daqui como duração sem passar
+    // pelo inventário da demanda (R8 da análise: a decisão passa a ser explícita).
+    expect(chavesDeDuracao(colunasCsv)).toEqual([])
+    expect(chavesDeDuracao(colunasXlsx)).toEqual([])
+  })
+
+  it('`Criado em` sai como DATA, não como duração — é o porquê do veredito', () => {
+    render(<ManutencaoRegistros />, { wrapper: createWrapper() })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar CSV' }))
+
+    const [, , linhas] = mockExportToCsv.mock.calls[0]
+    // Literal à mão: 2026-01-15 formatado dd/MM/yyyy. Vermelho se alguém trocar o mapper
+    // por um total de tempo (e aí a coluna passaria a precisar de `type: 'duration'`).
+    expect(linhas[0].criadoEm).toBe('15/01/2026')
+    expect(linhas[0].tipo).toBe('Ticket')
+    expect(linhas[1].pipeline).toBe('—')
   })
 })

@@ -1,138 +1,42 @@
 /**
- * 127/FE-AJUDA — textos e derivação do **indicador do botão de ajuda `(?)`** da tela de
- * Consumo de Planos.
+ * 127/FE-AJUDA — textos do **botão de ajuda `(?)`** da tela de Consumo de Planos.
  *
- * ## Por que este módulo existe
+ * ## Por que este módulo continua existindo depois da 132
  *
- * Até a 127 a explicação de competência e o card de exceções ficavam abertos no topo da
- * tela. Recolhê-los atrás de um `(?)` (decisão do usuário em 08/09/2026, olhando a tela)
- * moveu para o **próprio botão** uma distinção que era feita pelo card: "não há exceções"
- * **nunca** pode parecer "a requisição falhou" (`AP-FRONTEND-021`). Com o conteúdo
- * recolhido, quem carrega essa distinção é o nome acessível do gatilho — e nome acessível
- * que afirma comportamento do sistema **é código, não copy** (`AP-FRONTEND-022`).
+ * Até a 132 este arquivo derivava um **indicador de conferência** (quatro estados,
+ * glifo e nome acessível próprios) porque o `(?)` recolhia, além da nota de
+ * competência, o **card de exceções de faturamento**. A 132/D7 removeu as exceções:
+ * com `TimeEntry.InicioEm` como competência (D1), a hora é faturada no mês em que foi
+ * **apontada** — chamado aberto ou fechado —, logo não existe mais "chamado fora de
+ * qualquer fatura" para conferir. Sem o card, não há o que indicar: o indicador, o
+ * selo e a região `role="status"` saíram junto com ele.
  *
- * Por isso a derivação mora aqui, pura e testável, e não espalhada no JSX: os **quatro**
- * estados são um conjunto fechado (`EstadoDaConferencia`), cada um com um texto e um
- * **glifo próprio** — nunca só uma cor (WCAG 1.4.1: cor não pode ser o único meio).
+ * O módulo sobrevive por um motivo só, e é o que o mantém necessário: **o nome
+ * acessível do gatilho é uma afirmação sobre o comportamento do sistema, logo é
+ * código, não copy** (`AP-FRONTEND-022`). Literal inline no JSX é o que faz um texto
+ * assim envelhecer sem que ninguém perceba — foi exatamente o que aconteceu com o
+ * rótulo antigo (abaixo).
  *
- * ## O que cada estado afirma, e a âncora de cada afirmação
+ * ## 🔴 O rótulo mudou de AFIRMAÇÃO, de propósito
  *
- * | Estado | Quando | Afirma |
- * |---|---|---|
- * | `carregando` | a query do resumo ainda não respondeu | que ainda **não se sabe** |
- * | `erro` | a query falhou **ou** veio sem `anomaliasCount` | que **falhou** — nunca "zero" |
- * | `zero` | `anomaliasCount === 0` | que nada exige conferência |
- * | `pendente` | `anomaliasCount > 0` | **quantos** chamados exigem conferência |
+ * O rótulo visível era `'Ajuda e conferência'` e o nome acessível terminava em
+ * *"…exigem conferência"*. Mantê-los prometeria ao usuário uma **conferência que
+ * deixou de existir** na tela — no mês em que a regra de competência mudou, que é
+ * justamente quando ele vai ler o `(?)` para entender o número. O texto novo afirma
+ * apenas o que o `(?)` ainda faz: explicar **como o período é contado**.
  *
- * ⚠️ **`anomaliasCount` ausente cai em `erro`, não em `zero`.** O tipo do contrato diz
- * `number`, mas quem serializa é o outro lado: um `int?` do C# chega `null`, e o guard
- * `== null` (nunca `=== undefined`) é o que cobre os dois (`AP-FRONTEND-028`). Escrever
- * "nenhum chamado exige conferência" sem ter o número é exatamente a conflação que este
- * módulo existe para impedir.
- *
- * ⚠️ **O indicador olha só a seção ACIONÁVEL (`anomalias`).** É a mesma hierarquia que o
- * card já aplica desde F-15: `postergado` é informativo e **não exige ação**, e pedir
- * atenção onde não há ação é o mesmo defeito de misturar as duas listas. Com
- * `postergado > 0` e `anomalias === 0` o selo continua neutro — e o nome acessível
- * continua distinguindo isso de um erro de carga.
+ * O nome acessível **contém** o rótulo visível (WCAG 2.5.3 — Label in Name): quem usa
+ * comando de voz fala "Ajuda" e o alvo casa.
  */
-
-/** Os quatro estados do indicador. Conjunto fechado — o `Record` abaixo obriga a tratar todos. */
-export type EstadoDaConferencia = 'carregando' | 'erro' | 'zero' | 'pendente'
-
-export type IndicadorDeConferencia = {
-  estado: EstadoDaConferencia
-  /**
-   * Glifo/número **visível** do selo — o meio não-cromático da distinção.
-   * `null` = sem selo (só o estado `zero`, que é o repouso).
-   */
-  selo: string | null
-  /**
-   * Nome acessível COMPLETO do botão — o que o leitor de tela lê **sem o usuário abrir**.
-   * É aqui, e não num ponto colorido, que a distinção erro × zero × N vive.
-   */
-  nomeAcessivel: string
-}
 
 /** Rótulo visível do gatilho. O nome acessível sempre o CONTÉM (WCAG 2.5.3). */
-export const TEXTO_AJUDA_ROTULO = 'Ajuda e conferência'
+export const TEXTO_AJUDA_ROTULO = 'Ajuda'
 
 /**
- * O sufixo do nome acessível de cada estado sem número.
- * `erro` **nomeia a falha**; nenhum deles diz "0" nem soa como conjunto vazio.
- */
-export const TEXTO_INDICADOR: Record<'carregando' | 'erro' | 'zero', string> = {
-  carregando: 'verificando se há chamados a conferir',
-  erro: 'não foi possível verificar se há chamados a conferir',
-  zero: 'nenhum chamado exige conferência',
-}
-
-/** Glifo do selo nos estados sem número. `zero` não tem selo. */
-export const SELO_INDICADOR: Record<'carregando' | 'erro', string> = {
-  carregando: '…',
-  erro: '!',
-}
-
-/** Sufixo com número, plural correto. É o "quantos" que o despacho exige. */
-export function textoConferenciaPendente(count: number): string {
-  return count === 1
-    ? '1 chamado exige conferência'
-    : `${count} chamados exigem conferência`
-}
-
-/** Monta o nome acessível: o rótulo visível + o que o indicador comunica. */
-export function nomeAcessivelDaAjuda(sufixo: string): string {
-  return `${TEXTO_AJUDA_ROTULO} — ${sufixo}`
-}
-
-export type ArgsDoIndicador = {
-  isLoading: boolean
-  isError: boolean
-  /**
-   * `anomaliasCount` do resumo. `null`/`undefined` = **não se sabe** (rede), nunca zero
-   * — ver o guard `== null` no cabeçalho.
-   */
-  anomaliasCount: number | null | undefined
-}
-
-/**
- * Deriva o indicador do `(?)` a partir do estado da query do resumo.
+ * Nome acessível do gatilho — o que o leitor de tela lê **sem o usuário abrir**.
  *
- * Ordem dos ramos, de propósito: `carregando` primeiro (é o único em que ainda não há
- * veredito nenhum), depois a **falha** — e a ausência do número é tratada como falha, não
- * como zero. Só o que sobra é dado.
+ * Não afirma prazo, limite nem contagem: descreve o conteúdo que o disclosure revela.
+ * Nada aqui é derivado de requisição, então não há estado de carga nem de falha para
+ * distinguir (era o que o indicador da 127 fazia, e o que a 132/D7 tornou sem sujeito).
  */
-export function indicadorDeConferencia({
-  isLoading,
-  isError,
-  anomaliasCount,
-}: ArgsDoIndicador): IndicadorDeConferencia {
-  if (isLoading) {
-    return {
-      estado: 'carregando',
-      selo: SELO_INDICADOR.carregando,
-      nomeAcessivel: nomeAcessivelDaAjuda(TEXTO_INDICADOR.carregando),
-    }
-  }
-  if (isError || anomaliasCount == null) {
-    return {
-      estado: 'erro',
-      selo: SELO_INDICADOR.erro,
-      nomeAcessivel: nomeAcessivelDaAjuda(TEXTO_INDICADOR.erro),
-    }
-  }
-  if (anomaliasCount <= 0) {
-    // `<= 0` e não `=== 0`: contagem negativa é dado impossível; tratá-la como "há algo a
-    // conferir" escreveria "-2 chamados exigem conferência" na tela.
-    return {
-      estado: 'zero',
-      selo: null,
-      nomeAcessivel: nomeAcessivelDaAjuda(TEXTO_INDICADOR.zero),
-    }
-  }
-  return {
-    estado: 'pendente',
-    selo: String(anomaliasCount),
-    nomeAcessivel: nomeAcessivelDaAjuda(textoConferenciaPendente(anomaliasCount)),
-  }
-}
+export const TEXTO_AJUDA_NOME_ACESSIVEL = `${TEXTO_AJUDA_ROTULO}: como o período é contado nesta tela`

@@ -4,9 +4,14 @@
  * Função pura (testável). `sortKey` reflete a whitelist do backend
  * (nomefantasia | plannome | horascontratadas | horasconsumidas | percentual).
  * AP-SECURITY-001: só nome do cliente/plano + métricas de consumo — sem categoria HubSpot.
+ *
+ * 134 — `horasContratadas`/`horasConsumidas` ganharam `durationSeconds` (o wire está em HORAS
+ * decimais): o arquivo exportado leva número somável, a TELA segue com o `accessor`
+ * (`formatHours` → `'96h 0m'`). `percentualConsumo` é PERCENTUAL e continua fora disso.
  */
 
 import { formatHours, formatPercent } from '../../../reports/shared/utils/formatters'
+import { durationCellFromHours } from '../../../reports/shared/utils/exportTable'
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { ClientRowDto } from '../types/metrics'
 
@@ -38,6 +43,7 @@ export function clienteDrillColumns(): ColumnDef<ClientRowDto>[] {
       key: 'horasContratadas',
       header: 'Horas do plano',
       accessor: (row) => formatHours(row.horasContratadas),
+      durationSeconds: (row) => durationCellFromHours(row.horasContratadas),
       sortable: true,
       sortKey: 'horascontratadas',
       align: 'right',
@@ -46,6 +52,7 @@ export function clienteDrillColumns(): ColumnDef<ClientRowDto>[] {
       key: 'horasConsumidas',
       header: 'Horas usadas',
       accessor: (row) => formatHours(row.horasConsumidas),
+      durationSeconds: (row) => durationCellFromHours(row.horasConsumidas),
       sortable: true,
       sortKey: 'horasconsumidas',
       align: 'right',

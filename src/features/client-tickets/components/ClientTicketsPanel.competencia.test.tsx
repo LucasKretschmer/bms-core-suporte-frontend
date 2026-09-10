@@ -35,7 +35,11 @@ vi.mock('../../reports/shared/services/reportsService', () => ({
   getTicketStatuses: vi.fn().mockResolvedValue([]),
   listTeams: vi.fn().mockResolvedValue([]),
 }))
-vi.mock('../../reports/shared/utils/exportTable', () => ({
+// 134 — `importOriginal`: só `exportToCsv`/`exportToXlsx` são encenados. `durationCell`
+// TEM de ser o real, senão o teste do export mediria um dublê e não o guard de ausência do
+// núcleo (o exceljs continua fora, porque só `exportToXlsx` o importa, e ele está mockado).
+vi.mock('../../reports/shared/utils/exportTable', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../reports/shared/utils/exportTable')>()),
   exportToCsv: vi.fn(),
   exportToXlsx: vi.fn(),
 }))
@@ -45,12 +49,14 @@ import { ToastProvider } from '../../../components/ui/Toast'
 import { getClientKpis, listClientTickets } from '../services/clientTicketsService'
 import { exportToCsv } from '../../reports/shared/utils/exportTable'
 import {
-  KPI_EM_ABERTO_LABEL,
-  KPI_EM_ABERTO_TEXTO,
   TEXTO_APENAS_FATURA_LABEL,
   TEXTO_DIVERGENCIA_KPI_TABELA,
   textoPeriodoDoDetalhe,
 } from '../../reports/shared/utils/competenciaTexts'
+import {
+  assertCelulasDeDuracaoSaoNumericas,
+  chavesDeDuracao,
+} from '../../../test/duracaoExport'
 import type { PlanConsumptionItemDto } from '../../reports/shared/types/reports'
 import type { ClientTicketItemDto } from '../types/clientTickets'
 
@@ -75,7 +81,6 @@ function kpiRow(partial: Partial<PlanConsumptionItemDto> = {}): PlanConsumptionI
     percentualPlano: 40,
     horasFaturaveis: 1,
     horasAnalise: 0,
-    horasEmAbertoNaoFaturadas: 3.5,
     ...partial,
   }
 }
@@ -253,31 +258,47 @@ describe('a tela declara por qual data cada número recorta', () => {
   })
 
   /**
-   * 123/FE-FIX3 (ressalva `F-2`) — prova de RENDER: as duas frases estão na MESMA dobra e
-   * deixaram de se contradizer.
+   * 🔴 **INVERTIDO em 132/F2 (D7).** Este caso era a prova de RENDER da ressalva `F-2` de
+   * 123/FE-FIX3: que a frase de período e o subtexto do cartão "Em aberto" conviviam na
+   * MESMA dobra sem se contradizer — a frase excetuava o cartão, o cartão dizia "independe
+   * do período", e as duas afirmações fechavam.
    *
-   * O irmão unitário (`competenciaTexts.test.ts`) prova o conteúdo da frase. Aqui se prova
-   * que ela e o subtexto do cartão "Em aberto" convivem no mesmo `<section>` renderizado —
-   * que era exatamente o que o QA leu na tela.
+   * **As duas pontas saíram.** O cartão foi removido do painel e a exceção saiu da frase,
+   * no mesmo commit e pelo mesmo motivo: `horasEmAbertoNaoFaturadas` saiu do wire
+   * (132/B1+B2) e, com `TimeEntry.InicioEm` como competência (D1), não existe mais hora
+   * fora de fatura esperando um chamado fechar.
    *
-   * O que deixa isto vermelho: a frase voltar a dizer "os cartões … usam este mesmo
-   * período" sem a ressalva (a redação do defeito).
+   * O caso foi invertido porque o **risco mudou de lado**: o que se prova agora é que a
+   * tela não ficou com uma exceção ÓRFÃ, apontando para um cartão que o usuário não
+   * encontra. Isso é pior que a contradição original — na contradição as duas frases
+   * existiam; aqui uma delas manda procurar o que não há.
+   *
+   * O irmão unitário (`competenciaTexts.test.ts`) prova o conteúdo da frase; aqui o sujeito
+   * é o `<section>` RENDERIZADO, que é onde o QA humano leu o defeito da `F-2`.
    */
-  it('123/FE-FIX3 (F-2): a frase do período e o cartão "Em aberto" não se contradizem na tela', async () => {
+  it('🔴 132/F2: nem o cartão "Em aberto" nem a exceção órfã estão na dobra renderizada', async () => {
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom={FROM} initialTo={TO} />)
     await waitFor(() => expect(within(resumo()).getByText('4h 0m')).toBeInTheDocument())
 
     const secao = resumo()
-    // As duas afirmações estão na mesma seção — é o que produz a contradição quando
-    // uma diz "todos os cartões" e a outra "independe do período".
-    expect(within(secao).getByText(KPI_EM_ABERTO_LABEL)).toBeInTheDocument()
-    expect(within(secao).getAllByText(KPI_EM_ABERTO_TEXTO).length).toBeGreaterThan(0)
-
     const texto = secao.textContent ?? ''
-    expect(texto).toContain('menos o cartão')
-    expect(texto).toContain(KPI_EM_ABERTO_LABEL)
-    // Controle negativo: a redação antiga, sem ressalva, não pode estar na tela.
-    expect(texto).not.toContain('Os cartões e a tabela abaixo usam este mesmo período.')
+
+    // Companheira POSITIVA: a dobra existe, carregou e afirma o período. Sem isto, tudo
+    // abaixo passaria sobre uma seção vazia ou em skeleton.
+    expect(texto).toContain('Período em uso:')
+    expect(texto).toContain('A tabela e os cartões abaixo usam este mesmo período.')
+
+    // (1) o cartão não está na tela — rótulo E subtexto, que eram dois nós distintos.
+    expect(within(secao).queryByText('Em aberto (não faturável ainda)')).not.toBeInTheDocument()
+    expect(
+      within(secao).queryByText(
+        'Total, independe do período — trabalho em chamados ainda sem data de conclusão.',
+      ),
+    ).not.toBeInTheDocument()
+
+    // (2) e a exceção não sobrou órfã no texto da dobra.
+    expect(texto).not.toContain('menos o cartão')
+    expect(texto).not.toContain('total acumulado')
   })
 
   it('mostra que os KPIs e a coluna "Tempo no período" usam datas diferentes', async () => {
@@ -332,7 +353,7 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
           faturaAnaliseSegundos: 900,
         }),
         // Segunda linha sem nenhum dos campos novos: é o backend antigo, e prova que a
-        // planilha escreve "—" em vez de "0h 0m"/"Invalid Date".
+        // planilha escreve "—"/célula vazia em vez de "0h 0m"/"Invalid Date".
         ticket({ ticketId: 2, hubspotTicketId: '10002' }),
         // Terceira linha com `null` EXPLÍCITO — a OUTRA forma de ausente no wire.
         //
@@ -342,6 +363,8 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
         // descoberta justamente para a forma de ausência que o defeito produz
         // (`rules/tests.md`: ler o resultado da mutação por CLASSE de prova, não por
         // contagem; `AP-FRONTEND-028`: testar com `null` explícito, não só `undefined`).
+        // 134: o guard passou a morar em `durationCell`, e a mutação continua valendo —
+        // por isso as três formas (ausente, `null`, zero) seguem na MESMA planilha.
         ticket({
           ticketId: 3,
           hubspotTicketId: '10003',
@@ -350,14 +373,32 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
           faturaFaturadoSegundos: null,
           faturaAnaliseSegundos: null,
         }),
+        // 134 — quarta linha: ZERO LEGÍTIMO. É a companheira positiva das asserções de
+        // ausência acima e o que separa o guard certo (`== null`) da sobre-correção
+        // (`if (!v) return null`), que devolveria vazio aqui e apagaria um dado real.
+        ticket({
+          ticketId: 4,
+          hubspotTicketId: '10004',
+          totalSeconds: 0,
+          faturaPlanoSegundos: 0,
+          faturaFaturadoSegundos: 0,
+          faturaAnaliseSegundos: 0,
+        }),
       ],
-      totalCount: 3,
+      totalCount: 4,
       page: 1,
       pageSize: 25,
       totalPages: 1,
     })
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom={FROM} initialTo={TO} />)
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+    // 134 — a TELA não muda: a tabela visível continua em "1h 0m"/"0h 25m"/"—". Sem esta
+    // prova, converter o `accessor` em vez do mapper do export passaria despercebido.
+    const tabela = screen.getByRole('table')
+    expect(within(tabela).getAllByText('1h 0m').length).toBeGreaterThan(0)
+    expect(within(tabela).getAllByText('0h 25m').length).toBeGreaterThan(0)
+    expect(within(tabela).getAllByText('—').length).toBeGreaterThan(0)
 
     await userEvent.click(screen.getByRole('button', { name: 'Baixar CSV' }))
     await waitFor(() => expect(mockedExportCsv).toHaveBeenCalledTimes(1))
@@ -380,30 +421,90 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
     ])
 
     const linhas = mockedExportCsv.mock.calls[0][2]
+    // 134 — SEGUNDOS crus, número, literais escritos à mão. Um '1h 0m' aqui é reprovação:
+    // texto pré-formatado é justamente o que impede o gestor de somar na planilha.
     expect(linhas[0]).toMatchObject({
       concluidoEm: '05/08/2026',
       naFatura: 'Sim',
-      baldePlano: '1h 0m',
-      baldeFaturado: '0h 30m',
-      baldeAnalise: '0h 15m',
+      tempo: 1500,
+      baldePlano: 3600,
+      baldeFaturado: 1800,
+      baldeAnalise: 900,
     })
+    // Ausência ⇒ célula VAZIA (`null`), nunca 0 e nunca "—" numa coluna numérica. As
+    // colunas de TEXTO ("Concluído em", "Na fatura") seguem com "—" — nada disso mudou.
     expect(linhas[1]).toMatchObject({
       concluidoEm: '—',
       naFatura: '—',
-      baldePlano: '—',
-      baldeFaturado: '—',
-      baldeAnalise: '—',
+      baldePlano: null,
+      baldeFaturado: null,
+      baldeAnalise: null,
     })
-    // `null` no wire produz o MESMO "—" — nunca "Invalid Date" nem "0h 0m".
+    // `null` no wire produz a MESMA célula vazia — nunca "Invalid Date", "0h 0m" nem 0.
     expect(linhas[2]).toMatchObject({
       concluidoEm: '—',
-      baldePlano: '—',
-      baldeFaturado: '—',
-      baldeAnalise: '—',
+      baldePlano: null,
+      baldeFaturado: null,
+      baldeAnalise: null,
     })
+    // `undefined` é o que um mapper SEM helper produziria na linha de chave ausente;
+    // exigir `null` é o que discrimina "passou pelo `durationCell`" de "passou cru".
+    expect(linhas[1].baldePlano).not.toBeUndefined()
+    // ZERO é valor: sai 0, não célula vazia. Vermelho com `if (!v) return null`.
+    expect(linhas[3].tempo).toBe(0)
+    expect(linhas[3].baldePlano).toBe(0)
+    expect(linhas[3].baldeFaturado).toBe(0)
+    expect(linhas[3].baldeAnalise).toBe(0)
     // Companheira positiva do arquivo inteiro: a linha 0 continua com valores REAIS, então
-    // nenhuma das asserções de "—" acima é satisfeita por um export que não escreve nada.
-    expect(linhas[0].tempo).toBe('0h 25m')
+    // nenhuma das asserções de vazio acima é satisfeita por um export que não escreve nada.
+    expect(linhas[0].tempo).toBe(1500)
+  })
+
+  /**
+   * 134/§9.3 — invariante da superfície S5. A enumeração NÃO é mantida à mão: sai do
+   * `chavesDeDuracao` sobre as colunas que o componente REALMENTE passou ao export.
+   *
+   * O que fica vermelho: tirar o `type: 'duration'` de qualquer uma das 4 (identidade, não
+   * cardinalidade — trocar uma pela outra também reprova); marcar como duração uma coluna
+   * que não é (`apontamentos` é CONTAGEM, `concluidoEm` é INSTANTE); e o mapper voltar a
+   * pré-formatar em qualquer das 4 chaves derivadas.
+   */
+  it('as 4 colunas de duração são exatamente {tempo, baldePlano, baldeFaturado, baldeAnalise}', async () => {
+    mockedTickets.mockResolvedValue({
+      items: [
+        ticket({
+          ticketId: 1,
+          hubspotTicketId: '10001',
+          faturaPlanoSegundos: 3600,
+          faturaFaturadoSegundos: 1800,
+          faturaAnaliseSegundos: 900,
+        }),
+        ticket({ ticketId: 2, hubspotTicketId: '10002' }),
+      ],
+      totalCount: 2,
+      page: 1,
+      pageSize: 25,
+      totalPages: 1,
+    })
+    renderPanel(<ClientTicketsPanel clientId={1} initialFrom={FROM} initialTo={TO} />)
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Baixar CSV' }))
+    await waitFor(() => expect(mockedExportCsv).toHaveBeenCalledTimes(1))
+
+    const colunas = mockedExportCsv.mock.calls[0][1]
+    const linhas = mockedExportCsv.mock.calls[0][2]
+
+    expect(new Set(chavesDeDuracao(colunas))).toEqual(
+      new Set(['tempo', 'baldePlano', 'baldeFaturado', 'baldeAnalise']),
+    )
+    // Negativas nomeadas: contagem e instante NÃO são duração (PRD §2.4).
+    expect(chavesDeDuracao(colunas)).not.toContain('apontamentos')
+    expect(chavesDeDuracao(colunas)).not.toContain('concluidoEm')
+
+    // Derivado: para cada chave acima, o mapper devolve `number | null` — nunca "2h 44m".
+    // O helper começa pelos dois controles positivos contra "satisfeito pelo vazio".
+    assertCelulasDeDuracaoSaoNumericas(colunas, linhas)
   })
 
   it('com o toggle ligado, o export sai com apenasFatura=true', async () => {

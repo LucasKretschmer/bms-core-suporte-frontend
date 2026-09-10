@@ -6,6 +6,7 @@ import {
   formatMonth,
   formatPercent,
   formatSeconds,
+  hoursToSeconds,
   secondsToHours,
 } from './formatters'
 
@@ -48,6 +49,37 @@ describe('formatHours', () => {
 
   it('converte 0 para "0h 0m"', () => {
     expect(formatHours(0)).toBe('0h 0m')
+  })
+})
+
+describe('hoursToSeconds (134 — inverso exato de secondsToHours)', () => {
+  it('2,7333333 h → 9840 s (Math.round, o MESMO de formatHours — nunca floor)', () => {
+    expect(hoursToSeconds(2.7333333)).toBe(9840)
+  })
+
+  it('26,5 h → 95400 s — sem teto de 24 h', () => {
+    expect(hoursToSeconds(26.5)).toBe(95400)
+  })
+
+  it('é o inverso de secondsToHours para valores inteiros de segundo', () => {
+    expect(hoursToSeconds(secondsToHours(9840))).toBe(9840)
+  })
+})
+
+/**
+ * T-TELA-1 (demanda 134): a TELA continua em "2h 44m". A demanda muda só o arquivo
+ * baixado. Fica vermelho se alguém "resolver" a 134 mexendo no formatador de exibição.
+ */
+describe('T-TELA-1 · o formato de tela não mudou com a 134', () => {
+  it('formatSeconds(9840) continua "2h 44m" e formatHours(2.7333333) também', () => {
+    expect(formatSeconds(9840)).toBe('2h 44m')
+    expect(formatHours(2.7333333)).toBe('2h 44m')
+  })
+
+  it('a tela NÃO passa a exibir o formato calculável do export', () => {
+    // Negativa com companheira positiva na mesma execução (a linha acima).
+    expect(formatSeconds(95400)).toBe('26h 30m')
+    expect(formatSeconds(95400)).not.toBe('26:30:00')
   })
 })
 

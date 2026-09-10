@@ -1,14 +1,30 @@
 /**
- * 121/§4.5 — KPI "Em aberto (não faturável ainda)" no painel de chamados do cliente.
+ * 121/§4.5 + 🔴 **132/F2 (D7)** — o painel de chamados do cliente e o cartão que **saiu**
+ * dele.
  *
- * Hooks reais; só a camada de serviço é fake (mesmo padrão de
- * `ClientTicketsPanel.periodo-kpis.test.tsx`, da unidade WEB-1 — não mexo nos arquivos
- * dela, este é um arquivo novo).
+ * ## O que este arquivo travava, e o que ele trava agora
  *
- * Dois pontos que este arquivo existe para travar:
- *  1. o valor é ESTOQUE all-time e a tela **diz** que independe do período (§12/R12) —
- *     sem esse texto o relato P4 ("o filtro de data não tem efeito") volta;
- *  2. campo AUSENTE ⇒ "—", nunca "0h 0m" (AP-FRONTEND-021).
+ * Ele nasceu para provar o KPI "Em aberto (não faturável ainda)": que o valor era ESTOQUE
+ * all-time, que a tela **dizia** que ele independia do período (§12/R12), e que campo
+ * ausente/`null` virava `"—"` e nunca `"0h 0m"` (AP-FRONTEND-021).
+ *
+ * **O cartão não existe mais.** `horasEmAbertoNaoFaturadas` saiu do wire de
+ * `/metrics/plan-consumption` na 132/B1+B2, e o cartão — o **segundo consumidor** do
+ * campo — saiu daqui na 132/F2. Com `TimeEntry.InicioEm` como competência (132/D1), a
+ * hora é faturada no mês em que foi apontada, chamado aberto ou fechado: "trabalho em
+ * aberto fora de qualquer fatura" deixou de ser um conjunto.
+ *
+ * Os 6 casos daquele KPI foram **INVERTIDOS, não apagados** — viraram um bloco que afirma
+ * a ausência do cartão **com a identidade nominal dos 6 que ficaram** ao lado. Asserção
+ * negativa pura ("não vejo o cartão") passaria com o painel inteiro quebrado; a
+ * identidade é a companheira positiva que a torna capaz de discriminar
+ * (`rules/tests.md` § padrão 1).
+ *
+ * O resto do arquivo — a coluna "Na fatura", os 3 baldes e o **export** — não foi tocado
+ * pela 132: continua provando que `null`/ausente viram `"—"` nos quatro lugares
+ * (AP-FRONTEND-028), agora para os campos de `TicketReportItemDto`, que a 132 não mexeu.
+ *
+ * Hooks reais; só a camada de serviço é fake.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
@@ -27,9 +43,14 @@ vi.mock('../../reports/shared/services/reportsService', () => ({
   listTeams: vi.fn().mockResolvedValue([]),
 }))
 // O export é o 4º ramo de "Na fatura" (121/F4): ele tem a MESMA conflação que a coluna
-// visível, e num CSV a afirmação falsa sobrevive na planilha do gestor. Mockado para
+// visível, e num CSV a afirmação falsa sobrevive na planilha do gestor. Encenado para
 // inspecionar as linhas geradas (e para não importar o exceljs lazy).
-vi.mock('../../reports/shared/utils/exportTable', () => ({
+//
+// 134 — `importOriginal`: só `exportToCsv`/`exportToXlsx` são dublês. `durationCell` TEM de
+// ser o real, senão o teste do export mediria o dublê e não o guard de ausência do núcleo.
+// O exceljs continua fora, porque só `exportToXlsx` o importa (dinamicamente) e ele é dublê.
+vi.mock('../../reports/shared/utils/exportTable', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../reports/shared/utils/exportTable')>()),
   exportToCsv: vi.fn(),
   exportToXlsx: vi.fn(),
 }))
@@ -122,9 +143,15 @@ function resumo(): HTMLElement {
  * medir outra coluna. O controle positivo abaixo garante que a derivação não é vacuosa.
  */
 const IDX_NA_FATURA = buildClientTicketsColumns().findIndex((c) => c.key === 'naFatura')
+/** 134 — mesmo raciocínio, para provar que a COLUNA VISÍVEL do balde não mudou. */
+const IDX_BALDE_PLANO = buildClientTicketsColumns().findIndex((c) => c.key === 'baldePlano')
 
 function celulaNaFatura(linha: HTMLElement): HTMLElement {
   return within(linha).getAllByRole('cell')[IDX_NA_FATURA]
+}
+
+function celulaBaldePlano(linha: HTMLElement): HTMLElement {
+  return within(linha).getAllByRole('cell')[IDX_BALDE_PLANO]
 }
 
 beforeEach(() => {
@@ -138,66 +165,77 @@ beforeEach(() => {
   })
 })
 
-describe('KPI "Em aberto (não faturável ainda)" (121/§4.5)', () => {
-  it('mostra o valor do backend com literal escrito à mão (3.5 h → "3h 30m")', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 3.5 }))
-    renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
+describe('🔴 o KPI "Em aberto (não faturável ainda)" foi REMOVIDO (132/F2, D7)', () => {
+  /**
+   * Identidade NOMINAL dos cartões que sobraram, não cardinalidade: a grade caiu de 7
+   * para 6, e um assert de contagem (`toHaveLength(6)`) passaria com um cartão entrando e
+   * outro saindo (`rules/tests.md` § "cardinalidade simétrica não discrimina"). Os nomes
+   * são literais escritos à mão, na ordem em que a tela os renderiza.
+   *
+   * Cartão novo aqui reprova e obriga a declarar — é o comportamento desejado. A 132
+   * abriu espaço na grade e a análise §5.3 registra um KPI de crédito como
+   * **oportunidade, não requisito**: se ele entrar, entra por esta lista.
+   */
+  const CARTOES_QUE_FICAM = [
+    'Plano',
+    'Horas usadas',
+    'Horas restantes',
+    'Extras (estouro)',
+    'Faturável por fora',
+    '% do plano',
+  ]
 
-    // Espera pelo VALOR, não pelo rótulo: o rótulo já existe durante o skeleton, e
-    // esperar por ele mediria a fase errada (o assert rodaria no loading).
-    await waitFor(() => expect(within(resumo()).getByText('3h 30m')).toBeInTheDocument())
-    expect(within(resumo()).getByText('Em aberto (não faturável ainda)')).toBeInTheDocument()
-  })
-
-  it('ZERO é um valor, não ausência: 0 → "0h 0m"', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 0 }))
-    renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
-
-    await waitFor(() => expect(within(resumo()).getByText('0h 0m')).toBeInTheDocument())
-  })
-
-  it('campo AUSENTE → "—", nunca "0h 0m" (backend sem FAT-3; AP-FRONTEND-021)', async () => {
-    // `kpiRow({})` não traz `horasEmAbertoNaoFaturadas`: é o estado real entre os
-    // deploys. Um `?? 0` aqui afirmaria "não há trabalho em aberto".
+  it('o cartão não está na tela — e os 6 que ficaram continuam, nominalmente', async () => {
     mockedKpis.mockResolvedValue(kpiRow({}))
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
 
-    // Discriminador: espera um KPI que VEIO preenchido (4 h usadas). Só então a
-    // ausência do "0h 0m" prova algo — sem isso o assert passaria no loading.
+    // Discriminador: espera um KPI que VEIO preenchido (4 h usadas). Sem isto a ausência
+    // do cartão seria satisfeita pelo próprio skeleton do loading — o defeito de "prova
+    // por ausência com o ponto observado inalcançado" (`rules/tests.md`).
     await waitFor(() => expect(within(resumo()).getByText('4h 0m')).toBeInTheDocument())
-    expect(within(resumo()).getByText('Em aberto (não faturável ainda)')).toBeInTheDocument()
-    expect(within(resumo()).queryByText('0h 0m')).not.toBeInTheDocument()
-    expect(within(resumo()).getAllByText('—').length).toBeGreaterThan(0)
+
+    // A companheira POSITIVA, na mesma execução e no mesmo recorte.
+    for (const rotulo of CARTOES_QUE_FICAM) {
+      expect(
+        within(resumo()).getByText(rotulo),
+        `o cartão "${rotulo}" desapareceu da grade`,
+      ).toBeInTheDocument()
+    }
+
+    // E a negativa, que é o requisito da 132/F2.
+    expect(within(resumo()).queryByText('Em aberto (não faturável ainda)')).not.toBeInTheDocument()
   })
 
-  it('campo `null` → "—" também: `null` é a OUTRA forma de ausente (121/F4)', async () => {
-    // O que um `decimal?` do C# serializa. Com o guard `=== undefined`, `null` caía em
-    // `formatHours(null)` = "0h 0m" — afirmando ZERO onde o valor é DESCONHECIDO.
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: null }))
+  it('🔴 nem o subtexto de estoque all-time sobrou (a frase inteira, não só o rótulo)', async () => {
+    // O rótulo e o subtexto eram DOIS textos, e remover só o primeiro deixaria na tela
+    // uma frase órfã afirmando que existe um número que independe do período.
+    mockedKpis.mockResolvedValue(kpiRow({}))
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
 
-    // Mesmo discriminador do caso AUSENTE: sem um KPI já preenchido na tela, a ausência
-    // do "0h 0m" seria satisfeita pelo próprio loading.
     await waitFor(() => expect(within(resumo()).getByText('4h 0m')).toBeInTheDocument())
-    expect(within(resumo()).getByText('Em aberto (não faturável ainda)')).toBeInTheDocument()
-    expect(within(resumo()).queryByText('0h 0m')).not.toBeInTheDocument()
-    expect(within(resumo()).getAllByText('—').length).toBeGreaterThan(0)
+    expect(within(resumo()).queryByText(TEXTO_ESTOQUE)).not.toBeInTheDocument()
+    // Controle positivo do LITERAL: se a constante virar string vazia, o `queryByText`
+    // acima passa por vacuidade. Este assert garante que ela ainda descreve algo.
+    expect(TEXTO_ESTOQUE).toContain('independe do período')
   })
 
-  it('a tela DIZ que o número independe do período (§12/R12 — senão o relato P4 volta)', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 3.5 }))
+  it('a grade não deixou buraco: os 6 cartões e nenhum valor perdido de "—"', async () => {
+    // `kpiRow({})` tem TODOS os campos preenchidos e distintos entre si. Antes da 132 este
+    // fixture produzia pelo menos um "—" na grade (o cartão "Em aberto", cujo campo o
+    // fixture não trazia). Agora não deve haver nenhum: se aparecer, é cartão lendo campo
+    // que saiu do wire — exatamente a regressão que a 132/B1+B2 criou e a F2 fecha.
+    mockedKpis.mockResolvedValue(kpiRow({}))
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
 
-    await waitFor(() =>
-      expect(within(resumo()).getByText(TEXTO_ESTOQUE)).toBeInTheDocument(),
-    )
+    await waitFor(() => expect(within(resumo()).getByText('4h 0m')).toBeInTheDocument())
+    expect(within(resumo()).queryAllByText('—')).toEqual([])
   })
 
   it('durante o LOADING não exibe valor nenhum (nem "—", que afirmaria ausência)', () => {
     mockedKpis.mockReturnValue(new Promise(() => {}))
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
 
-    expect(within(resumo()).queryByText('3h 30m')).not.toBeInTheDocument()
+    expect(within(resumo()).queryByText('4h 0m')).not.toBeInTheDocument()
     expect(within(resumo()).queryByText('0h 0m')).not.toBeInTheDocument()
     expect(within(resumo()).getAllByLabelText('Carregando…').length).toBeGreaterThan(0)
   })
@@ -209,10 +247,11 @@ describe('Coluna "Na fatura" no painel', () => {
     // `undefined`, e os asserts abaixo falhariam por motivo errado (ou, num
     // `queryByText`, passariam vacuamente).
     expect(IDX_NA_FATURA).toBeGreaterThanOrEqual(0)
+    expect(IDX_BALDE_PLANO).toBeGreaterThanOrEqual(0)
   })
 
   it('renderiza "Sim"/"Não" a partir de entraNaFatura, e "—" quando o campo falta', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 3.5 }))
+    mockedKpis.mockResolvedValue(kpiRow({}))
     mockedTickets.mockResolvedValue({
       items: [
         ticket({ ticketId: 1, hubspotTicketId: '10001', entraNaFatura: true }),
@@ -234,7 +273,7 @@ describe('Coluna "Na fatura" no painel', () => {
   })
 
   it('entraNaFatura `null` na LINHA rende "—", nunca "Não" (121/F4, na tabela real)', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 3.5 }))
+    mockedKpis.mockResolvedValue(kpiRow({}))
     mockedTickets.mockResolvedValue({
       items: [
         // Cardinalidade assimétrica de propósito: 1 linha com `true` e 2 com ausência
@@ -263,7 +302,7 @@ describe('Coluna "Na fatura" no painel', () => {
   })
 
   it('no EXPORT, entraNaFatura `null` sai como "—" e nunca como "Não" (121/F4)', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 3.5 }))
+    mockedKpis.mockResolvedValue(kpiRow({}))
     mockedTickets.mockResolvedValue({
       items: [
         ticket({ ticketId: 1, hubspotTicketId: '10001', entraNaFatura: true }),
@@ -289,8 +328,69 @@ describe('Coluna "Na fatura" no painel', () => {
     expect(linhas[2].naFatura).toBe('Não')
   })
 
+  /**
+   * 134 — a MESMA lição deste arquivo ("ausente nunca vira zero"), agora na superfície que
+   * `AP-FRONTEND-028` chama de mais grave: o arquivo que sai do sistema.
+   *
+   * As colunas de duração deixaram de levar texto e levam SEGUNDOS. Ausência ⇒ célula
+   * VAZIA (`null`): na planilha ela não conta em SOMA/MÉDIA e não afirma nada. Um `0` ali
+   * afirmaria "nenhuma hora neste balde" — a mentira exata que o cartão "Em aberto" já
+   * produziu neste painel (`formatHours(null)` → "0h 0m") **antes de a 132/F2 removê-lo**.
+   * A citação é HISTÓRICA de propósito: o cartão não existe mais, mas o defeito que ele
+   * cometeu é o melhor exemplo do que este guard impede.
+   *
+   * Cardinalidade ASSIMÉTRICA de propósito (1 com valor · 2 ausentes · 1 zero): com um de
+   * cada, inverter o ramo do guard ainda passaria.
+   *
+   * O que fica vermelho: guard `=== undefined` (a linha `null` sairia 0);
+   * `if (!v) return null` (a linha de zero sumiria); mapper voltando a `baldeTexto`
+   * (sairia "—"/"1h 0m"); e mudar a TELA junto (as células visíveis abaixo).
+   */
+  it('134 — no EXPORT, balde ausente sai VAZIO e zero sai 0 (a tela segue em "—"/"0h 0m")', async () => {
+    mockedKpis.mockResolvedValue(kpiRow({}))
+    mockedTickets.mockResolvedValue({
+      items: [
+        ticket({ ticketId: 1, hubspotTicketId: '10001', faturaPlanoSegundos: 3600 }),
+        // `null` explícito — a forma de ausência que `=== undefined` deixa passar.
+        ticket({ ticketId: 2, hubspotTicketId: '10002', faturaPlanoSegundos: null }),
+        // Chave ausente — o backend anterior a FAT-3.
+        ticket({ ticketId: 3, hubspotTicketId: '10003' }),
+        // Zero legítimo: o backend RESPONDEU que não há horas neste balde.
+        ticket({ ticketId: 4, hubspotTicketId: '10004', faturaPlanoSegundos: 0 }),
+      ],
+      totalCount: 4,
+      page: 1,
+      pageSize: 25,
+      totalPages: 1,
+    })
+    renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+    // A TELA (as outras 3 superfícies do mesmo campo) não mudou: "1h 0m", "—", "0h 0m".
+    const linhasTela = screen.getAllByRole('row')
+    expect(celulaBaldePlano(linhasTela[1])).toHaveTextContent('1h 0m')
+    expect(celulaBaldePlano(linhasTela[2])).toHaveTextContent('—')
+    expect(celulaBaldePlano(linhasTela[3])).toHaveTextContent('—')
+    expect(celulaBaldePlano(linhasTela[4])).toHaveTextContent('0h 0m')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Baixar CSV' }))
+    await waitFor(() => expect(mockedExportCsv).toHaveBeenCalledTimes(1))
+
+    const linhas = mockedExportCsv.mock.calls[0][2]
+    // Companheira positiva primeiro: o export escreveu valor de verdade nesta coluna.
+    expect(linhas[0].baldePlano).toBe(3600)
+    expect(linhas[1].baldePlano).toBeNull()
+    expect(linhas[2].baldePlano).toBeNull()
+    // As duas mentiras possíveis, nomeadas: nem zero, nem o travessão da tela.
+    expect(linhas[1].baldePlano).not.toBe(0)
+    expect(linhas[1].baldePlano).not.toBe('—')
+    expect(linhas[2].baldePlano).not.toBe(0)
+    // E zero continua sendo zero — não é ausência.
+    expect(linhas[3].baldePlano).toBe(0)
+  })
+
   it('o cabeçalho "Tempo do plano" deixou de existir na tabela', async () => {
-    mockedKpis.mockResolvedValue(kpiRow({ horasEmAbertoNaoFaturadas: 0 }))
+    mockedKpis.mockResolvedValue(kpiRow({}))
     renderPanel(<ClientTicketsPanel clientId={1} initialFrom="2026-07-01" initialTo="2026-07-31" />)
 
     await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())

@@ -236,6 +236,17 @@ const COLISOES_ACEITAS: readonly string[] = [
  * consciente, não silêncio.
  */
 const NAO_RESOLVIDAS_ACEITAS: readonly string[] = [
+  // ── 132 (telas novas sob GerentePlus) ────────────────────────────────────────────────
+  // Três chaves, três prefixos DISTINTOS: nenhuma delas colide com outra fonte (o teste
+  // seguinte, que trata as não resolvidas como resolvidas, é quem prova isso).
+  // ⚠️ A entrada de `hour-credits` é da unidade F5, que está sendo desenvolvida na mesma
+  // janela; foi acrescentada AQUI, pela F7/F8, porque o invariante já estava vermelho por
+  // causa dela e a árvore é compartilhada. **Não duplicar** ao integrar a F5 — a lista é
+  // comparada por igualdade, e uma linha repetida reprova.
+  "src/features/billing-periods/hooks/useBillingPeriodComparison.ts | BILLING_PERIOD_COMPARISON_QUERY_KEY",
+  "src/features/billing-periods/hooks/useBillingPeriods.ts | BILLING_PERIODS_QUERY_KEY",
+  'src/features/hour-credits/hooks/useHourCredits.ts | HOUR_CREDITS_QUERY_KEY',
+  // ─────────────────────────────────────────────────────────────────────────────────────
   'src/features/client-tickets/hooks/useClientTickets.ts | `client-tickets:${clientId}`',
   "src/features/movimentacao-diaria/hooks/useMovimentacaoDiariaLogs.ts | 'movimentacao-diaria-logs'",
   "src/features/reports/appointments/hooks/useAppointments.ts | 'tickets-report'",

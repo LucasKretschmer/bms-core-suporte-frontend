@@ -372,6 +372,10 @@ describe('TimeEntryModal — 6 textos auxiliares dentro do modal', () => {
         ticketLabel="#4321 — Erro ao emitir nota"
         agentOptions={[{ value: '1', label: 'Ana' }]}
         categoryOptions={[{ value: '2', label: 'Consultoria' }]}
+        // 133: SEM trava de propósito — o texto de apoio medido aqui é o genérico, e é
+        // a lista das 6 frases abaixo que este caso protege. A trava tem contraste
+        // próprio, medido em `TimeEntryModal.test.tsx` (T-FE2-7).
+        categoriasQueForcam={new Set()}
         canChangeAgent
         currentUserId={1}
         canManage={false}

@@ -42,16 +42,58 @@ const TOKENS = lerTokensDeCor(derivarCascataDeCssDoApp(lerDoDisco), lerDoDisco)
 
 describe('faturamentoTheme — contraste (piso AA de 4.5:1, inviolável)', () => {
   it('o conjunto de pares auditados é exatamente o esperado (não encolhe em silêncio)', () => {
+    /**
+     * 🔴 **132/F1 — de 6 para 4, e a diferença é NOMINAL, não numérica.**
+     *
+     * Saíram os dois pares do card de exceções de faturamento (`título/contagem` e
+     * `subtexto`), porque a 132/D7 apagou o card: com `TimeEntry.InicioEm` como
+     * competência (D1), não existe mais "chamado fora de qualquer fatura" para conferir.
+     * Com eles saíram os tokens `--color-excecao-fatura-fg/-bg` de `global.css` — e é
+     * por isso que a remoção precisa acontecer **aqui no mesmo commit**: o caso
+     * `it.each` seguinte exige que cada `fgToken`/`bgToken` deste inventário **exista no
+     * CSS real**, então um par sobrevivente apontando para token apagado reprovaria
+     * nomeando o token (comportamento correto do invariante).
+     *
+     * Os outros dois foram **reescritos, não removidos**: eles diziam "do modal", e o
+     * modal era o de exceções. O par continua real; o rótulo é que envelheceu
+     * (`AP-QA-044`). Ver o comentário ao lado deles em `faturamentoTheme.ts`.
+     *
+     * ✅ **132/F4b entrou: de 4 para 5.** O par novo é o `+2h` verde da coluna
+     * "Qtde. Plano (h)" (`--color-success-fg` sobre `--color-card`). O aviso que a F1 deixou
+     * aqui — *"quando ela entrar, esta lista vai a 5"* — foi cumprido **nominalmente**: é
+     * este assert que obrigou a declarar o nome do par, em vez de deixá-lo entrar sem
+     * medição. A razão medida está no controle de valor abaixo.
+     */
     expect(new Set(FATURA_CONTRAST_PAIRS.map((p) => p.label))).toEqual(
       new Set([
         'badge "Na fatura: Sim"',
         'badge "Na fatura: Não"',
-        'card de exceções — título/contagem',
-        'card de exceções — subtexto (foreground sobre o fundo de alerta)',
         'texto secundário e aba inativa (muted sobre card)',
-        'aba ativa do modal (primary sobre card)',
+        'aba ativa e link em tabela (primary sobre card)',
+        'crédito de horas (+Xh) na coluna Qtde. Plano',
       ]),
     )
+  })
+
+  it('132/F4b — a razão MEDIDA do verde do crédito, com o número escrito à mão', () => {
+    /**
+     * `rules/frontend.md` § Contraste: **AA é piso inviolável e ele se MEDE.** O `it.each`
+     * acima já reprovaria abaixo de 4,5:1, mas ele não deixa o NÚMERO registrado em lugar
+     * nenhum — e "passou o piso" não é medição, é aprovação.
+     *
+     * Os dois valores abaixo são literais escritos à mão, medidos com este mesmo
+     * `contrastRatio` no dia da entrega (2026-09-09):
+     *  · `#008000` sobre `--color-card` (`#ffffff`)      → **5,14:1**  (a superfície real);
+     *  · `#008000` sobre `--color-background` (`#f0f4f7`) → **4,65:1**  (medido também, porque
+     *    §3.4 da análise manda medir o fundo da página caso a tabela caia sobre ele — hoje ela
+     *    não cai, e mesmo se cair o par passa).
+     *
+     * O que deixa isto vermelho: escurecer/clarear `--color-success-fg` (aí o `it.each` do hex
+     * também cai, nomeando o token) ou trocar o fundo da célula.
+     */
+    expect(contrastRatio('#008000', '#ffffff')).toBeCloseTo(5.14, 2)
+    expect(contrastRatio('#008000', '#f0f4f7')).toBeCloseTo(4.65, 2)
+    expect(contrastRatio('#008000', '#f0f4f7')).toBeGreaterThanOrEqual(PISO_AA)
   })
 
   it.each(FATURA_CONTRAST_PAIRS)(
@@ -81,6 +123,11 @@ describe('faturamentoTheme — contraste (piso AA de 4.5:1, inviolável)', () =>
     // token foi escurecido para #a85800 em 125/FE-A11Y-3 e hoje mede 5.00:1; lê-lo da
     // cascata aqui deixaria este controle positivo inerte. Se este assert deixar de
     // valer, o cálculo virou inerte.
+    //
+    // 🔴 132/F1 — `#fffbef` era TAMBÉM o valor de `--color-excecao-fatura-bg`, que este
+    // commit apagou de `global.css`. O controle positivo NÃO quebra por isso, e não é
+    // sorte: ele é `--color-warning-bg` (`global.css:33`, ainda lá) e está escrito como
+    // literal justamente para não depender de token nenhum. Verificado antes de remover.
     const razao = contrastRatio('#e07600', '#fffbef')
     expect(razao).toBeLessThan(PISO_AA)
     expect(razao).toBeCloseTo(3.0, 1)

@@ -1,6 +1,10 @@
 import type { ColumnDef } from '../../components/ui/DataTable/types'
 import { Switch } from '../../components/ui/Switch'
-import type { ServiceCategoryDto } from './types/serviceCategory'
+import {
+  forcaCobrancaForaDoPlano,
+  rotuloCobrancaForaDoPlano,
+  type ServiceCategoryDto,
+} from './types/serviceCategory'
 
 type BuildColumnsArgs = {
   onToggle: (category: ServiceCategoryDto) => void
@@ -37,6 +41,32 @@ export function buildCategoryColumns({
       accessor: (row) => (
         <span className={row.isActive ? 'text-foreground' : 'text-foreground/70'}>{row.nome}</span>
       ),
+    },
+    {
+      /**
+       * 133 — somente leitura. A edição da flag mora no modal "Editar categoria": uma
+       * segunda via de escrita (toggle direto na linha) seria uma segunda chamada de
+       * escrita para o mesmo campo, e é fábrica de divergência (`arquitetura.md` §4.3).
+       */
+      key: 'cobrancaForaDoPlano',
+      header: 'Cobrança fora do plano',
+      align: 'center',
+      width: '190px',
+      accessor: (row) => {
+        const forca = forcaCobrancaForaDoPlano(row)
+        return (
+          <span
+            className={forca ? 'text-foreground' : 'text-foreground/70'}
+            aria-label={`${row.nome}: ${
+              forca
+                ? 'sempre cobrada fora do plano de suporte'
+                : 'não força cobrança fora do plano'
+            }`}
+          >
+            {rotuloCobrancaForaDoPlano(row)}
+          </span>
+        )
+      },
     },
     {
       key: 'ativa',

@@ -10,9 +10,18 @@ export type TableParams<TFilters> = {
   filters: TFilters
 }
 
-type UseServerTableOptions<TFilters, TRow> = {
+/**
+ * 🔴 **132/F4d — o 3º genérico existe para NÃO ESTREITAR a resposta.**
+ *
+ * `TResp` tem default `PaginatedResponse<TRow>`, então os call sites existentes não mudam uma
+ * linha. Sem ele, uma resposta que HERDA de `PaginatedResponse` (o envelope de D12, com
+ * `fonte`/`competencia`/`aviso*`) perderia os campos extras **no tipo**: eles existiriam em
+ * runtime e a tela não conseguiria lê-los sem `as`, que é proibido. O selo de mês fechado
+ * simplesmente nunca apareceria, sem erro nenhum.
+ */
+type UseServerTableOptions<TFilters, TResp> = {
   queryKey: string
-  queryFn: (params: TableParams<TFilters>) => Promise<PaginatedResponse<TRow>>
+  queryFn: (params: TableParams<TFilters>) => Promise<TResp>
   initialFilters: TFilters
   initialPageSize?: number
   initialSortBy?: string | null
@@ -21,8 +30,8 @@ type UseServerTableOptions<TFilters, TRow> = {
   enabled?: boolean
 }
 
-type UseServerTableReturn<TFilters, TRow> = {
-  data: PaginatedResponse<TRow> | undefined
+type UseServerTableReturn<TFilters, TResp> = {
+  data: TResp | undefined
   isLoading: boolean
   isError: boolean
   refetch: () => void
@@ -48,7 +57,11 @@ type UseServerTableReturn<TFilters, TRow> = {
  *
  * queryKey inclui todos os parâmetros para cache correto por filtro.
  */
-export function useServerTable<TFilters extends object, TRow>({
+export function useServerTable<
+  TFilters extends object,
+  TRow,
+  TResp extends PaginatedResponse<TRow> = PaginatedResponse<TRow>,
+>({
   queryKey,
   queryFn,
   initialFilters,
@@ -56,7 +69,7 @@ export function useServerTable<TFilters extends object, TRow>({
   initialSortBy = null,
   initialSortDirection = 'desc',
   enabled = true,
-}: UseServerTableOptions<TFilters, TRow>): UseServerTableReturn<TFilters, TRow> {
+}: UseServerTableOptions<TFilters, TResp>): UseServerTableReturn<TFilters, TResp> {
   const [page, setPageState] = useState(1)
   const [pageSize, setPageSizeState] = useState(initialPageSize)
   const [sortBy, setSortBy] = useState<string | null>(initialSortBy)

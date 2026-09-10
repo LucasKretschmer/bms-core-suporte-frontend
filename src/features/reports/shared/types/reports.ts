@@ -3,6 +3,8 @@
  * Nunca usar 'any'. Nunca duplicar tipos do backend.
  */
 
+import type { PaginatedResponse } from '../../../../types/api'
+
 // ── Comuns ──────────────────────────────────────────────────────────────────
 
 export type RequesterDto = {
@@ -78,25 +80,152 @@ export type PlanConsumptionItemDto = {
   horasFaturaveis: number
   horasAnalise: number
 
+  // ── 132/F4 — PLANO EFETIVO (aditivos) ──────────────────────────────────────
+  //
+  // 🔴 D11/D21 — a coluna "Qtde. Plano (h)" passa a exibir `15h + 2h`: o plano BASE
+  // mais o crédito de horas da competência. As três derivadas (`horasRestantes`,
+  // `percentualPlano`, `horasAdicionais`) JÁ chegam calculadas sobre o plano EFETIVO
+  // (`ReportQueryRepository.cs:1017-1043` → `CalculadoraPlanoEfetivo`): o front NÃO
+  // recalcula nenhuma delas, nem para conferir, nem para o export
+  // (AP-ARQUITETURA-005 — segunda implementação é implementação que diverge).
+  //
+  // Os três campos são `?` **e** `| null` de propósito (AP-FRONTEND-028): no backend
+  // são `decimal` não-anuláveis com default `0m` (`ReportsDtos.cs:282-284`), logo o
+  // backend NOVO sempre manda a chave; o backend ANTERIOR à 132 não a manda. Os dois
+  // ramos são estados distintos e todo guard é `== null`, nunca `=== undefined`:
+  //   chave ausente **ou** `null` → "não sei responder" ⇒ a coluna renderiza como
+  //                                  hoje: só o plano base, sem `+`, sem tooltip;
+  //   `0`                         → "não há crédito"   ⇒ visualmente IDÊNTICO ao de
+  //                                  cima. É a regressão zero (PRD §5.1);
+  //   `> 0`                       → há crédito ⇒ `+Xh` + reforço textual + ⓘ.
+  // Os dois primeiros produzem a mesma tela de PROPÓSITO — o discriminador é
+  // `creditoConhecido` de `shared/utils/planoEfetivo.ts`, não o DOM.
+
   /**
-   * 121/§4.5 (D2) — soma dos 3 baldes dos apontamentos `Completed` ativos de chamados
-   * do cliente com `FechadoEm == null`. É um **ESTOQUE, all-time**: não reage ao filtro
-   * de período (por isso a tela é obrigada a dizê-lo — §12/R12).
+   * Σ das horas dos créditos vigentes da competência exibida — `competencia == C`,
+   * `estornadoem IS NULL`, `desativadoem IS NULL`, independente de `origem`
+   * (`ReportsDtos.cs:250-258`). **HORAS**, nunca segundos.
    *
-   * OPCIONAL de propósito: o backend de §8 (FAT-3) ainda **não** expõe o campo.
-   * AP-FRONTEND-021 — "ausente" ≠ "vazio", e os dois ramos são estados distintos:
-   *   `undefined` → backend antigo, não sabe responder ⇒ a UI mostra "—";
-   *   `0`         → backend novo dizendo "nada em aberto" ⇒ a UI mostra "0h 0m".
-   * Um helper que colapse os dois (`?? 0`) afirmaria "não há trabalho em aberto"
-   * durante todo o intervalo entre os dois deploys.
-   * **Remover o `?` quando FAT-3 estiver em produção.**
-   *
-   * `| null` (121/F4): "ausente" tem DUAS formas na fronteira HTTP — chave que não veio
-   * (`undefined`) e chave que veio nula (`null`, o que um `decimal?` do C# serializa).
-   * O tipo declara as duas para que todo call site novo seja obrigado a decidir, e o
-   * guard é `== null` — nunca `=== undefined`.
+   * D20 — em período NÃO-mensal vem `0` (fail-closed, sem rateio): a tela não infla o
+   * plano num recorte de 45 dias. O aviso de C-7 é que explica isso ao usuário, e ele
+   * é de outra unidade (F4d).
    */
-  horasEmAbertoNaoFaturadas?: number | null
+  creditoHoras?: number | null
+
+  /**
+   * `qtdePlanoHoras + creditoHoras`, exato (o backend NÃO arredonda esta ponta —
+   * `ReportQueryRepository.cs:1038-1042` — porque a identidade é um CHECK do banco).
+   *
+   * ⚠️ **Não é a fonte do número que a tela imprime.** `derivarPlanoEfetivo` soma
+   * `base + crédito` (os dois átomos que o usuário lê na célula) e usa este campo
+   * apenas para DENUNCIAR divergência: o default `0m` do construtor posicional do C#
+   * (`ReportsDtos.cs:283`) faria uma tela de fatura imprimir `0h` como plano efetivo
+   * se ele fosse lido cru contra um backend que ainda não o preenche.
+   */
+  qtdePlanoEfetivoHoras?: number | null
+
+  /**
+   * Os créditos que compõem o plano efetivo, um por linha (`PlanConsumptionCreditoDto`).
+   * `null`/ausente = backend anterior à 132; `[]` = backend novo dizendo "nenhum".
+   */
+  creditos?: PlanConsumptionCreditoDto[] | null
+
+  // ── 135/G1 — CONTAGEM DE CHAMADOS (aditivo) ────────────────────────────────
+
+  /**
+   * 135/G1 — quantidade de chamados **ABERTOS no período filtrado**, independente do
+   * status atual (PRD §2). Recorte: `Ticket.HsCriadoEm ∈ [from, toExclusive)` +
+   * `DesativadoEm IS NULL` (`135/analise-backend.md` §3.1;
+   * `ReportQueryRepository.cs:1172`).
+   *
+   * 🔴 **Recorte DIFERENTE do de todas as outras colunas da linha, de propósito** (PRD §2):
+   * as demais contam horas APONTADAS no período (`TimeEntry.InicioEm`). O número **não
+   * "explica"** as horas ao lado — um chamado aberto em agosto conta em agosto mesmo que
+   * as horas dele tenham sido apontadas em setembro. Não somar, não conciliar, não
+   * recalcular; se você veio "casar" os dois recortes, pare e leve a decisão ao usuário.
+   *
+   * **135/G4** — em competência FECHADA vem da coluna congelada
+   * (`faturamentosnapshots.qtdetickets`); em corrente/histórica é calculado ao vivo. Chega
+   * IGUAL nos dois caminhos: o front **não infere nem calcula nada**.
+   *
+   * ⚠️ No backend é `int` **NÃO-anulável** com default `0`
+   * (`ReportsDtos.cs:314`) — escolha deliberada, porque com
+   * `DefaultIgnoreCondition = WhenWritingNull` (`Program.cs:222`) um `int?` nulo
+   * **desapareceria do JSON**. Ou seja: a partir da 135 a chave está **sempre presente** e
+   * `0` é zero de verdade.
+   * O `?` **e** o `| null` aqui não desconfiam disso: eles cobrem o backend **anterior à
+   * 135**, que não conhece o campo — o estado normal entre os dois deploys
+   * (`135/analise-frontend.md` D-13, ratificado em `tracker.md` R-10).
+   *
+   * 🔴 Todo guard é `== null`, nunca `=== undefined` (AP-FRONTEND-028), e **`0` NÃO
+   * colapsa com ausência**: `0` → `"0"`, ausência/nulo → `"—"` são telas **diferentes**
+   * (ao contrário do crédito da 132). Um `?? 0` afirmaria "nenhum chamado aberto" durante
+   * toda a janela de deploy — na tela **e na planilha que vai por e-mail**.
+   */
+  qtdeTickets?: number | null
+}
+
+/**
+ * Um crédito de horas que compõe o plano efetivo da competência exibida
+ * (`ReportsDtos.cs:295`).
+ *
+ * 🔴 **D15 — `rotulo` NUNCA é renderizado.** O backend já projeta a constante pública
+ * (`CreditoRotulos.Publico`, `ReportQueryRepository.cs:990-996`), mas a tela não
+ * depende disso: `PlanoComCredito` renderiza `ROTULO_CREDITO_PUBLICO`, constante
+ * LOCAL, para que o motivo interno — que pode conter a string proibida
+ * `"Problema - Invoicy"` (`FaturamentoConstantes.cs`, AP-SECURITY-001) — não chegue à
+ * tela do cliente nem se o backend regredir. O campo existe no tipo porque está no
+ * wire; renderizá-lo é o defeito que o teste de wire envenenado deixa vermelho.
+ */
+export type PlanConsumptionCreditoDto = {
+  creditoId: number
+  horas: number
+  rotulo: string
+}
+
+// ── 132/F4d (D12 · C-6 · C-7) — o ENVELOPE da resposta ──────────────────────
+//
+// 🔴 **A fonte do número vem no PAYLOAD. O front NUNCA a infere pela data.**
+// `arquitetura.md` §9.2: nenhuma função do front pode olhar `filters.from`/`filters.to` e
+// concluir "isto é um mês fechado" — quem decide é o backend, que sabe se existe snapshot.
+// Inferir aqui criaria uma segunda fonte de verdade sobre o que foi FATURADO, e ela
+// divergiria em silêncio no primeiro mês reaberto. A proibição é travada por teste
+// estrutural (`plan-consumption/fonteDoPeriodo.estrutural.test.ts`), não por disciplina.
+//
+// ⚠️ **Nenhum destes campos chega no wire hoje**: são 132/B11, que não foi entregue. É por
+// isso que o ramo "não sei" (`fonte` ausente) é o ramo NORMAL por enquanto — e ele não
+// exibe selo nenhum, que é a única afirmação verdadeira quando não se sabe.
+
+/**
+ * Vocabulário do servidor para a origem dos números — **fonte única do conjunto**.
+ * `arquitetura.md` §9.2.
+ */
+export const FONTES_DO_CONSUMO = ['snapshot', 'aovivo'] as const
+
+export type FonteDoConsumo = (typeof FONTES_DO_CONSUMO)[number]
+
+/**
+ * `GET /metrics/plan-consumption` — página + envelope de D12.
+ *
+ * 🔴 **`fonte` é `string` no tipo, não a união literal** (AP-API-002). Declará-lo como
+ * `FonteDoConsumo` seria mentir para o compilador sobre um valor que o **servidor** controla:
+ * um token novo (`"mosaico"`, um dia) passaria a ser tratado como se fosse um dos dois, sem
+ * erro de tipo e sem erro em runtime. A normalização é feita por função pura fail-closed —
+ * `normalizarFonte`, em `plan-consumption/fonteDoPeriodoTextos.ts`.
+ */
+export type PlanConsumptionResponseDto = PaginatedResponse<PlanConsumptionItemDto> & {
+  /** `'snapshot'` | `'aovivo'` | qualquer outra coisa ⇒ tratada como desconhecida. */
+  fonte?: string | null
+  /** `"YYYY-MM"` da competência exibida; ausente em período não-mensal. */
+  competencia?: string | null
+  /** ISO-8601 do fechamento — só faz sentido com `fonte === 'snapshot'`. */
+  competenciaFechadaEm?: string | null
+  /** Versão do snapshot: `> 1` significa refechamento (C-8). */
+  competenciaVersao?: number | null
+  /** C-7 — o período pedido não é uma competência civil ⇒ números ao vivo, crédito zero. */
+  avisoPeriodoNaoMensal?: boolean | null
+  /** C-6 — competência anterior ao início do congelamento ⇒ recalculada pela regra atual. */
+  avisoAnteriorAoCongelamento?: boolean | null
 }
 
 // ── U4 — Apontamentos por Ticket ─────────────────────────────────────────────
@@ -173,109 +302,6 @@ export type TicketReportItemDto = {
   faturaPlanoSegundos?: number | null
   faturaFaturadoSegundos?: number | null
   faturaAnaliseSegundos?: number | null
-}
-
-// ── 121/§5.2 (A2/D2) + F-15 — Relatório de exceções de faturamento ────────────
-
-/**
- * F-15 (decisão do usuário, 04/08/2026) — o relatório tem **DUAS seções**, com
- * predicados diferentes e propósitos diferentes. Ambas partem de
- * `Ticket.FechadoEm == null` (o que sai da fatura desta competência por D1):
- *
- *  - `anomalia`   — estágio do chamado é FECHADO (`PipelineStage.Fechado == true`).
- *                   Defeito de sincronização: o chamado está encerrado no HubSpot e
- *                   as horas dele saem da fatura **para sempre**. **Exige ação.**
- *  - `postergado` — estágio do chamado NÃO é fechado. Chamado legitimamente aberto:
- *                   as horas entram na fatura da competência em que ele fechar.
- *                   **Informativo, não exige ação.**
- *
- * A distinção existe porque misturá-los numa lista só faz o item acionável se perder
- * no meio do informativo.
- *
- * ⚠️ Terceiro conjunto, invisível por construção: chamado cujo `pipelineStage` não
- * tem cadastro em `pipelinestages` não casa o JOIN e **não aparece em nenhuma das
- * duas seções**. Ver `naoClassificadosCount` em `BillingExceptionsSummaryDto`.
- */
-export type BillingExceptionTipo = 'anomalia' | 'postergado'
-
-/**
- * Linha do relatório — **a mesma forma nas duas seções**, de propósito: uma só
- * definição de "linha de chamado fora da fatura" não pode divergir entre as seções
- * (AP-ARQUITETURA-005). O que muda entre elas é apenas o predicado (`tipo`).
- *
- * Contrato congelado em §8 da arquitetura da demanda 121; o endpoint
- * `GET /api/v1/reports/billing-exceptions` ainda **não existe** (unidade FAT-4).
- *
- * NUNCA expõe `Ticket.Categoria`: o balde Análise é comunicado por `segundosAnalise`,
- * não pelo nome da categoria (AP-SECURITY-001).
- */
-export type BillingExceptionItemDto = {
-  ticketId: number
-  hubspotTicketId: string
-  assunto?: string | null
-  clientId?: number | null
-  /** NomeFantasia ?? RazaoSocial — mesmo coalesce do backend. */
-  clienteNome?: string | null
-  equipe?: string | null
-  ownerNome?: string | null
-  /** Label formatada do stage, com o nome do pipeline. */
-  status?: string | null
-  /** Nome cru do stage, sem "(Pipeline)". */
-  statusNome?: string | null
-  /** Fonte da cor do badge de Status — nunca derivar cor do texto de `status`. */
-  statusCategoria?: TicketStatusCategoria | null
-  /** ISO-8601; `max(InicioEm)` dos apontamentos Completed ativos. `null` = nenhum. */
-  ultimaAtividadeEm?: string | null
-  segundosPlano: number
-  segundosFaturado: number
-  segundosAnalise: number
-  /** Invariante do backend: == soma dos 3 baldes (não é campo independente). */
-  segundosTotais: number
-  hubspotUrl?: string | null
-}
-
-/**
- * F-15 — agregados do relatório de exceções, **fora do envelope paginado**.
- *
- * Existe porque `PaginatedResponse<T>` só traz `totalCount`: sem este DTO, o card
- * teria de somar as horas da página recebida e chamá-las de total — um número falso
- * na tela (AP-FRONTEND-022). Aqui os três totais são exatos.
- *
- * **Partição total e mutuamente exclusiva** de `Ticket.FechadoEm == null` (é isto que
- * torna o ponto cego mensurável em vez de invisível):
- *
- * ```
- * anomaliasSegundos + postergadoSegundos + naoClassificadosSegundos
- *     == Σ horasEmAbertoNaoFaturadas (mesmo escopo de cliente/equipe) × 3600
- * ```
- *
- * Endpoint proposto (não existe ainda — requisito da unidade FAT-4):
- * `GET /api/v1/reports/billing-exceptions/summary` → `ApiResponse<T>` (recurso único,
- * não paginado — é o envelope que o repo usa nesse caso), mesmos filtros de
- * `scope/clientId/teamId/from/to` da listagem.
- */
-export type BillingExceptionsSummaryDto = {
-  /** Seção 1 — estágio fechado, sem data de conclusão. Exige ação. */
-  anomaliasCount: number
-  anomaliasSegundos: number
-  /** Seção 2 — estágio não fechado, sem data de conclusão. Informativo. */
-  postergadoCount: number
-  postergadoSegundos: number
-  /**
-   * ⚠️ Falso negativo declarado: chamados cujo `pipelineStage` não tem cadastro em
-   * `pipelinestages`. O JOIN não casa, então eles **não aparecem em nenhuma das duas
-   * seções** — são invisíveis por construção. A tela exibe esta contagem como nota de
-   * rodapé; sem ela, o buraco fica escondido.
-   *
-   * OPCIONAL: se o backend não expuser o campo, a tela mostra a nota **sem número**
-   * (nunca `0`, que afirmaria "não há nenhum" — AP-FRONTEND-021).
-   *
-   * `| null` (121/F4): um `int?` do C# serializa `null`, e com guard `=== undefined` a
-   * tela escreveria literalmente "null chamados não puderam ser classificados". O guard
-   * é `== null`, e o tipo declara as duas formas para o compilador cobrar o ramo.
-   */
-  naoClassificadosCount?: number | null
-  naoClassificadosSegundos?: number | null
 }
 
 /** MELH-02 — opção do filtro "Categoria do atendimento" (categoria do TIMER, interna). */
@@ -388,10 +414,67 @@ export type ClientReportDto = {
   competencia: string         // YYYY-MM
   totalApontamentos: number
   totalSegundos: number
+  /**
+   * ⚠️ **Não é o tamanho do plano** — é a soma das horas do período que **consomem** o
+   * plano (`ReportQueryRepository.cs:236`, `PlanoSeg`: tudo que não é Invoicy nem
+   * "cobrar por fora", incluindo projeto). É este campo que alimenta o cartão rotulado
+   * "Plano de Suporte" (a frase está escrita em `competenciaTexts.ts:132-139`).
+   *
+   * O plano **base** deste relatório é `client.horasEfetivas`, em HORAS. Confundir os dois
+   * é o que faz a conferência de `derivarPlanoEfetivo` acusar divergência em todo cliente
+   * (132/F9 — ver `client-report/utils/creditoDoRelatorio.ts`).
+   */
   horasPlanoSegundos: number
   horasFaturadoSegundos: number
   horasNaoFaturadoSegundos: number
   items?: ClientReportItemDto[] | null
+
+  // ── 132/F9 (§9.5 · D15 · D16 · D20) — CRÉDITO DE HORAS (aditivos) ─────────
+  //
+  // 🔴 **DUAS UNIDADES no mesmo objeto, e é assim no backend de propósito**
+  // (`ReportsDtos.cs:57-96`): todo campo `...Segundos` acima é **segundos**; os dois
+  // abaixo são **horas** decimais — a mesma unidade dos campos homônimos do Consumo de
+  // Planos, porque é lado a lado com aquela tela que este número é conferido.
+  // `formatSeconds(2)` de duas horas de crédito imprime **"0h 0m"**: plausível o
+  // suficiente para nunca ser notado numa fatura. Só `formatHours` entra aqui.
+  //
+  // Os dois são `?` **e** `| null` (AP-FRONTEND-028): no backend são `decimal` NÃO
+  // anuláveis com default `0m`, logo o backend novo sempre manda as chaves e o anterior à
+  // 132 não manda nenhuma. Os três ramos e o guard `== null` são de
+  // `shared/utils/planoEfetivo.ts`; quem os aplica nesta tela é
+  // `client-report/utils/creditoDoRelatorio.ts` — **um** lugar, para o cabeçalho e o PDF.
+
+  /**
+   * Σ das horas de crédito **vigentes** na competência do relatório. **HORAS.**
+   *
+   * D20/C-7: período que não é mês civil vem `0` (fail-closed, sem rateio —
+   * `ReportService.cs:155-159`). Ausente/`null` = backend anterior à 132 ("não sei"),
+   * `0` = "não há": os dois renderizam como hoje, e o discriminador é
+   * `creditoConhecido`, nunca o pixel.
+   *
+   * 🔴 **D15** — este DTO é o artefato que chega ao **cliente** (tela + PDF): ele traz o
+   * **total** e nada mais. Não há campo de motivo, lista de créditos nem rótulo do wire —
+   * a ausência é a garantia, e o rótulo exibido é a constante local
+   * `ROTULO_CREDITO_PUBLICO`.
+   */
+  creditoHoras?: number | null
+
+  /**
+   * `planoBase + creditoHoras` em **HORAS**, com
+   * `planoBase = horasOverride ?? supportPlan.horasMes ?? 0` (D16) — a mesma conta do
+   * Consumo de Planos, feita pela mesma função no backend
+   * (`CalculadoraPlanoEfetivo.Efetivo`).
+   *
+   * ⚠️ Nome DIFERENTE do campo equivalente do Consumo de Planos
+   * (`qtdePlanoEfetivoHoras`), e é o mesmo dado: escrever o nome do outro aqui compila,
+   * chega `undefined` em runtime e não tem sintoma. Travado por teste sobre JSON literal
+   * em `creditoDoRelatorio.test.ts`.
+   *
+   * ⚠️ **Não é a fonte de nenhum número exibido.** O default `0m` do construtor
+   * posicional do C# imprimiria `0h` como plano do mês contra um backend que ainda não o
+   * preenche; aqui ele serve só para DENUNCIAR divergência (em DEV).
+   */
+  horasPlanoEfetivas?: number | null
 }
 
 // ── U6 — Produtividade por Analista ─────────────────────────────────────────

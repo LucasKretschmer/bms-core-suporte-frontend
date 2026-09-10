@@ -9,6 +9,21 @@ type SwitchProps = {
   /** Se true, o label é apenas para leitores de tela (aria-label) */
   hideLabel?: boolean
   disabled?: boolean
+  /**
+   * 133 — travado por **regra de negócio** (não por indisponibilidade do controle).
+   *
+   * Bloqueia a mudança **mantendo o botão na ordem de tabulação**: o `disabled` nativo
+   * tira o `<button>` do `Tab` e do leitor de tela, e o usuário de teclado nunca
+   * alcançaria o controle **nem a explicação** apontada por `describedById`
+   * (`rules/frontend.md` § Acessibilidade de teclado; `arquitetura.md` §7.1 item 4).
+   *
+   * Sem `opacity` e sem `pointer-events-none` no modo travado: reduzir a opacidade de um
+   * trilho `bg-primary` **marcado** custa contraste não-textual (WCAG 1.4.11, piso 3:1)
+   * sem ganho — quem comunica a trava é o texto visível.
+   */
+  ariaDisabled?: boolean
+  /** id do texto que explica o estado do switch → `aria-describedby` (133). */
+  describedById?: string
   /** ID do elemento — necessário quando há <label htmlFor> externo */
   id?: string
   className?: string
@@ -25,6 +40,8 @@ export function Switch({
   label,
   hideLabel = true,
   disabled = false,
+  ariaDisabled = false,
+  describedById,
   id: idProp,
   className,
 }: SwitchProps) {
@@ -32,8 +49,13 @@ export function Switch({
   const id = idProp ?? genId
 
   function handleClick() {
-    if (!disabled) onChange(!checked)
+    // `ariaDisabled` bloqueia a escrita tão de verdade quanto `disabled` — a diferença
+    // é só que o controle continua focável (ver a doc da prop).
+    if (disabled || ariaDisabled) return
+    onChange(!checked)
   }
+
+  const bloqueado = disabled || ariaDisabled
 
   return (
     <button
@@ -42,15 +64,18 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={hideLabel ? label : undefined}
+      aria-disabled={ariaDisabled || undefined}
+      aria-describedby={describedById}
       disabled={disabled}
       onClick={handleClick}
       className={clsx(
         'relative inline-flex h-5 w-9 shrink-0 items-center rounded-pill',
-        'transition-shadow duration-150 cursor-pointer',
+        'transition-shadow duration-150',
         'focus-visible:ring-2 focus-visible:ring-primary-light focus-visible:ring-offset-2',
         'hover:shadow-hover',
         checked ? 'bg-primary' : 'bg-border',
-        disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
+        bloqueado ? 'cursor-not-allowed' : 'cursor-pointer',
+        disabled && 'opacity-50 pointer-events-none',
         className,
       )}
     >

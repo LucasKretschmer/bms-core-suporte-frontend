@@ -402,16 +402,6 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
     porque: 'coluna de consumo em faixa crítica (>= 95%) do relatório Consumo de Planos.',
   },
   {
-    arquivo: 'src/features/reports/plan-consumption/components/PlanConsumptionHelp.tsx',
-    classes: ['bg-error-bg', 'border-error-fg', 'text-error-fg'],
-    porque:
-      '127/FE-AJUDA — selo do botão de ajuda `(?)` no estado de FALHA da verificação de ' +
-      'exceções: glifo "!" em `text-error-fg` sobre `bg-error-bg`, com borda ' +
-      '`border-error-fg/40`. É o par de texto do Badge/Toast reaproveitado, e existe para ' +
-      'que "a requisição falhou" nunca se pareça com "não há exceções" (AP-FRONTEND-021). ' +
-      'Medido no DOM em `PlanConsumptionHelp.test.tsx` (bloco de contraste).',
-  },
-  {
     arquivo: 'src/features/reports/shared/components/PeriodFilter.tsx',
     classes: ['text-error-fg'],
     porque: 'mensagem de erro do filtro de período.',
@@ -500,6 +490,57 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
     arquivo: 'src/features/ticket-detail/components/TimeEntryModal.tsx',
     classes: ['text-error-fg'],
     porque: 'erros de validação e de API do modal de apontamento (7 ocorrências).',
+  },
+  // ── 132/F5-F6 — Créditos de Horas e Motivos de Crédito ─────────────────────────────
+  {
+    arquivo: 'src/components/table/AcaoDeTabela.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'tom `danger` do botão de ação de linha ("excluir") — ação destrutiva em texto sobre ' +
+      'a superfície da tabela (`bg-card`). Mesmo par de `service-categories/columns.tsx`, ' +
+      'que este componente generaliza para as duas telas da 132.',
+  },
+  {
+    arquivo: 'src/features/hour-credits/components/CreditoStatusBadge.tsx',
+    classes: ['bg-error-bg', 'text-error-fg'],
+    porque:
+      'pílula de status `estornado` — texto de erro sobre o fundo de erro, o MESMO par do ' +
+      '`Badge` do app (`BADGE_MAP["Cancelado"]`), reaproveitado em vez de cunhar hex novo. ' +
+      'Nenhuma superfície nova entra em ALERTA_CONTRAST_PAIRS por causa desta entrada.',
+  },
+  {
+    arquivo: 'src/features/hour-credits/components/NovoCreditoForm.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'erro inline do campo cliente no formulário de lançamento de crédito. A mensagem de ' +
+      'validação dos campos de texto vem do `Input` do DS (`text-error`) e por isso não ' +
+      'está aqui — mesma distinção do achado F-1.',
+  },
+  {
+    arquivo: 'src/features/hour-credits/components/EditarCreditoModal.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'erro de API do modal de edição do crédito — inclui o `409 CREDITO_ESTORNADO`, sobre ' +
+      'a superfície do modal. Mesmo caso dos irmãos `EditCategoryModal` e ' +
+      '`SupportPlanFormModal`.',
+  },
+  {
+    arquivo: 'src/features/hour-credit-reasons/components/EditarMotivoModal.tsx',
+    classes: ['text-error-fg'],
+    porque:
+      'erro de API do modal de renomear motivo — inclui os `409 MOTIVO_DE_SISTEMA` e ' +
+      '`MOTIVO_DUPLICADO`, sobre a superfície do modal.',
+  },
+  // ── 132/F7 — Competências (fechar · reabrir · comparar) ────────────────────────────
+  {
+    arquivo: 'src/features/billing-periods/components/ReopenCompetenciaModal.tsx',
+    classes: ['bg-error-bg', 'border-error-fg', 'text-error-fg'],
+    porque:
+      'o erro de negócio da reabertura renderizado DENTRO do diálogo (C-8): o `409 ' +
+      'COMPETENCIA_COM_CREDITOS_DEPENDENTES`, que traz a contagem de créditos vivos, mais ' +
+      'o erro inline do checkbox de confirmação de impacto. O par é o MESMO do `Toast` de ' +
+      'erro — `error-fg` sobre `error-bg`, com borda `error-fg` —, reaproveitado em vez de ' +
+      'cunhar fundo sólido novo (fundo sólido de erro com texto branco reprova AA).',
   },
 ]
 

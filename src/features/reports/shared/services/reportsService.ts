@@ -2,13 +2,10 @@ import { api } from '../../../../services/api'
 import type { ApiResponse, PaginatedResponse } from '../../../../types/api'
 import type {
   AgentMetricDto,
-  BillingExceptionItemDto,
-  BillingExceptionsSummaryDto,
-  BillingExceptionTipo,
   ClientListItemDto,
   ClientReportDto,
   OrigemFiltro,
-  PlanConsumptionItemDto,
+  PlanConsumptionResponseDto,
   ProjectAppointmentReportItemDto,
   ServiceCategoryOptionDto,
   SupportPlanDto,
@@ -34,12 +31,54 @@ type PlanConsumptionParams = {
   sortDirection?: 'asc' | 'desc'
   page: number
   pageSize: number
+
+  /**
+   * 135/G5 — filtro "Uso do plano". Nome do parâmetro de query: **`usoPlano`**
+   * (`MetricsController.cs:446`; a rota também aceita a grafia `usoPlano[]` em `:447`,
+   * e a que este cliente emite é a **sem** colchetes).
+   *
+   * 🔴 **`string[]`, nunca a união literal `FaixaUsoDoPlano[]`** (AP-API-002, mesmo
+   * desenho de `fonte?: string | null` no envelope): o vocabulário é do **servidor**, e
+   * declará-lo como união aqui mentiria para o compilador sobre um valor que o transporte
+   * não controla. Os tokens vivem num único lugar do front —
+   * `plan-consumption/usoDoPlanoTextos.ts`.
+   *
+   * Serialização: `usoPlano=dentro&usoPlano=risco` (repeat, **sem** colchetes e **sem**
+   * índices), pelo `paramsSerializer: { indexes: null }` de `services/api.ts:40` — é a
+   * grafia que o model binding do ASP.NET liga a `string[]`. Nada a mudar no serializer.
+   *
+   * 🔴 **Nada selecionado ⇒ o parâmetro NÃO SAI, e a conversão é do CALL SITE:**
+   * `cleanParams` (no fim deste arquivo) descarta `null`/`undefined`/`''`, **não**
+   * array vazio ⇒ `usoPlano: []` viajaria como `?usoPlano=`. O servidor tolera isso
+   * como ausência (`MetricsController.cs:458-461`), mas depender da tolerância de
+   * terceiro é construir sobre ela. O requisito é
+   * `filters.usoPlano.length > 0 ? filters.usoPlano : undefined` em **todo** call site —
+   * hook **e** export (`135/analise-frontend.md` §3.5.1).
+   *
+   * ⚠️ Token não vazio fora do vocabulário ⇒ **400 `INVALID_USO_PLANO`**
+   * (`MetricsController.cs:467-478`), nunca "sem filtro" — logo a tela mostra
+   * `ErrorState` com retry, jamais a mensagem de vazio.
+   */
+  usoPlano?: string[]
 }
 
+/**
+ * 🔴 **132/F4d — o retorno passou a ser o ENVELOPE** (`PlanConsumptionResponseDto`), que
+ * herda de `PaginatedResponse<PlanConsumptionItemDto>` e acrescenta
+ * `fonte`/`competencia`/`competenciaFechadaEm`/`competenciaVersao`/`aviso*` (D12).
+ *
+ * Nada é desempacotado nem normalizado aqui: esta rota devolve envelope de paginação **cru**
+ * (não `ApiResponse<T>`), e a normalização de `fonte` é de função pura testável
+ * (`normalizarFonte`), não do transporte. O service continua sendo só transporte.
+ *
+ * ⚠️ Os campos do envelope **ainda não chegam** (132/B11 não entregue). O tipo os declara
+ * todos opcionais e a tela trata a ausência como "não sei" — é o que faz esta unidade poder
+ * subir antes do backend sem exibir nada de errado.
+ */
 export async function listPlanConsumption(
   params: PlanConsumptionParams,
-): Promise<PaginatedResponse<PlanConsumptionItemDto>> {
-  const { data } = await api.get<PaginatedResponse<PlanConsumptionItemDto>>(
+): Promise<PlanConsumptionResponseDto> {
+  const { data } = await api.get<PlanConsumptionResponseDto>(
     '/api/v1/metrics/plan-consumption',
     { params: cleanParams(params) },
   )
@@ -233,92 +272,6 @@ export async function listTeams(): Promise<TeamDto[]> {
 export async function listSupportPlans(): Promise<SupportPlanDto[]> {
   // Response: envelope ApiResponse<SupportPlanDto[]> (igual /teams) — desempacotar .data
   const { data } = await api.get<ApiResponse<SupportPlanDto[]>>('/api/v1/support-plans')
-  return data.data
-}
-
-// ── 121/A2 — Exceções de faturamento (D2) ─────────────────────────────────────
-
-/**
- * Params de `GET /api/v1/reports/billing-exceptions` — contrato §5.2/§8 da
- * arquitetura da demanda 121, congelado.
- *
- * ⚠️ `from`/`to` **não** filtram data de conclusão (por definição ela é nula neste
- * conjunto): filtram por EXISTÊNCIA de apontamento `Completed` ativo com `InicioEm`
- * na janela — "exceções com trabalho no mês que estou fechando". Omitidos ⇒ todas.
- * É por isso que "ignorar período" no cliente é simplesmente **não enviar** os dois.
- *
- * `scope` default é `all` no backend (difere dos irmãos, que usam `mine`) — o
- * relatório existe para não deixar nada passar; não enviamos `scope` daqui.
- */
-export type BillingExceptionsParams = {
-  scope?: 'mine' | 'team' | 'all'
-  clientId?: string | number | null
-  teamId?: number[]
-  search?: string
-  from?: string | null
-  to?: string | null
-  /**
-   * F-15 — qual das duas seções. `anomalia` (default) = estágio fechado sem data de
-   * conclusão, exige ação. `postergado` = estágio não fechado, informativo.
-   *
-   * É param **opcional com default `anomalia`** justamente para que o contrato de §8
-   * continue valendo verbatim: sem `tipo`, o endpoint responde exatamente o que §8
-   * especificou.
-   */
-  tipo?: BillingExceptionTipo
-  /** Whitelist do backend: hubspotticketid|cliente|equipe|owner|status|ultimaatividade|segundos */
-  sortBy?: string | null
-  sortDirection?: 'asc' | 'desc'
-  page: number
-  pageSize: number
-}
-
-/**
- * Lista as exceções de faturamento (chamado em estágio fechado sem `FechadoEm`).
- *
- * Envelope `PaginatedResponse<T>` **cru** (não `ApiResponse<T>`) — padrão dos
- * relatórios paginados, conforme §8. Errar isso quebraria o desempacotamento.
- *
- * ⚠️ Integração **não verificada ponta-a-ponta**: o endpoint é a unidade FAT-4 e
- * ainda não existe no backend. Escrito contra o contrato congelado de §8.
- */
-export async function listBillingExceptions(
-  params: BillingExceptionsParams,
-): Promise<PaginatedResponse<BillingExceptionItemDto>> {
-  const { data } = await api.get<PaginatedResponse<BillingExceptionItemDto>>(
-    '/api/v1/reports/billing-exceptions',
-    { params: cleanParams(params) },
-  )
-  return data
-}
-
-/** Filtros do resumo — os mesmos da listagem, sem paginação nem ordenação. */
-export type BillingExceptionsSummaryParams = {
-  scope?: 'mine' | 'team' | 'all'
-  clientId?: string | number | null
-  teamId?: number[]
-  search?: string
-  from?: string | null
-  to?: string | null
-}
-
-/**
- * F-15 — agregados das DUAS seções + a contagem de chamados não classificados.
- *
- * Envelope `ApiResponse<T>` (recurso único, não paginado) — padrão do repo para este
- * caso, distinto dos relatórios paginados, que usam `PaginatedResponse` cru.
- *
- * ⚠️ Endpoint **proposto por esta unidade** e ainda inexistente: é requisito novo da
- * FAT-4, registrado em `dev-fat-5-report.md`. Sem ele o card não tem como afirmar o
- * total de horas do conjunto (o envelope paginado só traz `totalCount`).
- */
-export async function getBillingExceptionsSummary(
-  params: BillingExceptionsSummaryParams,
-): Promise<BillingExceptionsSummaryDto> {
-  const { data } = await api.get<ApiResponse<BillingExceptionsSummaryDto>>(
-    '/api/v1/reports/billing-exceptions/summary',
-    { params: cleanParams(params) },
-  )
   return data.data
 }
 

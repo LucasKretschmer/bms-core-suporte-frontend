@@ -14,9 +14,9 @@
  *    campo de categoria interna do HubSpot.
  */
 
-import type { ExportColumn } from '../../shared/utils/exportTable'
+import { durationCell, type ExportColumn } from '../../shared/utils/exportTable'
 import type { ClientReportItemDto } from '../../shared/types/reports'
-import { formatDate, formatDateTime, formatSeconds } from '../../shared/utils/formatters'
+import { formatDate, formatDateTime } from '../../shared/utils/formatters'
 import { HEADER_CONCLUIDO_EM } from '../../shared/utils/competenciaTexts'
 
 export const CLIENT_REPORT_EXPORT_COLUMNS: ExportColumn[] = [
@@ -38,7 +38,7 @@ export const CLIENT_REPORT_EXPORT_COLUMNS: ExportColumn[] = [
   // que explica uma "Data do apontamento" fora do período exportado. Vem imediatamente
   // depois dela de propósito: é a leitura das duas juntas que explica a linha.
   { header: HEADER_CONCLUIDO_EM, key: 'fechadoEmChamado' },
-  { header: 'Tempo', key: 'tempo' },
+  { header: 'Tempo', key: 'tempo', type: 'duration' },
 ]
 
 /**
@@ -81,6 +81,6 @@ export function itemToExportRow(
      */
     fechadoEmChamado:
       item.fechadoEmChamado == null ? '—' : formatDate(item.fechadoEmChamado),
-    tempo: formatSeconds(item.totalSegundos),
+    tempo: durationCell(item.totalSegundos),
   }
 }

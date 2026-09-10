@@ -8,6 +8,10 @@ import {
   toggleServiceCategory,
   updateServiceCategory,
 } from '../services/serviceCategoriesService'
+import type {
+  EditCategoryFormValues,
+  NewCategoryFormValues,
+} from '../types/serviceCategory'
 import { SERVICE_CATEGORIES_QUERY_KEY } from './useServiceCategories'
 
 /**
@@ -33,7 +37,8 @@ const CHAVES_DEPENDENTES = [
 ]
 
 /**
- * Mutations de categoria: criar, renomear (PUT), alternar ativação (PATCH) e excluir.
+ * Mutations de categoria: criar, editar (PUT — nome + flag 133), alternar ativação
+ * (PATCH) e excluir.
  * Toda mutation invalida as listas dependentes no sucesso e dispara toast.
  */
 export function useCategoryMutations() {
@@ -50,7 +55,9 @@ export function useCategoryMutations() {
   }
 
   const create = useMutation({
-    mutationFn: (nome: string) => createServiceCategory(nome),
+    // 133: a flag viaja SEMPRE explícita, do form ao body (`serviceCategoriesService`).
+    mutationFn: ({ nome, forcesBillableOutsidePlan }: NewCategoryFormValues) =>
+      createServiceCategory(nome, forcesBillableOutsidePlan),
     onSuccess: () => {
       toast.success('Categoria adicionada.')
       invalidate()
@@ -60,9 +67,16 @@ export function useCategoryMutations() {
   })
 
   const update = useMutation({
-    mutationFn: ({ id, nome }: { id: number; nome: string }) => updateServiceCategory(id, nome),
+    mutationFn: ({
+      id,
+      nome,
+      forcesBillableOutsidePlan,
+    }: { id: number } & EditCategoryFormValues) =>
+      updateServiceCategory(id, nome, forcesBillableOutsidePlan),
     onSuccess: () => {
-      toast.success('Categoria renomeada.')
+      // 133: o PUT deixou de ser só "renomear" — o toast não pode continuar afirmando
+      // uma coisa que o request não faz mais sozinho (`AP-FRONTEND-022`).
+      toast.success('Categoria atualizada.')
       invalidate()
     },
     onError: (error: unknown) => toast.error(getCategoryMutationErrorMessage(error)),

@@ -160,18 +160,44 @@ describe('🔴 131: o card não atribui mais a diferença às horas de projeto',
     expect(card()).not.toHaveTextContent('Por essas duas razões')
   })
 
-  it('o card nomeia a razão que PERMANECE (a data) e a terceira (quem entra na lista)', async () => {
+  /**
+   * 🔴 **INVERTIDO em 132/D1 — a "razão que permanece" da 131 deixou de permanecer.**
+   *
+   * Este caso exigia que o card nomeasse **duas datas diferentes**. Medido no backend em
+   * 2026-09-09: os dois lados recortam por `te.InicioEm` com predicado idêntico
+   * (`MetricsQueryRepository.cs:1465-1474` × `ReportQueryRepository.cs:900-914`). O assert
+   * antigo passou a exigir do card uma afirmação **falsa**.
+   *
+   * Invertido, não apagado — e a razão nova (o crédito de horas, 132/R-12) entrou no lugar,
+   * com a mesma disciplina de literal escrito à mão.
+   */
+  it('🔴 132: o card diz que a data é a MESMA, e nomeia o crédito como a razão nova', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: JSON.parse(WIRE_COM_DADOS) as unknown })
     renderSection()
     await screen.findByTestId('plan-health-chart')
 
-    // `MetricsQueryRepository.cs:1465-1473` (InicioEm) × `ReportQueryRepository.cs:777-785`
-    // (Ticket.FechadoEm) — lido no backend em 08/09/2026.
-    expect(card()).toHaveTextContent('data em que o chamado foi concluído')
-    expect(card()).toHaveTextContent('data em que o time lançou a hora')
+    // Positivas: a data igual, e a diferença que sobrou no lugar dela.
+    expect(card()).toHaveTextContent('pela mesma data deste medidor')
+    expect(card()).toHaveTextContent('Crédito de Suporte')
+    expect(card()).toHaveTextContent('só as horas contratadas')
     // `c.SupportPlanId != null` (`MetricsQueryRepository.cs:1459`) × elegibilidade do
-    // plan-consumption (`ReportQueryRepository.cs:683-693`).
+    // plan-consumption (região `⟪121/A1 PLANCONSUMO-ELEGIBILIDADE⟫`, `:819-831`).
     expect(card()).toHaveTextContent('lista também cliente sem plano contratado')
     expect(card()).toHaveTextContent('só quem tem plano')
+
+    // Negativa: a data revogada saiu do card. (A companheira positiva está acima, na mesma
+    // execução — sem ela este assert passaria com o card vazio.)
+    expect(card()).not.toHaveTextContent('data em que o chamado foi concluído')
+  })
+
+  it('🔴 132/D15: o card NÃO exibe a categoria interna do crédito', async () => {
+    // O card do painel é superfície de gerência, mas o texto é o mesmo módulo que alimenta a
+    // tela do cliente: a garantia é do texto, não do lugar (AP-SECURITY-001).
+    vi.mocked(api.get).mockResolvedValue({ data: JSON.parse(WIRE_COM_DADOS) as unknown })
+    renderSection()
+    await screen.findByTestId('plan-health-chart')
+
+    expect(card()).toHaveTextContent('Crédito de Suporte')
+    expect(card()).not.toHaveTextContent('Problema - Invoicy')
   })
 })

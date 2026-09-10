@@ -22,13 +22,9 @@ import { LogsTable } from '../features/sincronizador/components/LogsTable'
 import { buildClientTicketsColumns } from '../features/client-tickets/columns'
 import { buildMovimentacaoDiariaColumns } from '../features/movimentacao-diaria/columns'
 import { buildAppointmentsColumns } from '../features/reports/appointments/columns'
-import { buildBillingExceptionsColumns } from '../features/reports/plan-consumption/components/billingExceptionsColumns'
 import type { TicketTimeEntryDto, TicketHeaderDto } from '../features/ticket-detail/types/ticketDetail'
 import type { MovimentacaoDiariaRowDto } from '../features/movimentacao-diaria/types/movimentacaoDiaria'
-import type {
-  BillingExceptionItemDto,
-  TicketReportItemDto,
-} from '../features/reports/shared/types/reports'
+import type { TicketReportItemDto } from '../features/reports/shared/types/reports'
 import type { LogDto } from '../features/sincronizador/types/sincronizador'
 import { ToastProvider } from '../components/ui/Toast'
 
@@ -252,33 +248,6 @@ describe('A-1 · células de tabela — o travessão é conteúdo, não decoraç
     }
   })
 
-  it('plan-consumption/exceções: status ausente mede 5,47:1', () => {
-    const excecao: BillingExceptionItemDto = {
-      ticketId: 1,
-      hubspotTicketId: '1001',
-      assunto: 'Erro',
-      clientId: null,
-      clienteNome: 'ACME',
-      equipe: null,
-      ownerNome: null,
-      status: null,
-      statusNome: null,
-      statusCategoria: null,
-      ultimaAtividadeEm: null,
-      segundosPlano: 0,
-      segundosFaturado: 0,
-      segundosAnalise: 0,
-      segundosTotais: 0,
-      hubspotUrl: null,
-    }
-    const coluna = buildBillingExceptionsColumns('anomalia').find((c) => c.key === 'status')
-    if (!coluna) throw new Error('Coluna "status" não existe mais — a varredura ficaria vazia.')
-    const { medidas, pulados } = medirCelula(coluna.accessor(excecao))
-    expect(pulados).toEqual([])
-    expect(classesDoTexto(medidas, '—')).toEqual(['text-foreground/70'])
-    expect(razaoDoTexto(medidas, '—').toFixed(2)).toBe('5.47')
-  })
-
   it('movimentação diária: "Sem equipe" é texto de conteúdo e mede 5,47:1', () => {
     const linha: MovimentacaoDiariaRowDto = {
       id: 1,
@@ -365,6 +334,8 @@ describe('A-1 · placeholder de campo é TEXTO — e não aparece na varredura d
             entry={apontamento()}
             agentOptions={[]}
             categoryOptions={[]}
+            // 133: prop obrigatória; sem trava (a categoria do apontamento não força).
+            categoriasQueForcam={new Set()}
             canChangeAgent={false}
             currentUserId={1}
             canManage={false}

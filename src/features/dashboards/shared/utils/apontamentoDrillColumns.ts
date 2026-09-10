@@ -9,9 +9,14 @@
  * categorização interna do atendimento (ex.: "Plantão"), não a categoria do ticket.
  *
  * `sortKey` reflete a whitelist de ordenação do backend (inicioem | totalsegundos | atendente).
+ *
+ * 134 — `totalSegundos` ganhou `durationSeconds` (o wire já está em SEGUNDOS, então é
+ * `durationCell` direto): o arquivo leva número somável e a TELA segue no `accessor`
+ * (`formatSeconds` → `'2h 44m'`).
  */
 
 import { formatDate, formatSeconds } from '../../../reports/shared/utils/formatters'
+import { durationCell } from '../../../reports/shared/utils/exportTable'
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { TimeEntryDrillRowDto } from '../types/metrics'
 
@@ -55,6 +60,7 @@ export function apontamentoDrillColumns(): ColumnDef<TimeEntryDrillRowDto>[] {
       key: 'totalSegundos',
       header: 'Tempo',
       accessor: (row) => formatSeconds(row.totalSegundos),
+      durationSeconds: (row) => durationCell(row.totalSegundos),
       sortable: true,
       sortKey: 'totalsegundos',
       align: 'right',

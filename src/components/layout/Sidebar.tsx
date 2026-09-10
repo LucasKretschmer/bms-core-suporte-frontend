@@ -230,6 +230,43 @@ const adminItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    // 132/F5 — créditos de horas (GerentePlus: `HourCreditsController`, arquitetura §11.4).
+    // Rótulo "Créditos de Horas" e não "Créditos": nenhum outro item da barra contém a
+    // palavra, mas o rótulo longo mantém a distinção óbvia de "Consumo de Planos", que é a
+    // tela onde o crédito APARECE somado ao plano.
+    label: 'Créditos de Horas',
+    href: '/creditos',
+    requiresGerentePlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1m9-5a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    // 132/F6 — motivos de crédito (GerentePlus: `HourCreditReasonsController`).
+    label: 'Motivos de Crédito',
+    href: '/motivos-credito',
+    requiresGerentePlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 4h4m-6 5V5a2 2 0 012-2h10a2 2 0 012 2v16l-3-2-3 2-3-2-3 2z" />
+      </svg>
+    ),
+  },
+  {
+    // 132/F7 — competências de faturamento: fechar, reabrir e comparar snapshot × ao vivo
+    // (GerentePlus: `BillingPeriodsController`).
+    label: 'Competências',
+    href: '/competencias',
+    requiresGerentePlus: true,
+    icon: (
+      <svg aria-hidden="true" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm4 10h6" />
+      </svg>
+    ),
+  },
 ]
 
 /**

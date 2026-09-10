@@ -2,16 +2,18 @@
  * 123/FAT-1 — nota fixa que declara **por qual data** a tela recorta o período.
  *
  * Genérica de propósito: as duas telas de fatura (Consumo de Planos e Relatório do Cliente)
- * apuram o CHAMADO pelo mesmo critério (`Ticket.FechadoEm`), e duas cópias do texto
- * divergiriam na primeira mudança de regra. Todo texto vem de
- * `shared/utils/competenciaTexts.ts`, onde cada afirmação está ancorada no `arquivo:linha`
- * do backend que a sustenta (AP-FRONTEND-022).
+ * apuram a HORA pelo mesmo critério — e duas cópias do texto divergiriam na primeira mudança
+ * de regra. **Foi o que aconteceu:** em 132/D1 o critério trocou de `Ticket.FechadoEm` para
+ * `TimeEntry.InicioEm` nas duas telas, e a nota inteira mudou de conteúdo **sem uma linha de
+ * componente** — porque o texto vive em `shared/utils/competenciaTexts.ts`, onde cada
+ * afirmação está ancorada no `arquivo:linha` do backend que a sustenta (AP-FRONTEND-022).
  *
  * ⚠️ **Ressalva da 131 (08/09/2026): o PROJETO deixou de ser igual nas duas telas.** No
- * Consumo de Planos ele não consome mais o plano de suporte
- * (`ReportQueryRepository.cs:771-786`); no Relatório do Cliente nada mudou (`:146-179`,
- * `:210`). Por isso `notaDeProjeto` é uma união, não um booleano: a nota continua
- * compartilhada, mas a AFIRMAÇÃO sobre projeto é escolhida pelo call site.
+ * Consumo de Planos ele não consome mais o plano de suporte (região
+ * `⟪131 PLANCONSUMO-HORASUSADAS⟫`, `ReportQueryRepository.cs:900-914`); no Relatório do
+ * Cliente nada mudou. Por isso `notaDeProjeto` é uma união, não um booleano: a nota continua
+ * compartilhada, mas a AFIRMAÇÃO sobre projeto é escolhida pelo call site. A 132 **não
+ * revogou** a 131 — reancorado em 2026-09-09, com B1/B2 entregues.
  *
  * É informativa e **não interativa**: `<section>` semântica com `aria-label`, sem foco a
  * capturar e sem estado. Fica sempre visível (inclusive em loading/erro/vazio) quando
@@ -30,23 +32,25 @@
 
 import { clsx } from 'clsx'
 import {
+  TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO,
   TEXTO_COMPETENCIA_CONSEQUENCIA,
   TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
   TEXTO_COMPETENCIA_PROJETO_RELATORIO_DO_CLIENTE,
   TEXTO_COMPETENCIA_REGRA,
-  TEXTO_COMPETENCIA_SEM_CONCLUSAO,
   TEXTO_COMPETENCIA_TITULO,
   TEXTO_COMPETENCIA_VS_SAUDE_PLANOS,
-  textoPeriodoDeConclusao,
+  textoPeriodoDeApontamento,
 } from '../utils/competenciaTexts'
 
 /**
  * 131 — o apontamento de projeto tem DOIS enquadramentos, um por tela, e por isso este
  * eixo deixou de ser booleano:
  *  · `'fora-do-plano'` — **Consumo de Planos**: projeto não consome o plano de suporte
- *    (`ReportQueryRepository.cs:771-786`, região `⟪131 PLANCONSUMO-HORASUSADAS⟫`);
+ *    (região `⟪131 PLANCONSUMO-HORASUSADAS⟫`, `ReportQueryRepository.cs:900-914`);
  *  · `'no-plano-por-apontamento'` — **Relatório do Cliente**: nada mudou ali, projeto
- *    continua recortado por `InicioEm` (`:146-179`) e somado em `PlanoSeg` (`:210`).
+ *    continua recortado por `InicioEm` (região `⟪121/A1 RAMO-PROJETO⟫`, `:172-205`) e
+ *    somado em `PlanoSeg`. ⚠️ Depois da 132/D1 o ramo de TICKET daquela tela passou a usar
+ *    a mesma data (`:119-170`) — o que esta opção afirma é sobre o PLANO, não sobre a data.
  *
  * Com um booleano as duas telas compartilhavam a MESMA frase — foi o que fez o texto
  * ficar falso em uma delas sem ficar falso na outra. A união obriga o call site a
@@ -72,8 +76,11 @@ type CompetenciaNotaProps = {
   notaDeProjeto?: NotaDeProjeto
   /**
    * 123/FE-PER (D-14 / AUTO-1) — declara também que o gráfico **Saúde dos Planos** apura o
-   * mesmo consumo por OUTRA data (a do apontamento, `MetricsQueryRepository.cs:1264-1265`),
-   * de propósito: é o medidor ao vivo que o usuário pediu.
+   * mesmo consumo — e 🔴 **132/F3: já NÃO é por outra data.** Os dois lados recortam por
+   * `te.InicioEm` (`MetricsQueryRepository.cs:1471` × `ReportQueryRepository.cs:900-914`).
+   * A frase continua necessária porque as telas divergem por OUTRAS razões, agora incluindo
+   * o **crédito de horas**, que o `plan-health` não conhece (132/R-12,
+   * `MetricsDtos.cs:137-148`).
    *
    * Só faz sentido onde o usuário compara os dois números — a tela de **Consumo de Planos**.
    * O Relatório do Cliente não tem contraparte no painel, e a frase ali seria ruído.
@@ -100,13 +107,13 @@ export function CompetenciaNota({
 
       <ul className="mt-2 flex flex-col gap-1 text-xs text-muted">
         <li>{TEXTO_COMPETENCIA_CONSEQUENCIA}</li>
-        <li>{TEXTO_COMPETENCIA_SEM_CONCLUSAO}</li>
+        <li>{TEXTO_COMPETENCIA_CHAMADO_EM_ABERTO}</li>
         {notaDeProjeto && <li>{TEXTO_DE_PROJETO[notaDeProjeto]}</li>}
         {comparaSaudePlanos && <li>{TEXTO_COMPETENCIA_VS_SAUDE_PLANOS}</li>}
       </ul>
 
       <p className="mt-2 text-xs font-medium text-foreground">
-        {textoPeriodoDeConclusao({ from, to })}
+        {textoPeriodoDeApontamento({ from, to })}
       </p>
     </section>
   )

@@ -20,6 +20,20 @@ export type ServiceCategoryOptionDto = {
   id: number
   nome: string
   isActive: boolean
+  /**
+   * 133 — quando `true`, o backend força `billableOutsidePlan = true` em toda escrita de
+   * apontamento com esta categoria (R-133), e o painel trava a caixa no `TimeEntryModal`.
+   *
+   * **OPCIONAL de propósito:** um backend anterior à 133 não envia a chave, e *ausente* ≠
+   * *`false` declarado pelo servidor* (`AP-FRONTEND-021`). Entre dois deploys o cliente
+   * novo conversa com o backend velho; a direção segura do default é **ausente → não
+   * trava** (e o backend velho também não força, então nada fica incoerente).
+   *
+   * Nunca ler esta propriedade solta: use `forcaCobrancaForaDoPlano`, o mesmo helper da
+   * tela de categorias (`features/service-categories/types/serviceCategory.ts`), que trata
+   * `undefined`, `null` e objeto nulo com `=== true`.
+   */
+  forcesBillableOutsidePlan?: boolean
 }
 
 export async function listAgentOptions(): Promise<AgentOptionDto[]> {

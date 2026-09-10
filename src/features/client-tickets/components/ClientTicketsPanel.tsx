@@ -32,6 +32,7 @@ import { KpiCardGrid } from '../../dashboards/shared/components/KpiCardGrid'
 import { ExportButtons } from '../../reports/shared/components/ExportButtons'
 import { PeriodFilter } from '../../reports/shared/components/PeriodFilter'
 import {
+  durationCell,
   exportToCsv,
   exportToXlsx,
   type ExportColumn,
@@ -41,17 +42,16 @@ import {
   fetchAllPaginated,
   ExportLimitError,
 } from '../../reports/shared/utils/fetchAllPaginated'
-import { formatDate, formatHours, formatPercent, formatSeconds } from '../../reports/shared/utils/formatters'
+import { formatDate, formatHours, formatPercent } from '../../reports/shared/utils/formatters'
 import {
   HEADER_BALDE_ANALISE,
   HEADER_BALDE_FATURADO,
   HEADER_BALDE_PLANO,
   HEADER_CONCLUIDO_EM,
-  KPI_EM_ABERTO_LABEL,
-  KPI_EM_ABERTO_TEXTO,
   TEXTO_APENAS_FATURA_INFO,
   TEXTO_APENAS_FATURA_LABEL,
   TEXTO_DIVERGENCIA_KPI_TABELA,
+  TOOLTIP_KPI_HORAS_ADICIONAIS,
   TOOLTIP_KPI_HORAS_FATURAVEIS,
   TOOLTIP_KPI_HORAS_RESTANTES,
   TOOLTIP_KPI_HORAS_USADAS,
@@ -61,7 +61,7 @@ import { resolverPeriodoPadrao } from '../../reports/shared/utils/periodoPadrao'
 import { getPercentClass } from '../../reports/plan-consumption/columns'
 import { getTicketStatuses, listTeams } from '../../reports/shared/services/reportsService'
 import type { ClientTicketItemDto } from '../types/clientTickets'
-import { baldeTexto, buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO } from '../columns'
+import { buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO } from '../columns'
 import { listClientTickets, listTicketOwners } from '../services/clientTicketsService'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
@@ -77,6 +77,15 @@ import { useClientKpis } from '../hooks/useClientKpis'
  * três baldes de fatura do chamado. É a lacuna literal do relato B2 ("para a extração de
  * relatório com informações corretas"): sem os baldes, a planilha do detalhe não fecha com a
  * linha da tela-mãe, porque "Tempo no período" é outra janela.
+ *
+ * 134 — as QUATRO colunas de duração desta superfície ("Tempo no período" + os 3 baldes)
+ * saem `type: 'duration'`: a célula leva SEGUNDOS crus e quem formata é o núcleo do export
+ * (`H:mm:ss` no CSV, número + `[h]:mm:ss` no XLSX), para que o gestor consiga somar na
+ * planilha. Os KPIs e a tabela da TELA não mudam — continuam em `formatHours`/`baldeTexto`.
+ * ⚠️ Ausência (`null` ou chave que não veio) ⇒ célula VAZIA, nunca `0` e nunca "—": é a
+ * mentira que `AP-FRONTEND-028` documenta nesta própria tela (ver o comentário do cartão
+ * "Em aberto", abaixo — `formatHours(null)` escrevia "0h 0m", afirmando ZERO onde o valor é
+ * DESCONHECIDO). O guard `== null` mora dentro de `durationCell`, uma vez só.
  */
 const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket', key: 'ticket' },
@@ -86,13 +95,13 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Status', key: 'status' },
   // 121/§4.4 — antes "Tempo do plano": o rótulo afirmava algo que a coluna não mede
   // (é o tempo TOTAL no período, todos os baldes). Mesmo rótulo da tabela visível.
-  { header: HEADER_TEMPO_NO_PERIODO, key: 'tempo' },
+  { header: HEADER_TEMPO_NO_PERIODO, key: 'tempo', type: 'duration' },
   { header: 'Apontamentos', key: 'apontamentos' },
   { header: HEADER_CONCLUIDO_EM, key: 'concluidoEm' },
   { header: 'Na fatura', key: 'naFatura' },
-  { header: HEADER_BALDE_PLANO, key: 'baldePlano' },
-  { header: HEADER_BALDE_FATURADO, key: 'baldeFaturado' },
-  { header: HEADER_BALDE_ANALISE, key: 'baldeAnalise' },
+  { header: HEADER_BALDE_PLANO, key: 'baldePlano', type: 'duration' },
+  { header: HEADER_BALDE_FATURADO, key: 'baldeFaturado', type: 'duration' },
+  { header: HEADER_BALDE_ANALISE, key: 'baldeAnalise', type: 'duration' },
 ]
 
 /**
@@ -123,22 +132,28 @@ function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
     equipe: item.equipe ?? '—',
     owner: item.ownerNome ?? '—',
     status: item.status ?? '—',
-    tempo: formatSeconds(item.totalSeconds),
+    tempo: durationCell(item.totalSeconds),
     apontamentos: item.apontamentosCount,
     concluidoEm: concluidoEmTexto(item.fechadoEm),
     naFatura: naFaturaTexto(item.entraNaFatura),
-    // `baldeTexto` é o MESMO formatador da coluna visível — nunca uma segunda cópia da
-    // regra de ausência (é assim que o export divergiu da tela na 121/F4).
-    baldePlano: baldeTexto(item.faturaPlanoSegundos),
-    baldeFaturado: baldeTexto(item.faturaFaturadoSegundos),
-    baldeAnalise: baldeTexto(item.faturaAnaliseSegundos),
+    // 134 — o export deixa de chamar `baldeTexto` (que segue sendo a formatação da
+    // COLUNA VISÍVEL, em `columns.tsx`) e passa os segundos crus por `durationCell`.
+    // O guard `== null` continua existindo exatamente uma vez, agora dentro do helper.
+    baldePlano: durationCell(item.faturaPlanoSegundos),
+    baldeFaturado: durationCell(item.faturaFaturadoSegundos),
+    baldeAnalise: durationCell(item.faturaAnaliseSegundos),
   }
 }
 
-// 121/§4.5 (D2) — o rótulo e o subtexto do KPI "Em aberto" agora moram em
-// `reports/shared/utils/competenciaTexts.ts`, junto com o resto da copy deste painel:
-// `textoPeriodoDoDetalhe` precisa nomear ESTE cartão como a exceção da frase de período
-// (123/FE-FIX3, ressalva `F-2`), e as duas pontas têm de sair da mesma constante.
+// 🔴 132/F3 — aqui vivia a nota que explicava por que o rótulo do KPI "Em aberto" morava em
+// `competenciaTexts.ts`: `textoPeriodoDoDetalhe` NOMEAVA aquele cartão como a exceção da frase
+// de período (123/FE-FIX3, ressalva `F-2`), e as duas pontas tinham de sair da mesma constante.
+//
+// O cartão saiu na 132/F2 e a exceção saiu da frase no mesmo commit — a nota ficou sem sujeito
+// e descrevia um acoplamento que já não existe. O mecanismo, no entanto, VALE: toda copy deste
+// painel continua em `competenciaTexts.ts`, e é de lá que sai também o tooltip do cartão
+// "Extras (estouro)", que até a 132/F3 estava digitado inline logo abaixo (e ficou falso quando
+// o plano passou a ter crédito somado).
 
 const PERCENT_SUBTEXT: Record<
   ReturnType<typeof getPercentClass>,
@@ -329,10 +344,12 @@ export function ClientTicketsPanel({
               value={kpis?.nomePlano ?? '—'}
               isLoading={kpisQuery.isLoading}
             />
-            {/* 123/FAT-1 — os KPIs vêm da MESMA linha de /metrics/plan-consumption da
-                tela-mãe (getClientKpis), logo recortam por DATA DE CONCLUSÃO do chamado.
-                Sem o tooltip, "Horas usadas = 0h 0m" com apontamentos visíveis na tabela
-                logo abaixo parece defeito — é o relato B2 literal. */}
+            {/* 123/FAT-1 · 🔴 132/D1 — os KPIs vêm da MESMA linha de
+                /metrics/plan-consumption da tela-mãe (getClientKpis), logo recortam pela
+                DATA DO APONTAMENTO (era a data de conclusão do chamado até a 132) e herdam
+                o plano EFETIVO, com o crédito da competência já somado. Sem o tooltip,
+                "Horas usadas = 0h 0m" com apontamentos visíveis na tabela logo abaixo parece
+                defeito — é o relato B2 literal. */}
             <KpiCard
               label="Horas usadas"
               value={kpis ? formatHours(kpis.horasUsadas) : '—'}
@@ -345,11 +362,17 @@ export function ClientTicketsPanel({
               tooltipText={TOOLTIP_KPI_HORAS_RESTANTES}
               isLoading={kpisQuery.isLoading}
             />
+            {/* 🔴 132/F3 — o tooltip deste cartão estava DIGITADO INLINE e dizia "além do
+                plano contratado". Com o plano efetivo (D11) o excedente é medido contra
+                contrato + crédito, então "contratado" passou a nomear o divisor errado — e,
+                digitado aqui, o texto escapava de todos os detectores de
+                `competenciaTexts.test.ts` (AP-FRONTEND-022). Agora sai da mesma constante que
+                a coluna "Horas Adicionais" do Consumo de Planos, que é o MESMO número. */}
             <KpiCard
               label="Extras (estouro)"
               value={kpis ? formatHours(kpis.horasAdicionais) : '—'}
               isLoading={kpisQuery.isLoading}
-              tooltipText="Horas consumidas além do plano contratado."
+              tooltipText={TOOLTIP_KPI_HORAS_ADICIONAIS}
             />
             <KpiCard
               label="Faturável por fora"
@@ -357,26 +380,20 @@ export function ClientTicketsPanel({
               tooltipText={TOOLTIP_KPI_HORAS_FATURAVEIS}
               isLoading={kpisQuery.isLoading}
             />
-            {/* 121/§4.5 — "Em aberto": estoque all-time, NÃO reage ao filtro de
-                período (e a tela diz isso, no subtexto E no tooltip).
-                TRÊS ramos (AP-FRONTEND-021): sem linha de plano → "—"; campo AUSENTE
-                (backend sem FAT-3) → "—"; campo presente com 0 → "0h 0m". Um
-                `?? 0` afirmaria "não há trabalho em aberto" enquanto o backend
-                antigo estiver no ar.
-                ⚠️ `== null` e não `=== undefined` (121/F4): um `decimal?` do C# manda
-                `null`, e aí `formatHours(null)` escrevia "0h 0m" — afirmando ZERO onde
-                o valor é DESCONHECIDO. */}
-            <KpiCard
-              label={KPI_EM_ABERTO_LABEL}
-              value={
-                kpis?.horasEmAbertoNaoFaturadas == null
-                  ? '—'
-                  : formatHours(kpis.horasEmAbertoNaoFaturadas)
-              }
-              subtext={KPI_EM_ABERTO_TEXTO}
-              tooltipText={KPI_EM_ABERTO_TEXTO}
-              isLoading={kpisQuery.isLoading}
-            />
+            {/* 🔴 132/F2 (D7) — aqui vivia o 7º cartão, "Em aberto (não faturável
+                ainda)", alimentado por `kpis.horasEmAbertoNaoFaturadas`. Ele era o
+                SEGUNDO consumidor do campo (o 1º é o Consumo de Planos, que compartilha
+                a MESMA linha via `getClientKpis`), e o campo **saiu do wire** de
+                `/metrics/plan-consumption` na 132/B1+B2.
+
+                O conceito acabou, não foi só o cartão: com `TimeEntry.InicioEm` como
+                competência (132/D1), a hora é faturada no mês em que foi APONTADA —
+                chamado aberto ou fechado. "Trabalho em aberto, fora de qualquer fatura"
+                deixou de existir como conjunto; o que antes ficava nesse limbo agora
+                aparece nos cartões acima, na competência do apontamento.
+
+                ⚠️ A grade caiu de 7 para 6 cartões. Se você veio devolver o cartão:
+                ele não tem fonte de dado. */}
             <KpiCard
               label="% do plano"
               value={formatPercent(kpis?.percentualPlano ?? null)}
@@ -391,15 +408,19 @@ export function ClientTicketsPanel({
           </KpiCardGrid>
         )}
 
-        {/* 123/FAT-1 + 123/FE-PER — a tela deixa de esconder TRÊS coisas:
+        {/* 123/FAT-1 + 123/FE-PER · 🔴 reescrito por 132/F3 — a tela deixa de esconder:
               0. (D-2) QUAL período está em uso, inclusive quando ele veio do padrão da tela
                  (mês atual). Default invisível é defeito de comunicação: foi ele que fez o
                  usuário concluir que a tela estava errada.
-              1. por qual data os cartões acima recortam (data de conclusão do chamado);
-              2. que a coluna "Tempo no período" da tabela recorta por OUTRA data
-                 (a do apontamento) — e que os dois não fecham de propósito.
-            Isto apenas torna a divergência LEGÍVEL. Unificar as duas janelas depende da
-            decisão de produto DP-7, ainda aberta, e mexeria em query do backend. */}
+              1. o que cada número MEDE — os cartões medem consumo do plano (só chamado, sem
+                 as horas de cobrar por fora e sem as isentas); a coluna "Tempo no período"
+                 mede todo o tempo apontado.
+            🔴 O que NÃO se afirma mais aqui: que as duas metades recortam por datas
+            diferentes. Depois da 132/D1 as duas recortam pela data do apontamento
+            (`⟪132 JANELA-OPERACIONAL⟫` × `⟪132 JANELA-COMPETENCIA⟫`) — e também não se
+            afirma o contrário ("agora batem"), porque o que cada uma mede continua
+            diferente. As duas janelas seguem separadas no backend de propósito (PRD §8.1);
+            unificá-las é decisão de produto (DP-7), ainda aberta. */}
         <p className="mt-2 max-w-[100ch] text-xs text-muted">
           {textoPeriodoDoDetalhe({ from: filters.from, to: filters.to })}{' '}
           {TEXTO_DIVERGENCIA_KPI_TABELA}

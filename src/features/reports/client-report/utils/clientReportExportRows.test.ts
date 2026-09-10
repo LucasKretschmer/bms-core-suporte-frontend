@@ -124,11 +124,66 @@ describe('itemToExportRow — "Concluído em"', () => {
     // `undefined` passaria nas duas implementações e não discriminaria.
     const linha = itemToExportRow(item({ fechadoEmChamado: null }))
     expect(linha.fechadoEmChamado).toBe('—')
-    expect(linha.tempo).toBe('2h 0m')
+    // 134/U11 — `tempo` agora é SEGUNDOS crus (coluna `type: 'duration'`), não texto.
+    // Segue sendo a companheira positiva desta linha: prova que o mapeamento escreveu.
+    expect(linha.tempo).toBe(7200)
   })
 
   it('data ilegível não vira "Invalid Date" na planilha', () => {
     const linha = itemToExportRow(item({ fechadoEmChamado: 'xx' }))
     expect(String(linha.fechadoEmChamado)).not.toContain('Invalid')
+  })
+})
+
+/**
+ * 134/U11 — a coluna "Tempo" no export virou DURAÇÃO CALCULÁVEL: o mapper para de formatar e
+ * entrega segundos crus; quem formata é o `exportTable` (CSV `H:mm:ss`, XLSX serial + `[h]:mm:ss`).
+ * A tela e o PDF continuam em `2h 44m` de propósito — nada aqui os cobre.
+ */
+describe('itemToExportRow — "Tempo" como duração calculável (134/U11)', () => {
+  it('9840s sai como o NÚMERO 9840, não como o texto "2h 44m"', () => {
+    // VERMELHO se: o mapper voltar a `formatSeconds(item.totalSegundos)` (sai '2h 44m');
+    // se alguém "ajudar" convertendo para string (`String(...)`, template literal);
+    // se o helper trocar `Math.round` por outra coisa que altere o inteiro.
+    const linha = itemToExportRow(item({ totalSegundos: 9840 }))
+    expect(linha.tempo).toBe(9840)
+    expect(typeof linha.tempo).toBe('number')
+  })
+
+  it('0s é VALOR (0), não ausência', () => {
+    // VERMELHO se: qualquer ramo do caminho de duração for `if (!v) return null` / `?? ''`
+    // (sairia célula vazia = perda de dado na planilha que o gestor encaminha);
+    // se o mapper voltar a formatar (sairia '0h 0m').
+    // É a companheira positiva do guard de ausência: `0` e "não sei" não podem colapsar.
+    const linha = itemToExportRow(item({ totalSegundos: 0 }))
+    expect(linha.tempo).toBe(0)
+    expect(typeof linha.tempo).toBe('number')
+  })
+
+  it('`tempo` é a ÚNICA coluna `duration` do export — identidade nominal, não contagem', () => {
+    // Conjunto DERIVADO do array em runtime (não lista mantida à mão): coluna nova nasce
+    // dentro da varredura. VERMELHO se: o `type: 'duration'` sair de `tempo` (conjunto vazio);
+    // se `type: 'duration'` for posto em qualquer outra coluna (ex.: uma data), o que a
+    // escreveria como serial de Excel. Cardinalidade passaria com uma entrando e outra saindo.
+    const chavesDuration = new Set(
+      CLIENT_REPORT_EXPORT_COLUMNS.filter((c) => c.type === 'duration').map((c) => c.key),
+    )
+    expect(chavesDuration).toEqual(new Set(['tempo']))
+  })
+
+  it('toda coluna `duration` recebe número ou null do mapeamento — nunca texto', () => {
+    // Invariante derivado: casa as duas pontas (declaração da coluna × valor do mapper) sem
+    // nomear ninguém. VERMELHO se uma coluna marcada `duration` continuar pré-formatada —
+    // exatamente o defeito que o FALLBACK RUIDOSO do `exportTable` degrada, e que aqui reprova
+    // na origem. Controle positivo abaixo: prova que a varredura visitou alguma coluna.
+    const linha = itemToExportRow(item({ totalSegundos: 9840 }))
+    const visitadas: string[] = []
+    for (const coluna of CLIENT_REPORT_EXPORT_COLUMNS) {
+      if (coluna.type !== 'duration') continue
+      visitadas.push(coluna.key)
+      const valor = linha[coluna.key]
+      expect(valor === null || typeof valor === 'number').toBe(true)
+    }
+    expect(visitadas).toEqual(['tempo'])
   })
 })

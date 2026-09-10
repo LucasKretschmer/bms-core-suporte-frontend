@@ -108,6 +108,72 @@ describe('Sidebar — grupo Administração', () => {
   })
 })
 
+/**
+ * 132/F8 — os três itens `GerentePlus` das telas novas (D10 · D22).
+ *
+ * A lista é **nominal**, com os `href` literais: cardinalidade ("são 4 itens no grupo")
+ * passaria com um item entrando e outro saindo. E cada negativa tem a companheira positiva
+ * — sem ela, "o coordenador não vê Créditos de Horas" também passaria se a barra inteira
+ * tivesse deixado de renderizar.
+ */
+const ITENS_GERENTE_PLUS_DA_132: ReadonlyArray<readonly [string, string]> = [
+  ['Créditos de Horas', '/creditos'],
+  ['Motivos de Crédito', '/motivos-credito'],
+  ['Competências', '/competencias'],
+]
+
+describe('Sidebar — telas GerentePlus da 132 (F5 · F6 · F7)', () => {
+  afterEach(() => vi.clearAllMocks())
+
+  it('GERENTE vê os três itens, cada um com o href literal', () => {
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: true, isGestor: true })
+    render(<Sidebar isCollapsed={false} />)
+
+    for (const [rotulo, href] of ITENS_GERENTE_PLUS_DA_132) {
+      expect(screen.getByText(rotulo).closest('a')).toHaveAttribute('href', href)
+    }
+  })
+
+  it('COORDENADOR não vê nenhum dos três — e continua vendo os itens que são dele', () => {
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: false, isGestor: true })
+    render(<Sidebar isCollapsed={false} />)
+
+    for (const [rotulo] of ITENS_GERENTE_PLUS_DA_132) {
+      expect(screen.queryByText(rotulo)).not.toBeInTheDocument()
+    }
+    // Companheira positiva NA MESMA execução: prova que a barra renderizou.
+    expect(screen.getByText('Categorias').closest('a')).toHaveAttribute('href', '/categorias')
+  })
+
+  it('ATENDENTE não vê nenhum dos três — e continua vendo os itens que são dele', () => {
+    setRole({ isCoordenadorOuAcima: false, isGerentePlus: false, isGestor: false })
+    render(<Sidebar isCollapsed={false} />)
+
+    for (const [rotulo] of ITENS_GERENTE_PLUS_DA_132) {
+      expect(screen.queryByText(rotulo)).not.toBeInTheDocument()
+    }
+    expect(screen.getByText('Consumo de Planos').closest('a')).toHaveAttribute(
+      'href',
+      '/relatorios/consumo-planos',
+    )
+  })
+
+  it('os rótulos novos não engolem nem são engolidos por itens existentes', () => {
+    // Mesma razão do caso "Planos" × "Consumo de Planos" (124/F1): `getByText` casa o texto
+    // inteiro do nó, e um rótulo novo que repetisse o de outro item quebraria as duas
+    // buscas. Fica vermelho se alguém encurtar "Créditos de Horas" para "Créditos" tendo
+    // por perto um item que já contenha a palavra.
+    setRole({ isCoordenadorOuAcima: true, isGerentePlus: true, isGestor: true })
+    render(<Sidebar isCollapsed={false} />)
+
+    for (const [rotulo] of ITENS_GERENTE_PLUS_DA_132) {
+      expect(screen.getAllByText(rotulo)).toHaveLength(1)
+    }
+    expect(screen.getAllByText('Planos')).toHaveLength(1)
+    expect(screen.getAllByText('Consumo de Planos')).toHaveLength(1)
+  })
+})
+
 describe('Sidebar — Apontamentos por Projeto (057)', () => {
   afterEach(() => vi.clearAllMocks())
 
@@ -165,6 +231,10 @@ describe('Sidebar — Dashboards e Consumo de Planos para ATENDENTE (118.6)', ()
     expect(screen.queryByText('Equipes e Atendentes')).not.toBeInTheDocument()
     expect(screen.queryByText('Configurações')).not.toBeInTheDocument()
     expect(screen.queryByText('Sincronizador')).not.toBeInTheDocument()
+    // 132/F8 — os três itens GerentePlus das telas novas (D10), nominalmente.
+    expect(screen.queryByText('Créditos de Horas')).not.toBeInTheDocument()
+    expect(screen.queryByText('Motivos de Crédito')).not.toBeInTheDocument()
+    expect(screen.queryByText('Competências')).not.toBeInTheDocument()
   })
 
   it('GERENTE vê todos os itens, incluindo Onboarding, Administração e Sincronizador (regressão "vê tudo")', () => {
@@ -186,6 +256,10 @@ describe('Sidebar — Dashboards e Consumo de Planos para ATENDENTE (118.6)', ()
     expect(screen.getByText('Equipes e Atendentes')).toBeInTheDocument()
     expect(screen.getByText('Configurações')).toBeInTheDocument()
     expect(screen.getByText('Sincronizador')).toBeInTheDocument()
+    // 132/F8 — as três telas novas entram nesta regressão "vê tudo", nominalmente.
+    expect(screen.getByText('Créditos de Horas')).toBeInTheDocument()
+    expect(screen.getByText('Motivos de Crédito')).toBeInTheDocument()
+    expect(screen.getByText('Competências')).toBeInTheDocument()
   })
 })
 
@@ -352,6 +426,25 @@ describe('Sidebar — contraste da barra inteira sobre o gradiente (125/FE-A11Y-
     expect(razaoDoTexto(medidas, 'Consumo de Planos').toFixed(2)).toBe('5.31') // SubNavLink
   })
 
+  it('132/F8: os três itens novos FORAM medidos, e passam com o número (6,40 na ponta clara)', () => {
+    // `reprovacoesAA(medidas) === []` sozinho **não prova** que os itens novos entraram na
+    // varredura — asserção negativa é satisfeita pelo vazio. `razaoDoTexto` LANÇA quando a
+    // frase não é encontrada, então é ela que transforma "não medi" em vermelho
+    // (`AP-FRONTEND-030`). Os rótulos têm menos de 60 caracteres, dentro do truncamento do
+    // medidor.
+    const { medidas } = varrerSidebar('')
+
+    // 6,40 e não 5,31: os três são `NavLink` (`text-white/80`, como "Sincronizador"), e não
+    // `SubNavLink` (`text-white/70`, 5,31 — o valor de "Consumo de Planos" acima). Os dois
+    // passam AA; o número diferente é a prova de que a medição casou o nó certo.
+    expect(razaoDoTexto(medidas, 'Créditos de Horas').toFixed(2)).toBe('6.40')
+    expect(razaoDoTexto(medidas, 'Motivos de Crédito').toFixed(2)).toBe('6.40')
+    expect(razaoDoTexto(medidas, 'Competências').toFixed(2)).toBe('6.40')
+    // Companheira: o mesmo número no item GerentePlus que já existia — se o `NavLink`
+    // mudar de classe, os quatro caem juntos.
+    expect(razaoDoTexto(medidas, 'Sincronizador').toFixed(2)).toBe('6.40')
+  })
+
   it('estado ATIVO: o item selecionado passa (era 4,33:1 com as duas classes de cor)', () => {
     // O `activeProps` do router ACRESCENTA classes. Com a cor no `className` base, o item
     // ativo carregava `text-white/70` E `text-white`; na folha gerada pelo Tailwind
@@ -469,6 +562,18 @@ describe('Sidebar — anel de foco sobre o gradiente (126/FE-FOCO)', () => {
       '--color-white 9.04',
       '--color-primary 1.53',
     ])
+  })
+
+  it('132/F8: o anel dos três itens novos foi MEDIDO e passa (companheira do `pulados === []`)', () => {
+    // Mesma razão do caso irmão de contraste: sem uma consulta que LANCE quando o alvo não
+    // é encontrado, "nenhuma reprovação" não distingue "passou" de "não foi medido".
+    const { medidas, pulados } = varrerFocoDaSidebar('')
+
+    expect(pulados).toEqual([])
+    for (const rotulo of ['Créditos de Horas', 'Motivos de Crédito', 'Competências']) {
+      expect(razaoDoAlvo(medidas, rotulo)).toBeGreaterThanOrEqual(PISO_NAO_TEXTUAL)
+      expect(fundosDoAlvo(medidas, rotulo)).toEqual(['#002f4f', '#074b7f'])
+    }
   })
 
   it('estado ATIVO: o item selecionado também passa (o fundo dele é mais claro)', () => {

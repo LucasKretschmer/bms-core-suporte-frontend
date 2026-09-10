@@ -9,8 +9,6 @@ vi.mock('../../../../services/api', () => ({
 
 import { api } from '../../../../services/api'
 import {
-  getBillingExceptionsSummary,
-  listBillingExceptions,
   listTeams,
   getClientReport,
   getTicketStatuses,
@@ -23,8 +21,6 @@ import {
 } from './reportsService'
 import type { PaginatedResponse } from '../../../../types/api'
 import type {
-  BillingExceptionItemDto,
-  BillingExceptionsSummaryDto,
   TeamDto,
   ClientReportDto,
   PlanConsumptionItemDto,
@@ -322,6 +318,88 @@ describe('reportsService', () => {
       expect(params).toHaveProperty('page', 1)
       expect(params).toHaveProperty('pageSize', 25)
     })
+
+    // ── 135/G5 — o filtro "Uso do plano" no transporte ────────────────────────
+
+    it('🔴 135/G5 — `usoPlano` viaja como ARRAY, na ordem recebida, sem transformação', async () => {
+      // Vermelho se o service passar a serializar/juntar o array por conta própria: a
+      // serialização é da instância (`paramsSerializer: { indexes: null }`,
+      // `services/api.ts:40`), e o nome do parâmetro é o que o controller liga a
+      // `string[]` (`MetricsController.cs:446`). Um `usoPlano: 'dentro,risco'` aqui
+      // chegaria ao backend como token único fora do vocabulário ⇒ 400 `INVALID_USO_PLANO`.
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listPlanConsumption({ page: 1, pageSize: 25, usoPlano: ['dentro', 'risco'] })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as {
+        params: Record<string, unknown>
+      }).params
+      expect(params.usoPlano).toEqual(['dentro', 'risco'])
+    })
+
+    it('🔴 135/§3.5.1 — `cleanParams` NÃO descarta array vazio (é por isso que a conversão `[] → undefined` é do CALL SITE)', async () => {
+      // Este caso DOCUMENTA um fato medido, não um desejo: `cleanParams` filtra só
+      // `null`/`undefined`/`''` ⇒ `usoPlano: []` viajaria como `?usoPlano=`. É o que
+      // torna obrigatória a conversão no hook E no export
+      // (`filters.usoPlano.length > 0 ? filters.usoPlano : undefined`), porque não há como
+      // delegá-la ao transporte.
+      //
+      // ⚠️ Condição que INVERTE este teste: se algum dia `cleanParams` passar a descartar
+      // array vazio (como o `limparParams` de `hourCreditsService.ts`), este caso fica
+      // vermelho e deve ser REESCRITO afirmando o novo comportamento — e a conversão nos
+      // call sites revisitada no mesmo commit. Nunca apagado.
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listPlanConsumption({ page: 1, pageSize: 25, usoPlano: [] })
+
+      const params = (vi.mocked(api.get).mock.calls[0][1] as {
+        params: Record<string, unknown>
+      }).params
+      expect(params).toHaveProperty('usoPlano')
+      expect(params.usoPlano).toEqual([])
+      // Companheira positiva: o filtro que o service DEVE descartar continua descartado —
+      // sem ela, "a chave está presente" não distinguiria `cleanParams` de um no-op.
+      expect(params).not.toHaveProperty('search')
+    })
+
+    it('135/G1 — `qtdeTickets` chega no item sem transformação, e `0` NÃO colapsa com ausência', async () => {
+      // O service é transporte: ele não preenche default nenhum. Vermelho se alguém
+      // "normalizar" o item aqui (um `?? 0` no transporte afirmaria "nenhum chamado
+      // aberto" durante a janela de deploy — na tela e na planilha).
+      const comZero: PlanConsumptionItemDto = {
+        clientId: 1,
+        qtdePlanoHoras: 40,
+        horasUsadas: 0,
+        horasRestantes: 40,
+        horasAdicionais: 0,
+        horasFaturaveis: 0,
+        horasAnalise: 0,
+        qtdeTickets: 0,
+      }
+      const semChave: PlanConsumptionItemDto = {
+        clientId: 2,
+        qtdePlanoHoras: 40,
+        horasUsadas: 0,
+        horasRestantes: 40,
+        horasAdicionais: 0,
+        horasFaturaveis: 0,
+        horasAnalise: 0,
+      }
+
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [comZero, semChave], totalCount: 2, page: 1, pageSize: 25, totalPages: 1 },
+      })
+
+      const resultado = await listPlanConsumption({ page: 1, pageSize: 25 })
+
+      expect(resultado.items[0].qtdeTickets).toBe(0)
+      expect(Object.hasOwn(resultado.items[1], 'qtdeTickets')).toBe(false)
+      expect(resultado.items[1].qtdeTickets).toBeUndefined()
+    })
   })
 
   // ── listTicketsReport ───────────────────────────────────────────────────────
@@ -589,231 +667,6 @@ describe('reportsService', () => {
         .params
       expect(params.sortBy).toBe('totalsegundos')
       expect(params.sortDirection).toBe('desc')
-    })
-  })
-
-  // ── listBillingExceptions (121/A2 — contrato §5.2/§8) ────────────────────────
-  //
-  // ⚠️ O endpoint é a unidade FAT-4 e ainda NÃO existe no backend. Estes testes
-  // travam o CONTRATO congelado de §8 no lado do cliente (rota, envelope, params);
-  // eles não provam a integração ponta-a-ponta — ver o relatório da unidade.
-
-  describe('listBillingExceptions', () => {
-    const excecao: BillingExceptionItemDto = {
-      ticketId: 501,
-      hubspotTicketId: '77001',
-      assunto: 'Faturamento travado',
-      clientId: 9,
-      clienteNome: 'Acme',
-      equipe: 'Suporte N2',
-      ownerNome: 'Ana',
-      status: 'Fechado (Suporte BR)',
-      statusNome: 'Fechado',
-      statusCategoria: 'fechado',
-      ultimaAtividadeEm: '2026-07-10T14:00:00Z',
-      segundosPlano: 3600,
-      segundosFaturado: 1800,
-      segundosAnalise: 0,
-      segundosTotais: 5400,
-      hubspotUrl: 'https://app.hubspot.com/ticket/77001',
-    }
-
-    it('chama a rota de §8 e envia TODOS os params do contrato', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
-      })
-
-      await listBillingExceptions({
-        from: '2026-07-01',
-        to: '2026-07-31',
-        sortBy: 'segundos',
-        sortDirection: 'desc',
-        page: 2,
-        pageSize: 50,
-      })
-
-      expect(vi.mocked(api.get).mock.calls[0][0]).toBe('/api/v1/reports/billing-exceptions')
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params).toEqual({
-        from: '2026-07-01',
-        to: '2026-07-31',
-        sortBy: 'segundos',
-        sortDirection: 'desc',
-        page: 2,
-        pageSize: 50,
-      })
-      // Sem `tipo`, o contrato de §8 vale verbatim: nada é enviado, o backend
-      // responde a seção `anomalia` (default). É o que preserva §8 sob F-15.
-      expect(params).not.toHaveProperty('tipo')
-    })
-
-    it('F-15: envia tipo=postergado quando a seção informativa é pedida', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
-      })
-
-      await listBillingExceptions({
-        tipo: 'postergado',
-        from: '2026-07-01',
-        to: '2026-07-31',
-        page: 1,
-        pageSize: 25,
-      })
-
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params.tipo).toBe('postergado')
-    })
-
-    it('F-15: tipo=anomalia é enviado explicitamente quando pedido', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
-      })
-
-      await listBillingExceptions({ tipo: 'anomalia', from: null, to: null, page: 1, pageSize: 25 })
-
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params.tipo).toBe('anomalia')
-    })
-
-    it('OMITE from/to quando nulos — ramo "ignorar período" (nunca string vazia: 400)', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
-      })
-
-      await listBillingExceptions({ from: null, to: null, page: 1, pageSize: 25 })
-
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params).not.toHaveProperty('from')
-      expect(params).not.toHaveProperty('to')
-      expect(params).toHaveProperty('page', 1)
-      expect(params).toHaveProperty('pageSize', 25)
-    })
-
-    it('envia clientId, teamId[] e search quando presentes', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
-      })
-
-      await listBillingExceptions({
-        clientId: 9,
-        teamId: [1, 4],
-        search: 'invoicy',
-        page: 1,
-        pageSize: 25,
-      })
-
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params.clientId).toBe(9)
-      expect(params.teamId).toEqual([1, 4])
-      expect(params.search).toBe('invoicy')
-    })
-
-    it('devolve PaginatedResponse CRU (sem envelope data) com os valores do item', async () => {
-      const mockResponse: PaginatedResponse<BillingExceptionItemDto> = {
-        items: [excecao],
-        totalCount: 1,
-        page: 1,
-        pageSize: 25,
-        totalPages: 1,
-      }
-      vi.mocked(api.get).mockResolvedValueOnce({ data: mockResponse })
-
-      const result = await listBillingExceptions({ from: null, to: null, page: 1, pageSize: 25 })
-
-      // Literais escritos à mão — nada derivado da própria resposta.
-      expect(result.totalCount).toBe(1)
-      expect(result.items[0].hubspotTicketId).toBe('77001')
-      expect(result.items[0].segundosTotais).toBe(5400)
-      expect(result.items[0].segundosPlano + result.items[0].segundosFaturado).toBe(5400)
-    })
-
-    it('resposta VAZIA é sucesso com totalCount 0 (não é erro, não é null)', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({
-        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
-      })
-
-      const result = await listBillingExceptions({ from: null, to: null, page: 1, pageSize: 25 })
-
-      expect(result.items).toEqual([])
-      expect(result.totalCount).toBe(0)
-    })
-
-    it('propaga o erro do axios (o service não engole falha em resposta vazia)', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('500'))
-
-      await expect(
-        listBillingExceptions({ from: null, to: null, page: 1, pageSize: 25 }),
-      ).rejects.toThrow('500')
-    })
-  })
-
-  // ── getBillingExceptionsSummary (F-15 — contrato NOVO, definido nesta unidade) ──
-
-  describe('getBillingExceptionsSummary', () => {
-    const summary: BillingExceptionsSummaryDto = {
-      anomaliasCount: 3,
-      anomaliasSegundos: 6300,
-      postergadoCount: 12,
-      postergadoSegundos: 54000,
-      naoClassificadosCount: 2,
-      naoClassificadosSegundos: 1200,
-    }
-
-    it('desempacota data.data (envelope ApiResponse — recurso único, NÃO paginado)', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: summary } })
-
-      const result = await getBillingExceptionsSummary({ from: '2026-07-01', to: '2026-07-31' })
-
-      // Literais escritos à mão, nada derivado da resposta.
-      expect(result.anomaliasCount).toBe(3)
-      expect(result.anomaliasSegundos).toBe(6300)
-      expect(result.postergadoCount).toBe(12)
-      expect(result.postergadoSegundos).toBe(54000)
-      expect(result.naoClassificadosCount).toBe(2)
-    })
-
-    it('chama a rota do resumo com o período', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: summary } })
-
-      await getBillingExceptionsSummary({ from: '2026-07-01', to: '2026-07-31' })
-
-      expect(vi.mocked(api.get).mock.calls[0][0]).toBe(
-        '/api/v1/reports/billing-exceptions/summary',
-      )
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params).toEqual({ from: '2026-07-01', to: '2026-07-31' })
-    })
-
-    it('omite from/to nulos', async () => {
-      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: summary } })
-
-      await getBillingExceptionsSummary({ from: null, to: null })
-
-      const params = (vi.mocked(api.get).mock.calls[0][1] as { params: Record<string, unknown> })
-        .params
-      expect(params).toEqual({})
-    })
-
-    it('naoClassificadosCount AUSENTE chega como undefined, nunca como 0', async () => {
-      // Backend sem o campo: "não sei responder" ≠ "não há nenhum" (AP-FRONTEND-021).
-      const semCampo = {
-        anomaliasCount: 0,
-        anomaliasSegundos: 0,
-        postergadoCount: 0,
-        postergadoSegundos: 0,
-      }
-      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: semCampo } })
-
-      const result = await getBillingExceptionsSummary({ from: null, to: null })
-
-      expect(result.naoClassificadosCount).toBeUndefined()
-      expect(result.anomaliasCount).toBe(0)
     })
   })
 })

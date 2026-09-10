@@ -1,57 +1,70 @@
 /**
- * 127/FE-AJUDA — o `(?)` da tela de Consumo de Planos.
+ * 127/FE-AJUDA + 132/F1 — o `(?)` da tela de Consumo de Planos.
  *
- * Este arquivo trava a **ressalva** da unidade: com a nota de competência e o card de
- * exceções recolhidos, a distinção que o card fazia por estar sempre aberto passou para o
- * **gatilho**. Os quatro estados do indicador têm caso próprio, e o de **erro** tem os
- * seus dois: que ele *nomeia a falha* e que ele **não** se parece com o zero.
+ * ## Por que este arquivo NÃO foi apagado com o card (`FE/D-1`)
  *
- * Usa os hooks REAIS; só a camada de serviço é fake — o que se prova é o wiring (período
- * da tela → requisição → indicador no botão), não que o mock foi chamado.
+ * A 132/D7 removeu o card de exceções e, com ele, o indicador de quatro estados que o
+ * gatilho carregava — eram 10 casos, e eles saíram. O que **fica** é o mecanismo de
+ * disclosure: é ele que decide se a explicação de competência aparece, e ele passou
+ * intacto pela remoção. Apagar o arquivo inteiro perderia a **única** prova do
+ * mecanismo que sobrevive, no mês em que a regra de competência mudou.
  *
- * O que deixa cada asserção VERMELHA está dito caso a caso; as duas mutações dirigidas da
- * unidade são (a) indicador sempre neutro e (b) estado de erro renderizado como zero.
+ * ## O que cada bloco prova, e o que o deixa VERMELHO
+ *
+ *  1. **o rótulo** — o nome acessível **contém** o visível (WCAG 2.5.3) e **não afirma
+ *     conferência**. Fica vermelho se alguém restaurar `'Ajuda e conferência'`, que
+ *     prometeria uma conferência que a tela não faz mais;
+ *  2. **o disclosure** — abrir/fechar por mouse, `Enter` e espaço; `aria-expanded`
+ *     acompanhando; `aria-controls` apontando para um id que **existe nos dois
+ *     estados**; e **nenhum focável escondido** atrás do recolhido (travessia real de
+ *     `Tab`, nunca `el.focus()` — `rules/frontend.md`). Fica vermelho se o `hidden` do
+ *     contêiner sumir, se o conteúdo passar a ser montado sempre, ou se o `<button>`
+ *     virar `<div onClick>`;
+ *  3. **a nota de competência está lá dentro, com as duas props** (`fora-do-plano`,
+ *     `comparaSaudePlanos`) — decisões de 131 e 123/FE-PER, que a 132 **não** revoga.
+ *     É a companheira POSITIVA das asserções negativas do bloco 2: sem ela, "não
+ *     renderiza nada quando fechado" passaria com o componente quebrado
+ *     (`rules/tests.md` § padrão 1);
+ *  4. **contraste medido no DOM**, com `pulados` vazio e controle positivo na mesma
+ *     árvore.
+ *
+ * 🔴 **Nenhum serviço é mockado neste arquivo, e isso é deliberado, não esquecimento.**
+ * O componente deixou de fazer requisição: um `vi.mock('…/reportsService')` aqui
+ * silenciaria justamente a regressão de alguém devolver uma query ao `(?)` — com o mock
+ * no lugar, a query nova responderia e todos os casos abaixo continuariam verdes. Sem
+ * mock, ela quebra ruidosamente. **Não é uma asserção** (não há um `expect` que a
+ * prove), é uma propriedade do arranjo; quem reintroduzir uma requisição tem de decidir
+ * conscientemente mockar, e este parágrafo é o que ele lê antes.
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactElement, ReactNode } from 'react'
 
-vi.mock('../../shared/services/reportsService', () => ({
-  getBillingExceptionsSummary: vi.fn(),
-  listBillingExceptions: vi.fn(),
-}))
-
-import {
-  getBillingExceptionsSummary,
-  listBillingExceptions,
-} from '../../shared/services/reportsService'
 import { PlanConsumptionHelp } from './PlanConsumptionHelp'
-import type { BillingExceptionsSummaryDto } from '../../shared/types/reports'
-import { TEXTO_COMPETENCIA_TITULO } from '../../shared/utils/competenciaTexts'
-import { TEXTO_EXCECOES_TITULO } from '../billingExceptionsTexts'
+import {
+  TEXTO_AJUDA_NOME_ACESSIVEL,
+  TEXTO_AJUDA_ROTULO,
+} from '../planConsumptionHelpTexts'
+import {
+  TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS,
+  TEXTO_COMPETENCIA_TITULO,
+  TEXTO_COMPETENCIA_VS_SAUDE_PLANOS,
+  TEXTO_QTDE_TICKETS_RECORTE_PROPRIO,
+  textoPeriodoDeApontamento,
+} from '../../shared/utils/competenciaTexts'
 import { reprovacoesAA, varrer } from '../../../../test/medidor-de-contraste'
-
-const mockedSummary = vi.mocked(getBillingExceptionsSummary)
-const mockedLista = vi.mocked(listBillingExceptions)
-
-function summary(
-  partial: Partial<BillingExceptionsSummaryDto> = {},
-): BillingExceptionsSummaryDto {
-  return {
-    anomaliasCount: 0,
-    anomaliasSegundos: 0,
-    postergadoCount: 0,
-    postergadoSegundos: 0,
-    ...partial,
-  }
-}
 
 /**
  * Renderiza sobre uma superfície REAL da tela (`bg-background`, o fundo da página onde o
  * `(?)` vive) — é esse fundo que o medidor de contraste precisa enxergar.
+ *
+ * O `QueryClientProvider` fica de propósito, mesmo sem query nenhuma: se alguém
+ * reintroduzir uma requisição no componente, ela reprova por asserção (bloco 5), não
+ * por "no QueryClient set" — erro de infraestrutura que se confunde com defeito de
+ * teste.
  */
 function renderAjuda(ui: ReactElement) {
   const queryClient = new QueryClient({
@@ -65,219 +78,103 @@ function renderAjuda(ui: ReactElement) {
   return render(ui, { wrapper })
 }
 
-/** O gatilho é o único elemento que existe nos quatro estados — é por ele que se pergunta. */
+/** O gatilho é o único elemento que existe nos dois estados — é por ele que se pergunta. */
 function gatilho(): HTMLElement {
   return screen.getByTestId('ajuda-gatilho')
 }
 
-/** O nome ACESSÍVEL do gatilho: é nele, não numa cor, que a distinção vive. */
-function nomeDoGatilho(): string {
-  return gatilho().getAttribute('aria-label') ?? ''
+/** A nota, quando aberta. `getByRole` com o nome acessível — não por testid. */
+function nota(): HTMLElement {
+  return screen.getByRole('region', { name: TEXTO_COMPETENCIA_TITULO })
 }
 
-beforeEach(() => {
-  vi.clearAllMocks()
-  mockedLista.mockResolvedValue({
-    items: [],
-    totalCount: 0,
-    page: 1,
-    pageSize: 25,
-    totalPages: 0,
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. O rótulo — o que ele afirma, e o que ele DEIXOU de afirmar (132/D7)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PlanConsumptionHelp — o rótulo do gatilho', () => {
+  it('o nome acessível CONTÉM o rótulo visível (WCAG 2.5.3, Label in Name)', () => {
+    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
+
+    // Literais escritos à mão AO LADO das constantes: comparar constante com constante
+    // seria tautologia (`rules/tests.md` § expectativa derivada da própria resposta).
+    expect(TEXTO_AJUDA_ROTULO).toBe('Ajuda')
+    expect(TEXTO_AJUDA_NOME_ACESSIVEL).toBe('Ajuda: como o período é contado nesta tela')
+    expect(TEXTO_AJUDA_NOME_ACESSIVEL).toContain(TEXTO_AJUDA_ROTULO)
+
+    expect(gatilho()).toHaveAttribute('aria-label', TEXTO_AJUDA_NOME_ACESSIVEL)
+    expect(gatilho()).toHaveTextContent(TEXTO_AJUDA_ROTULO)
+  })
+
+  it('🔴 nem o rótulo nem o nome acessível prometem CONFERÊNCIA (132/D7)', () => {
+    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
+
+    // Vermelho se alguém restaurar 'Ajuda e conferência' ou o sufixo "…exigem
+    // conferência": as exceções de faturamento não existem mais, e o texto prometeria
+    // uma conferência que a tela não faz (AP-FRONTEND-022).
+    const nomeAcessivel = gatilho().getAttribute('aria-label') ?? ''
+    // Companheira positiva PRIMEIRO: sem ela os dois `not.toMatch` abaixo passariam por
+    // vacuidade sobre uma string vazia (`rules/tests.md` § padrão 1).
+    expect(nomeAcessivel.length).toBeGreaterThan(10)
+    expect(gatilho().textContent ?? '').toContain('Ajuda')
+
+    expect(nomeAcessivel).not.toMatch(/confer/i)
+    expect(gatilho().textContent ?? '').not.toMatch(/confer/i)
+  })
+
+  it('o glifo `?` é visível — o gatilho não depende de cor nem de ícone decorativo', () => {
+    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
+    expect(screen.getByTestId('ajuda-glifo')).toHaveTextContent('?')
+  })
+
+  it('🔴 não existe mais selo nem região de anúncio no gatilho (saíram com o card)', async () => {
+    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
+
+    // Companheira positiva na MESMA execução: o gatilho existe e funciona. Sem ela, as
+    // duas negativas passariam com o componente inteiro quebrado.
+    expect(gatilho()).toBeInTheDocument()
+    await userEvent.click(gatilho())
+    expect(gatilho()).toHaveAttribute('aria-expanded', 'true')
+
+    expect(screen.queryByTestId('ajuda-selo')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ajuda-anuncio')).not.toBeInTheDocument()
+    // O `data-estado` era o discriminador dos 4 estados do indicador — não há estado.
+    expect(gatilho()).not.toHaveAttribute('data-estado')
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. Os QUATRO estados do indicador — literais escritos à mão, um por caso
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('PlanConsumptionHelp — os 4 estados do indicador do (?)', () => {
-  it('CARREGANDO: diz que ainda não se sabe, e nunca "nenhum"', () => {
-    mockedSummary.mockReturnValue(new Promise(() => {}))
-    renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
-
-    expect(nomeDoGatilho()).toBe(
-      'Ajuda e conferência — verificando se há chamados a conferir',
-    )
-    expect(gatilho()).toHaveAttribute('data-estado', 'carregando')
-    // Meio não-cromático: o selo é um glifo, legível por quem não distingue cor.
-    expect(screen.getByTestId('ajuda-selo')).toHaveTextContent('…')
-    // Vermelho se o carregando passar a ser escrito como conjunto vazio.
-    expect(nomeDoGatilho()).not.toMatch(/nenhum/i)
-  })
-
-  it('ERRO: NOMEIA a falha — e o nome é diferente do de zero (a ressalva da 127)', async () => {
-    mockedSummary.mockRejectedValue(new Error('500'))
-    renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
-
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'erro'))
-    expect(nomeDoGatilho()).toBe(
-      'Ajuda e conferência — não foi possível verificar se há chamados a conferir',
-    )
-    // As duas metades da ressalva, explícitas:
-    // (1) a falha é nomeada;
-    expect(nomeDoGatilho()).toMatch(/não foi possível/)
-    // (2) e NÃO soa como conjunto vazio — este é o assert que a mutação (b) derruba.
-    expect(nomeDoGatilho()).not.toContain('nenhum chamado exige conferência')
-    expect(screen.getByTestId('ajuda-selo')).toHaveTextContent('!')
-  })
-
-  it('ZERO: neutro, sem selo — e continua afirmando o zero por escrito', async () => {
-    mockedSummary.mockResolvedValue(summary())
-    renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
-
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'zero'))
-    expect(nomeDoGatilho()).toBe('Ajuda e conferência — nenhum chamado exige conferência')
-    // O repouso é a AUSÊNCIA de marca — se o zero ganhar selo, o alerta perde significado.
-    expect(screen.queryByTestId('ajuda-selo')).not.toBeInTheDocument()
-  })
-
-  it('N > 0: diz QUANTOS, no nome acessível e no selo visível', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
-    renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
-
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
-    expect(nomeDoGatilho()).toBe('Ajuda e conferência — 3 chamados exigem conferência')
-    expect(screen.getByTestId('ajuda-selo')).toHaveTextContent('3')
-  })
-
-  it('N = 1: singular correto (número diferente, não um literal fixo)', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 1, anomaliasSegundos: 60 }))
-    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-
-    await waitFor(() =>
-      expect(nomeDoGatilho()).toBe('Ajuda e conferência — 1 chamado exige conferência'),
-    )
-    expect(screen.getByTestId('ajuda-selo')).toHaveTextContent('1')
-  })
-
-  /**
-   * Cardinalidades DIFERENTES nos dois casos com número (3 e 1) e o selo asseverado pelo
-   * VALOR: um indicador que mostrasse sempre "1", ou o `length` de qualquer coisa, passaria
-   * num só (rules/tests.md, padrão 2).
-   */
-  it('os quatro nomes acessíveis são DISTINTOS entre si (nenhum par se confunde)', async () => {
-    const nomes: string[] = []
-
-    mockedSummary.mockReturnValue(new Promise(() => {}))
-    const carregando = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    nomes.push(nomeDoGatilho())
-    carregando.unmount()
-
-    mockedSummary.mockRejectedValue(new Error('500'))
-    const erro = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'erro'))
-    nomes.push(nomeDoGatilho())
-    erro.unmount()
-
-    mockedSummary.mockResolvedValue(summary())
-    const zero = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'zero'))
-    nomes.push(nomeDoGatilho())
-    zero.unmount()
-
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 2 }))
-    const pendente = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
-    nomes.push(nomeDoGatilho())
-    pendente.unmount()
-
-    // Identidade, não cardinalidade: é a lista literal que reprova quando dois estados
-    // passam a dizer a mesma coisa (mutação (a) — indicador sempre neutro).
-    expect(nomes).toEqual([
-      'Ajuda e conferência — verificando se há chamados a conferir',
-      'Ajuda e conferência — não foi possível verificar se há chamados a conferir',
-      'Ajuda e conferência — nenhum chamado exige conferência',
-      'Ajuda e conferência — 2 chamados exigem conferência',
-    ])
-    expect(new Set(nomes).size).toBe(4)
-  })
-
-  it('sucesso SEM o número (`anomaliasCount: null` no wire) cai em ERRO, nunca em zero', async () => {
-    // AP-FRONTEND-021/028: "o servidor não sabe responder" ≠ "não há nada". `null`
-    // EXPLÍCITO — com `undefined` o caso passaria nas duas implementações.
-    mockedSummary.mockResolvedValue({
-      ...summary(),
-      anomaliasCount: null,
-    } as unknown as BillingExceptionsSummaryDto)
-    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'erro'))
-    expect(nomeDoGatilho()).toContain('não foi possível verificar')
-    expect(nomeDoGatilho()).not.toContain('nenhum')
-  })
-
-  it('postergado > 0 com anomalias 0 continua NEUTRO (só a seção acionável chama)', async () => {
-    // Mesma hierarquia de F-15 já travada no card: pedir ação onde não há ação é o defeito
-    // de misturar as duas listas. Cardinalidade alta de propósito (40) — se o indicador
-    // somasse as duas seções, este caso ficaria vermelho.
-    mockedSummary.mockResolvedValue(
-      summary({ postergadoCount: 40, postergadoSegundos: 360000 }),
-    )
-    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'zero'))
-    expect(nomeDoGatilho()).toBe('Ajuda e conferência — nenhum chamado exige conferência')
-    expect(screen.queryByTestId('ajuda-selo')).not.toBeInTheDocument()
-  })
-
-  it('a mudança de estado é ANUNCIADA (region status), não só trocada no aria-label', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 2 }))
-    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-
-    const anuncio = screen.getByTestId('ajuda-anuncio')
-    expect(anuncio).toHaveAttribute('role', 'status')
-    // Mudança de `aria-label` não é anunciada a quem já leu o botão — a região carrega a
-    // MESMA frase, e é o que torna a transição perceptível.
-    await waitFor(() =>
-      expect(anuncio).toHaveTextContent('Ajuda e conferência — 2 chamados exigem conferência'),
-    )
-  })
-})
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. O recolhimento — o que o (?) abre, e o que ele esconde
+// 2. O disclosure — o que o (?) abre, e o que ele esconde
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('PlanConsumptionHelp — recolher e abrir', () => {
-  it('FECHADO: nem a nota, nem o card, nem "Conferir" estão na tela', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
+  it('FECHADO: a nota não está na tela, e o contêiner do `aria-controls` existe oculto', () => {
     renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
 
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
     expect(gatilho()).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText(TEXTO_COMPETENCIA_TITULO)).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('region', { name: TEXTO_EXCECOES_TITULO }),
-    ).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /conferir/i })).not.toBeInTheDocument()
     // O contêiner existe (o `aria-controls` aponta para algo real) e está oculto.
     expect(screen.getByTestId('ajuda-conteudo')).toHaveAttribute('hidden')
   })
 
-  it('ABERTO: mostra os textos E o botão Conferir (o pedido da 127, literal)', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
+  it('ABERTO: mostra a nota de competência com o período da tela', async () => {
     renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
 
     await userEvent.click(gatilho())
 
     expect(gatilho()).toHaveAttribute('aria-expanded', 'true')
-    // (1) a nota "Como o período é contado aqui"…
-    expect(screen.getByText(TEXTO_COMPETENCIA_TITULO)).toBeInTheDocument()
+    // 🔴 O texto do recorte vem da FUNÇÃO de produção, não de uma cópia (AP-QA-045): a
+    // 132/F3 vai reescrever essa frase ("concluídos" → "apontados"), e uma cópia literal
+    // aqui divergiria em silêncio — ou obrigaria a F3 a "consertar" este teste.
     expect(
-      screen.getByText('Mostrando os chamados concluídos entre 01/07/2026 e 31/07/2026.'),
+      within(nota()).getByText(
+        textoPeriodoDeApontamento({ from: '2026-07-01', to: '2026-07-31' }),
+      ),
     ).toBeInTheDocument()
-    // (2) …o card de exceções…
-    const card = screen.getByRole('region', { name: TEXTO_EXCECOES_TITULO })
-    expect(within(card).getByTestId('excecoes-anomalias')).toHaveTextContent(
-      'Precisa ação: 3 chamados fechados sem data de conclusão',
-    )
-    // (3) …e o botão Conferir.
-    expect(screen.getByRole('button', { name: /conferir/i })).toBeInTheDocument()
     expect(screen.getByTestId('ajuda-conteudo')).not.toHaveAttribute('hidden')
   })
 
   it('o segundo clique recolhe de novo (é um disclosure, não um caminho de ida)', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 1, anomaliasSegundos: 60 }))
     renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
 
     await userEvent.click(gatilho())
@@ -286,11 +183,9 @@ describe('PlanConsumptionHelp — recolher e abrir', () => {
     await userEvent.click(gatilho())
     expect(gatilho()).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText(TEXTO_COMPETENCIA_TITULO)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /conferir/i })).not.toBeInTheDocument()
   })
 
   it('abre pelo TECLADO — Tab até o gatilho e Enter (nada exige mouse)', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 1, anomaliasSegundos: 60 }))
     renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
 
     // Ancorado FORA do componente: a travessia começa no início do documento.
@@ -303,7 +198,6 @@ describe('PlanConsumptionHelp — recolher e abrir', () => {
   })
 
   it('espaço também alterna (semântica nativa de <button>, não de div clicável)', async () => {
-    mockedSummary.mockResolvedValue(summary())
     renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
 
     expect(gatilho().tagName).toBe('BUTTON')
@@ -314,7 +208,6 @@ describe('PlanConsumptionHelp — recolher e abrir', () => {
   })
 
   it('`aria-controls` aponta para um id que EXISTE nos dois estados', async () => {
-    mockedSummary.mockResolvedValue(summary())
     renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
 
     const id = gatilho().getAttribute('aria-controls')
@@ -325,10 +218,8 @@ describe('PlanConsumptionHelp — recolher e abrir', () => {
     expect(document.getElementById(id ?? '')).toBe(screen.getByTestId('ajuda-conteudo'))
   })
 
-  it('nenhum focável fica escondido atrás do recolhido (o Tab não visita o Conferir)', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 1, anomaliasSegundos: 60 }))
+  it('nenhum focável fica escondido atrás do recolhido (travessia real de Tab)', async () => {
     renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
 
     const paradas: (Element | null)[] = []
     for (let i = 0; i < 3; i += 1) {
@@ -339,130 +230,128 @@ describe('PlanConsumptionHelp — recolher e abrir', () => {
     expect(paradas[0]).toBe(gatilho())
     expect(paradas.slice(1).every((p) => p === document.body || p === gatilho())).toBe(true)
   })
+})
 
-  it('abrir NÃO devolve o card ao esqueleto: ele nasce com o número (mesma queryKey)', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. A nota de competência — as props são requisito de OUTRAS demandas (FE/D-1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PlanConsumptionHelp — a nota que a 132 NÃO removeu', () => {
+  it('🔴 usa `fora-do-plano` (131) e compara com Saúde dos Planos (123/FE-PER, D-14)', async () => {
     renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
-
     await userEvent.click(gatilho())
 
-    // Vermelho se o card passar a usar outra chave/outro endpoint: ali ele montaria em
-    // `isLoading` e piscaria o Skeleton antes do número.
-    const card = screen.getByRole('region', { name: TEXTO_EXCECOES_TITULO })
-    expect(within(card).queryByLabelText('Carregando…')).not.toBeInTheDocument()
-    expect(within(card).getByTestId('excecoes-anomalias')).toHaveTextContent(
-      '3 chamados fechados sem data de conclusão',
-    )
-  })
-
-  it('o período da tela chega à requisição do resumo (e não o mês do backend)', async () => {
-    mockedSummary.mockResolvedValue(summary())
-    renderAjuda(<PlanConsumptionHelp from="2026-05-10" to="2026-05-20" />)
-
-    await waitFor(() => expect(mockedSummary).toHaveBeenCalled())
-    expect(mockedSummary.mock.calls[0][0]).toEqual({ from: '2026-05-10', to: '2026-05-20' })
-  })
-
-  it('com ERRO, abrir mostra a mensagem do card e o retry (a falha é inspecionável)', async () => {
-    mockedSummary.mockRejectedValue(new Error('500'))
-    renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'erro'))
-
-    await userEvent.click(gatilho())
-
+    // As duas frases vêm das CONSTANTES de produção (AP-QA-045), não de cópias: a F3 vai
+    // reescrevê-las e este teste tem de acompanhar sem virar contrato do texto antigo.
+    //
+    // `notaDeProjeto="fora-do-plano"` — nesta tela projeto NÃO consome o plano (131).
+    // Vermelho se a prop for trocada por `no-plano-por-apontamento` (a do Relatório do
+    // Cliente) ou omitida: as duas telas afirmam coisas DIFERENTES desde a 131.
     expect(
-      screen.getByText('Não foi possível verificar as exceções de faturamento.'),
+      within(nota()).getByText(TEXTO_COMPETENCIA_PROJETO_CONSUMO_DE_PLANOS),
     ).toBeInTheDocument()
-
-    // E o retry conserta os DOIS: o card e o indicador do gatilho.
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 2, anomaliasSegundos: 120 }))
-    await userEvent.click(screen.getByRole('button', { name: /tentar novamente/i }))
-
-    await waitFor(() =>
-      expect(nomeDoGatilho()).toBe('Ajuda e conferência — 2 chamados exigem conferência'),
-    )
+    // `comparaSaudePlanos` — a frase que existe só nesta tela (123/FE-PER, D-14).
+    expect(within(nota()).getByText(TEXTO_COMPETENCIA_VS_SAUDE_PLANOS)).toBeInTheDocument()
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. Contraste medido no DOM — com controle positivo e `pulados` vazio
+// 4. Contraste medido no DOM — com controle positivo e `pulados` vazio
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Mede o que a árvore RENDERIZA (nunca a classe que o teste passou), com o medidor
  * consolidado do repo. `pulados` vazio é obrigatório: recusa do medidor reprova aqui em
  * vez de virar fallback silencioso (125/FE-A11Y-4, `Q-3`).
+ *
+ * ⚠️ `AP-FRONTEND-030` — nada aqui assevera `m.texto === <frase longa>`: o medidor
+ * **trunca em 60 caracteres** e a igualdade passaria por vacuidade. A companheira
+ * positiva é a CONTAGEM de medidas (que só cresce se o medidor alcançou a árvore) mais o
+ * controle positivo do último caso, que é o único assert que reprova quando o medidor
+ * morre.
  */
-describe('PlanConsumptionHelp — contraste AA do (?) nos 4 estados', () => {
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. 135/G1 — o recorte PRÓPRIO da contagem de chamados, dentro do disclosure
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PlanConsumptionHelp — o parágrafo da contagem de chamados (135/G1)', () => {
+  it('🔴 T-20: FECHADO não mostra o parágrafo; ABERTO mostra — e ele fica FORA da nota', async () => {
+    renderAjuda(<PlanConsumptionHelp from="2026-08-01" to="2026-08-31" />)
+
+    // Fechado: nada. Solto na tela ele voltaria a empurrar a tabela para baixo, que é
+    // exatamente a decisão de 127/FE-AJUDA.
+    expect(screen.queryByText(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO)).not.toBeInTheDocument()
+
+    await userEvent.click(gatilho())
+
+    // O texto vem do MÓDULO, nunca de uma cópia literal aqui: uma cópia divergiria em
+    // silêncio quando o texto for reescrito, ou obrigaria quem o reescrever a "consertar"
+    // este teste.
+    const paragrafo = screen.getByText(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO)
+    expect(paragrafo).toBeInTheDocument()
+
+    // 🔴 FORA de `<CompetenciaNota>`, e essa é a razão de ele existir como parágrafo
+    // separado: a nota é COMPARTILHADA com o Relatório do Cliente, que não tem esta
+    // coluna — um parágrafo dentro dela afirmaria lá a existência de uma coluna
+    // inexistente (AP-FRONTEND-028). A companheira POSITIVA é a nota estar na tela na
+    // MESMA renderização: sem ela, "não está dentro da nota" passaria com a nota ausente.
+    expect(nota()).toBeInTheDocument()
+    expect(nota()).not.toContainElement(paragrafo)
+
+    // E os dois vivem dentro do conteúdo recolhível (o `aria-controls` do gatilho).
+    expect(screen.getByTestId('ajuda-conteudo')).toContainElement(paragrafo)
+  })
+
+  it('o segundo clique recolhe o parágrafo junto com a nota', async () => {
+    renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
+
+    await userEvent.click(gatilho())
+    expect(screen.getByText(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO)).toBeInTheDocument()
+
+    await userEvent.click(gatilho())
+    expect(screen.queryByText(TEXTO_QTDE_TICKETS_RECORTE_PROPRIO)).not.toBeInTheDocument()
+  })
+})
+
+describe('PlanConsumptionHelp — contraste AA', () => {
   function medir(container: HTMLElement) {
     const { medidas, pulados } = varrer(container)
     expect(pulados).toEqual([])
     return medidas
   }
 
-  it('CARREGANDO: nenhum texto abaixo de 4,5:1', () => {
-    mockedSummary.mockReturnValue(new Promise(() => {}))
+  it('FECHADO: nenhum texto abaixo de 4,5:1', () => {
     const { container } = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
 
     const medidas = medir(container)
-    expect(medidas.length).toBeGreaterThan(2)
+    expect(medidas.length).toBeGreaterThan(1)
     expect(reprovacoesAA(medidas)).toEqual([])
   })
 
-  it('ERRO: o selo "!" (error-fg sobre error-bg) passa AA', async () => {
-    mockedSummary.mockRejectedValue(new Error('500'))
-    const { container } = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'erro'))
-
-    const medidas = medir(container)
-    // A companheira positiva: o selo foi de fato medido (senão a asserção passaria vazia).
-    expect(medidas.some((m) => m.texto === '!')).toBe(true)
-    expect(reprovacoesAA(medidas)).toEqual([])
-  })
-
-  it('ZERO: nenhum texto abaixo de 4,5:1', async () => {
-    mockedSummary.mockResolvedValue(summary())
-    const { container } = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'zero'))
-
-    expect(reprovacoesAA(medir(container))).toEqual([])
-  })
-
-  it('N > 0: o selo com o número (excecao-fatura-fg sobre excecao-fatura-bg) passa AA', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
-    const { container } = renderAjuda(<PlanConsumptionHelp from={null} to={null} />)
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
-
-    const medidas = medir(container)
-    expect(medidas.some((m) => m.texto === '3')).toBe(true)
-    expect(reprovacoesAA(medidas)).toEqual([])
-  })
-
-  it('ABERTO: a árvore inteira (nota + card + Conferir) continua sem reprovação', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
+  it('ABERTO: a árvore inteira (gatilho + nota) continua sem reprovação', async () => {
     const { container } = renderAjuda(<PlanConsumptionHelp from="2026-07-01" to="2026-07-31" />)
     await userEvent.click(gatilho())
 
     const medidas = medir(container)
-    expect(medidas.length).toBeGreaterThan(8)
+    // Piso mais alto que o do caso fechado, de propósito: se o conteúdo parasse de
+    // montar, esta cardinalidade reprova em vez de o teste passar medindo só o botão.
+    expect(medidas.length).toBeGreaterThan(4)
     expect(reprovacoesAA(medidas)).toEqual([])
   })
 
   /**
    * Controle positivo, na MESMA execução e na MESMA árvore: um medidor que morresse
    * (parasse de alcançar o componente e devolvesse "0 reprovações") deixaria este caso
-   * vermelho. Sem ele, os cinco casos acima passariam vacuamente.
+   * vermelho. Sem ele, os dois casos acima passariam vacuamente.
    */
   it('controle positivo: um texto propositalmente ruim NA ÁRVORE é reprovado', async () => {
-    mockedSummary.mockResolvedValue(summary({ anomaliasCount: 3, anomaliasSegundos: 6300 }))
     const { container } = renderAjuda(
       <div>
         <PlanConsumptionHelp from={null} to={null} />
         <p className="text-muted/30">controle positivo de contraste</p>
       </div>,
     )
-    await waitFor(() => expect(gatilho()).toHaveAttribute('data-estado', 'pendente'))
+    await userEvent.click(gatilho())
 
     const reprovacoes = reprovacoesAA(medir(container))
     expect(reprovacoes).toHaveLength(1)

@@ -233,3 +233,64 @@ describe('TicketDetailPage — §5.3: o modal devolve o foco ao gatilho', () => 
     expect(gatilho).toBe(screen.getByRole('button', { name: /editar/i }))
   })
 })
+
+/**
+ * 133/FE-2 — o fio inteiro, do serviço até o DOM (classe **comportamental**).
+ *
+ * Os testes de `useModalOptions.test.tsx` e `TimeEntryModal.test.tsx` provam as duas
+ * metades separadamente; este prova a **emenda**: a flag sai do JSON do serviço, atravessa
+ * o hook, a página e a prop, e vira trava na tela. A mutação dirigida que zera o índice no
+ * hook derruba **este** caso além do unitário — sem ele, o único vermelho seria de unidade,
+ * e "a tela trava" ficaria sem prova de efeito.
+ *
+ * A página é montada de verdade (hook, react-query, RHF, `Modal`, `Combobox`, `Switch`);
+ * só a camada de serviço é fabricada — e ela devolve o **JSON como vem do wire**.
+ */
+describe('TicketDetailPage — trava de cobrança fora do plano (133)', () => {
+  const TEXTO_DA_TRAVA =
+    'A categoria "Suporte" é sempre cobrada fora do plano de suporte. A marcação é obrigatória e não pode ser desmarcada.'
+
+  /** O apontamento aberto pelo "editar" é o `apontamentoConcluido`, categoria id 3. */
+  function categorias(forcaAId3: boolean) {
+    return [
+      { id: 3, nome: 'Suporte', isActive: true, forcesBillableOutsidePlan: forcaAId3 },
+      { id: 8, nome: 'Consultoria', isActive: true, forcesBillableOutsidePlan: false },
+    ]
+  }
+
+  it('categoria COM a flag: o modal abre marcado, travado e com a explicação', async () => {
+    mockedCategories.mockResolvedValue(categorias(true))
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: /editar/i }))
+    const dialog = await screen.findByRole('dialog')
+
+    const sw = await within(dialog).findByRole('switch', { name: 'Cobrar por fora do plano' })
+    await waitFor(() => expect(sw).toHaveAttribute('aria-checked', 'true'))
+    expect(sw).toHaveAttribute('aria-disabled', 'true')
+
+    const apoio = within(dialog).getByText(TEXTO_DA_TRAVA)
+    expect(sw.getAttribute('aria-describedby')).toBe(apoio.id)
+  })
+
+  it('companheira positiva — a MESMA categoria SEM a flag deixa a caixa livre', async () => {
+    // Cardinalidade e caminho idênticos ao caso acima; muda **só** o valor da flag no
+    // JSON. É isso que distingue "a trava veio da flag" de "o modal trava sempre".
+    mockedCategories.mockResolvedValue(categorias(false))
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: /editar/i }))
+    const dialog = await screen.findByRole('dialog')
+
+    const sw = await within(dialog).findByRole('switch', { name: 'Cobrar por fora do plano' })
+    expect(sw).toHaveAttribute('aria-checked', 'false')
+    expect(sw).not.toHaveAttribute('aria-disabled')
+    expect(within(dialog).queryByText(TEXTO_DA_TRAVA)).toBeNull()
+
+    // Discriminador: o clique que não faz nada no caso travado alterna aqui.
+    await userEvent.click(sw)
+    expect(
+      within(dialog).getByRole('switch', { name: 'Cobrar por fora do plano' }),
+    ).toHaveAttribute('aria-checked', 'true')
+  })
+})

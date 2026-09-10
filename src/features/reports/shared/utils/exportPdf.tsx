@@ -4,6 +4,8 @@ import {
   consolidateClientReport,
   type ConsolidatedClientReportRow,
 } from '../../client-report/utils/consolidateClientReport'
+import { derivarCreditoDoRelatorio } from '../../client-report/utils/creditoDoRelatorio'
+import { ROTULO_CREDITO_PUBLICO } from './creditoTexts'
 import { pdfColors, pdfFonts } from './pdfTheme'
 
 /**
@@ -137,12 +139,24 @@ export async function generateClientReportPdf(
         'BMS Core Suporte'
       : 'BMS Core Suporte'
 
+  // 132/F9 — o crédito de horas da competência. Derivado no MESMO lugar que o cabeçalho da
+  // tela (`client-report/utils/creditoDoRelatorio.ts`): duas derivações divergiriam entre o
+  // que o gestor vê e o que o cliente recebe, e é o PDF que sai do sistema.
+  const creditoDaCompetencia = derivarCreditoDoRelatorio(report)
+
   const kpis = [
     { label: 'Apontamentos', value: String(report.totalApontamentos) },
     { label: 'Tempo Total', value: formatSeconds(report.totalSegundos) },
     { label: 'Plano de Suporte', value: formatSeconds(report.horasPlanoSegundos) },
     { label: 'Faturado', value: formatSeconds(report.horasFaturadoSegundos) },
     { label: 'Não Faturado', value: formatSeconds(report.horasNaoFaturadoSegundos) },
+    // 🔴 132/F9 (D15) — o Crédito de Suporte, e **só quando existe**: sem crédito (chave
+    // ausente ou `0`) o documento sai byte a byte como sempre saiu, que é a regressão zero
+    // de PRD §5.1. O rótulo é a constante pública; o motivo interno do crédito não existe
+    // neste DTO, e é assim que ele não pode chegar ao cliente nem por engano.
+    ...(creditoDaCompetencia.temCredito
+      ? [{ label: ROTULO_CREDITO_PUBLICO, value: creditoDaCompetencia.creditoTexto }]
+      : []),
   ]
 
   const headers = [

@@ -20,6 +20,15 @@ export function secondsToHours(seconds: number): number {
   return seconds / 3600
 }
 
+/**
+ * Horas decimais → segundos inteiros (ex: 2.7333333 → 9840). Inverso de `secondsToHours`.
+ * Usa o MESMO arredondamento de `formatHours` (linha abaixo), para que o número exportado
+ * e o texto da tela descrevam o mesmo instante, ao segundo. Não trocar por `Math.floor`.
+ */
+export function hoursToSeconds(hours: number): number {
+  return Math.round(hours * 3600)
+}
+
 /** Horas decimais → "Xh Ym" (ex: 1.5 → "1h 30m") */
 export function formatHours(hours: number): string {
   const totalSeconds = Math.round(hours * 3600)

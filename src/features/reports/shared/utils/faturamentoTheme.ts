@@ -2,8 +2,7 @@
  * 121/FAT-5 (A2/D2) — cores das superfícies novas de faturamento.
  *
  * Duas responsabilidades, de propósito no mesmo arquivo:
- *  1. as CLASSES Tailwind (por token, nunca hex) usadas pelo badge "Na fatura" e
- *     pelo card de exceções;
+ *  1. as CLASSES Tailwind (por token, nunca hex) usadas pelo badge "Na fatura";
  *  2. o INVENTÁRIO dos pares (texto sobre fundo) que a entrega introduz ou
  *     reaproveita, com o hex espelhado — insumo do teste de contraste.
  *
@@ -48,23 +47,20 @@ export const FATURA_CONTRAST_PAIRS: ParDeContraste[] = [
     fg: '#4a5a68',
     bg: '#f0f4f7',
   },
+  // ── Reaproveitados (medidos, não herdados por associação) ──
+  //
+  // 🔴 132/F1 — os DOIS rótulos abaixo diziam "do modal", e o modal era o de exceções de
+  // faturamento, que a 132/D7 apagou. Os PARES continuam reais (foram remedidos hoje), o
+  // que envelheceu foi só a superfície nomeada: rótulo de allowlist que aponta para algo
+  // removido passa a MENTIR, e é exatamente por isso que ele é reescrito no mesmo commit
+  // em vez de o par ser retirado do inventário (`AP-QA-044`).
+  //
+  // Onde cada um vive hoje, verificado por grep em 09/09/2026:
+  //  · muted sobre card   → `CompetenciaNota.tsx:101` (a `<ul>` da nota, dentro do
+  //    `bg-card` da própria nota) e a ABA INATIVA do `Tabs` genérico (`Tabs.tsx:132`);
+  //  · primary sobre card → a ABA ATIVA do mesmo `Tabs` (`Tabs.tsx:131`) e o link de
+  //    ticket da tabela do painel do parceiro (`client-tickets/columns.tsx:84`).
   {
-    label: 'card de exceções — título/contagem',
-    fgToken: '--color-excecao-fatura-fg',
-    bgToken: '--color-excecao-fatura-bg',
-    fg: '#8a3d00',
-    bg: '#fffbef',
-  },
-  // ── Reaproveitados pela tela nova (medidos, não herdados por associação) ──
-  {
-    label: 'card de exceções — subtexto (foreground sobre o fundo de alerta)',
-    fgToken: '--color-foreground',
-    bgToken: '--color-excecao-fatura-bg',
-    fg: '#002f4f',
-    bg: '#fffbef',
-  },
-  {
-    // Cobre também o rótulo da ABA INATIVA do modal (mesmo par: muted sobre card).
     label: 'texto secundário e aba inativa (muted sobre card)',
     fgToken: '--color-muted',
     bgToken: '--color-card',
@@ -72,10 +68,32 @@ export const FATURA_CONTRAST_PAIRS: ParDeContraste[] = [
     bg: '#ffffff',
   },
   {
-    label: 'aba ativa do modal (primary sobre card)',
+    label: 'aba ativa e link em tabela (primary sobre card)',
     fgToken: '--color-primary',
     bgToken: '--color-card',
     fg: '#002f4f',
+    bg: '#ffffff',
+  },
+  // ── 132/F4b — o `+2h` verde da coluna "Qtde. Plano (h)" ──
+  //
+  // 🔴 O verde do crédito PRECISA de medição, não de suposição: pares `-fg`/`-bg` do próprio
+  // design system já reprovaram AA quatro vezes neste repo (AP-FRONTEND-011/014/015/018).
+  //
+  // Token reaproveitado de propósito: `--color-success-fg` é o MESMO que esta tela já usa no
+  // `% do Plano` abaixo de 80% (`plan-consumption/columns.ts:55`). Nada de hex novo e nada de
+  // classe da paleta padrão do Tailwind (`text-green-600`), que escaparia à repontagem de
+  // tokens e a esta medição (AP-FRONTEND-014).
+  //
+  // Fundo: a célula da `DataTable` herda o `--color-card` do card do `ReportPageLayout` — a
+  // tabela só pinta `bg-background` no `<th>` (`DataTable.tsx:73`) e a linha não muda de fundo
+  // em nenhum estado (o hover é por SOMBRA, `DataTable.tsx:115`, padrão do design system). O
+  // par "primary sobre card" acima já vive na MESMA célula-vizinha (o link de ticket do painel
+  // do parceiro), o que confirma a superfície por precedente, não por leitura de classe.
+  {
+    label: 'crédito de horas (+Xh) na coluna Qtde. Plano',
+    fgToken: '--color-success-fg',
+    bgToken: '--color-card',
+    fg: '#008000',
     bg: '#ffffff',
   },
 ]
@@ -84,10 +102,4 @@ export const FATURA_CONTRAST_PAIRS: ParDeContraste[] = [
 export const NA_FATURA_CLASSES = {
   sim: 'bg-fatura-sim-bg text-fatura-sim-fg',
   nao: 'bg-fatura-nao-bg text-fatura-nao-fg',
-} as const
-
-/** Classes do card de exceções de faturamento (estado "há exceções"). */
-export const EXCECAO_FATURA_CLASSES = {
-  surface: 'bg-excecao-fatura-bg border-excecao-fatura-fg/40',
-  accent: 'text-excecao-fatura-fg',
 } as const

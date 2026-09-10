@@ -20,8 +20,15 @@ import { TITULO_UNMATCHED, textoResumoUnmatched } from '../utils/unmatchedTexts'
  * ## O card é SEMPRE renderizado, inclusive com a lista vazia
  *
  * Esconder no zero tornaria "nenhum valor sem correspondência" indistinguível de "a
- * requisição falhou" (AP-FRONTEND-021). Mesmo princípio do irmão
- * `features/reports/plan-consumption/components/BillingExceptionsCard.tsx`.
+ * requisição falhou" (AP-FRONTEND-021).
+ *
+ * ⚠️ Esta ressalva citava como irmã de desenho a
+ * `plan-consumption/components/BillingExceptionsCard.tsx`, **apagada pela demanda 132**
+ * (D7: com a competência vindo de `TimeEntry.InicioEm`, não existe mais "chamado fora de
+ * qualquer fatura" para conferir). A referência foi removida em vez de reapontada porque
+ * este card passou a ser o **único** exemplar vivo do padrão no repo — e um ponteiro para
+ * arquivo inexistente manda o próximo leitor procurar o que não há. O princípio
+ * (`AP-FRONTEND-021`) não depende do exemplo.
  */
 
 type UnmatchedPlansCardProps = {

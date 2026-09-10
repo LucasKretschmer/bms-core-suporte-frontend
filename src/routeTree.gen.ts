@@ -14,8 +14,11 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as AuthSincronizadorRouteImport } from './routes/_auth/sincronizador'
 import { Route as AuthPlanosRouteImport } from './routes/_auth/planos'
+import { Route as AuthMotivosCreditoRouteImport } from './routes/_auth/motivos-credito'
 import { Route as AuthEquipesRouteImport } from './routes/_auth/equipes'
+import { Route as AuthCreditosRouteImport } from './routes/_auth/creditos'
 import { Route as AuthConfiguracoesRouteImport } from './routes/_auth/configuracoes'
+import { Route as AuthCompetenciasRouteImport } from './routes/_auth/competencias'
 import { Route as AuthCategoriasRouteImport } from './routes/_auth/categorias'
 import { Route as AuthCalendarioRouteImport } from './routes/_auth/calendario'
 import { Route as AuthRelatoriosProdutividadeRouteImport } from './routes/_auth/relatorios/produtividade'
@@ -53,14 +56,29 @@ const AuthPlanosRoute = AuthPlanosRouteImport.update({
   path: '/planos',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthMotivosCreditoRoute = AuthMotivosCreditoRouteImport.update({
+  id: '/motivos-credito',
+  path: '/motivos-credito',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthEquipesRoute = AuthEquipesRouteImport.update({
   id: '/equipes',
   path: '/equipes',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthCreditosRoute = AuthCreditosRouteImport.update({
+  id: '/creditos',
+  path: '/creditos',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthConfiguracoesRoute = AuthConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCompetenciasRoute = AuthCompetenciasRouteImport.update({
+  id: '/competencias',
+  path: '/competencias',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthCategoriasRoute = AuthCategoriasRouteImport.update({
@@ -137,8 +155,11 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/calendario': typeof AuthCalendarioRoute
   '/categorias': typeof AuthCategoriasRoute
+  '/competencias': typeof AuthCompetenciasRoute
   '/configuracoes': typeof AuthConfiguracoesRoute
+  '/creditos': typeof AuthCreditosRoute
   '/equipes': typeof AuthEquipesRoute
+  '/motivos-credito': typeof AuthMotivosCreditoRoute
   '/planos': typeof AuthPlanosRoute
   '/sincronizador': typeof AuthSincronizadorRoute
   '/dashboards/onboarding': typeof AuthDashboardsOnboardingRoute
@@ -156,8 +177,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/calendario': typeof AuthCalendarioRoute
   '/categorias': typeof AuthCategoriasRoute
+  '/competencias': typeof AuthCompetenciasRoute
   '/configuracoes': typeof AuthConfiguracoesRoute
+  '/creditos': typeof AuthCreditosRoute
   '/equipes': typeof AuthEquipesRoute
+  '/motivos-credito': typeof AuthMotivosCreditoRoute
   '/planos': typeof AuthPlanosRoute
   '/sincronizador': typeof AuthSincronizadorRoute
   '/': typeof AuthIndexRoute
@@ -178,8 +202,11 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_auth/calendario': typeof AuthCalendarioRoute
   '/_auth/categorias': typeof AuthCategoriasRoute
+  '/_auth/competencias': typeof AuthCompetenciasRoute
   '/_auth/configuracoes': typeof AuthConfiguracoesRoute
+  '/_auth/creditos': typeof AuthCreditosRoute
   '/_auth/equipes': typeof AuthEquipesRoute
+  '/_auth/motivos-credito': typeof AuthMotivosCreditoRoute
   '/_auth/planos': typeof AuthPlanosRoute
   '/_auth/sincronizador': typeof AuthSincronizadorRoute
   '/_auth/': typeof AuthIndexRoute
@@ -201,8 +228,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/calendario'
     | '/categorias'
+    | '/competencias'
     | '/configuracoes'
+    | '/creditos'
     | '/equipes'
+    | '/motivos-credito'
     | '/planos'
     | '/sincronizador'
     | '/dashboards/onboarding'
@@ -220,8 +250,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/calendario'
     | '/categorias'
+    | '/competencias'
     | '/configuracoes'
+    | '/creditos'
     | '/equipes'
+    | '/motivos-credito'
     | '/planos'
     | '/sincronizador'
     | '/'
@@ -241,8 +274,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/_auth/calendario'
     | '/_auth/categorias'
+    | '/_auth/competencias'
     | '/_auth/configuracoes'
+    | '/_auth/creditos'
     | '/_auth/equipes'
+    | '/_auth/motivos-credito'
     | '/_auth/planos'
     | '/_auth/sincronizador'
     | '/_auth/'
@@ -300,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthPlanosRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/motivos-credito': {
+      id: '/_auth/motivos-credito'
+      path: '/motivos-credito'
+      fullPath: '/motivos-credito'
+      preLoaderRoute: typeof AuthMotivosCreditoRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/equipes': {
       id: '/_auth/equipes'
       path: '/equipes'
@@ -307,11 +350,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthEquipesRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/creditos': {
+      id: '/_auth/creditos'
+      path: '/creditos'
+      fullPath: '/creditos'
+      preLoaderRoute: typeof AuthCreditosRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/configuracoes': {
       id: '/_auth/configuracoes'
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AuthConfiguracoesRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/competencias': {
+      id: '/_auth/competencias'
+      path: '/competencias'
+      fullPath: '/competencias'
+      preLoaderRoute: typeof AuthCompetenciasRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/categorias': {
@@ -404,8 +461,11 @@ declare module '@tanstack/react-router' {
 interface AuthRouteChildren {
   AuthCalendarioRoute: typeof AuthCalendarioRoute
   AuthCategoriasRoute: typeof AuthCategoriasRoute
+  AuthCompetenciasRoute: typeof AuthCompetenciasRoute
   AuthConfiguracoesRoute: typeof AuthConfiguracoesRoute
+  AuthCreditosRoute: typeof AuthCreditosRoute
   AuthEquipesRoute: typeof AuthEquipesRoute
+  AuthMotivosCreditoRoute: typeof AuthMotivosCreditoRoute
   AuthPlanosRoute: typeof AuthPlanosRoute
   AuthSincronizadorRoute: typeof AuthSincronizadorRoute
   AuthIndexRoute: typeof AuthIndexRoute
@@ -424,8 +484,11 @@ interface AuthRouteChildren {
 const AuthRouteChildren: AuthRouteChildren = {
   AuthCalendarioRoute: AuthCalendarioRoute,
   AuthCategoriasRoute: AuthCategoriasRoute,
+  AuthCompetenciasRoute: AuthCompetenciasRoute,
   AuthConfiguracoesRoute: AuthConfiguracoesRoute,
+  AuthCreditosRoute: AuthCreditosRoute,
   AuthEquipesRoute: AuthEquipesRoute,
+  AuthMotivosCreditoRoute: AuthMotivosCreditoRoute,
   AuthPlanosRoute: AuthPlanosRoute,
   AuthSincronizadorRoute: AuthSincronizadorRoute,
   AuthIndexRoute: AuthIndexRoute,

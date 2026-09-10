@@ -23,8 +23,8 @@ import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
 import { ClientCombobox } from '../shared/components/ClientCombobox'
 import { listProjectAppointments, listTeams } from '../shared/services/reportsService'
-import { formatDateTime, formatSeconds } from '../shared/utils/formatters'
-import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
+import { formatDateTime } from '../shared/utils/formatters'
+import { durationCell, exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
 import type { ExportColumn, ExportRow } from '../shared/utils/exportTable'
 import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPaginated'
 import { usePermissions } from '../../../hooks/usePermissions'
@@ -42,7 +42,15 @@ const SCOPE_OPTIONS = [
 
 // ── Colunas para export (mapeamento de campos simples, sem JSX) ──────────────
 
-const EXPORT_COLUMNS: ExportColumn[] = [
+// Exportados para teste (134): o mapper do export é um call site próprio do campo
+// `totalSegundos` — a tela é outro. Sem export não há como cobri-lo (AP-FRONTEND-028:
+// planilha errada o gestor encaminha; tela errada ele recarrega).
+//
+// 134: "Tempo" é `type: 'duration'` — o mapper entrega SEGUNDOS CRUS e a formatação
+// (`[h]:mm:ss` no XLSX, `H:mm:ss` no CSV) mora no núcleo (`exportTable.ts`). Nunca
+// pré-formatar aqui. A TELA não muda: `columns.tsx` segue exibindo "2h 44m" via
+// `formatSeconds`. "Data do apontamento" é INSTANTE, não duração — segue sem `type`.
+export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Projeto', key: 'projeto' },
   { header: 'Stage', key: 'stage' },
   { header: 'Cliente', key: 'cliente' },
@@ -51,10 +59,10 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Categorização do atendimento', key: 'categorizacaoAtendimento' },
   { header: 'Faturamento', key: 'faturamento' },
   { header: 'Data do apontamento', key: 'dataApontamento' },
-  { header: 'Tempo', key: 'tempo' },
+  { header: 'Tempo', key: 'tempo', type: 'duration' },
 ]
 
-function mapToExportRow(item: ProjectAppointmentReportItemDto): ExportRow {
+export function mapToExportRow(item: ProjectAppointmentReportItemDto): ExportRow {
   return {
     projeto: item.projetoNome ?? '—',
     stage: item.stage ?? '—',
@@ -64,7 +72,7 @@ function mapToExportRow(item: ProjectAppointmentReportItemDto): ExportRow {
     categorizacaoAtendimento: item.categorizacaoAtendimento ?? '—',
     faturamento: item.faturamento,
     dataApontamento: formatDateTime(item.dataApontamento),
-    tempo: formatSeconds(item.totalSegundos),
+    tempo: durationCell(item.totalSegundos),
   }
 }
 

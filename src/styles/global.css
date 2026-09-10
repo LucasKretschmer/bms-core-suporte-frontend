@@ -191,15 +191,21 @@
      deste arquivo e reprova abaixo de 4.5:1:
        #046b04 sobre #ddffdd = 6.25:1  (badge "Na fatura: Sim")
        #4a5a68 sobre #f0f4f7 = 6.43:1  (badge "Na fatura: Não")
-       #8a3d00 sobre #fffbef = 7.39:1  (card de exceções de faturamento)
-     `#fffbef` é o mesmo fundo de alerta-aviso do DS (--color-alert-warning); só o
-     TEXTO foi escurecido, preservando o fundo (rules/frontend.md § Contraste). */
+
+     🔴 132/F1 (D7) — `--color-excecao-fatura-fg/-bg` (#8a3d00 sobre #fffbef, 7.39:1)
+     foram REMOVIDOS daqui junto com o card de exceções de faturamento. Com
+     `TimeEntry.InicioEm` como competência (132/D1), a hora é faturada no mês em que foi
+     apontada — chamado aberto ou fechado —, logo "chamado fora de qualquer fatura"
+     deixou de ser um conjunto e a superfície que esses tokens pintavam não existe.
+     Zero call site restante, medido por grep de `excecao-fatura` em `src/**` antes de
+     apagar. Se você veio restaurá-los, restaure primeiro o card — token órfão em
+     `@theme` gera classe utilitária que ninguém usa e que nenhum teste de contraste
+     audita (o inventário de `faturamentoTheme.ts` foi de 6 pares para 4 no mesmo
+     commit). */
   --color-fatura-sim-fg: #046b04;
   --color-fatura-sim-bg: #ddffdd;
   --color-fatura-nao-fg: #4a5a68;
   --color-fatura-nao-bg: #f0f4f7;
-  --color-excecao-fatura-fg: #8a3d00;
-  --color-excecao-fatura-bg: #fffbef;
 }
 
 /* ── Reset global ── */

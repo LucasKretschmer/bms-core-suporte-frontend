@@ -18,9 +18,17 @@
  *
  * As `key` (`frHoras`, `frHorasUteis`, `frSla`) **não** mudam: são campos de `TicketRowDto`
  * e chaves de ordenação do backend.
+ *
+ * ## 134 — as 4 colunas de tempo também saem CALCULÁVEIS no arquivo
+ *
+ * Cada uma ganhou `durationSeconds` (segundos, via `durationCellFromHours` — o campo do wire
+ * está em HORAS decimais). O `accessor` NÃO muda: a tela continua exibindo `'2h 44m'`, e é o
+ * export que passa a levar número. Ausência (`null` ou chave ausente) vira `null` ⇒ célula
+ * vazia, nunca `0` — `0` afirmaria "atendeu na hora" onde não há dado (AP-FRONTEND-028).
  */
 
 import { formatDate, formatHours, formatDecimal } from '../../../reports/shared/utils/formatters'
+import { durationCellFromHours } from '../../../reports/shared/utils/exportTable'
 import type { ColumnDef } from '../../../../components/ui/DataTable/types'
 import type { TicketMetricKey, TicketRowDto } from '../types/metrics'
 
@@ -130,6 +138,7 @@ const colFrHoras: ColumnDef<TicketRowDto> = {
   key: 'frHoras',
   header: '1º atendimento (corridas)',
   accessor: (row) => fmtHours(row.frHoras),
+  durationSeconds: (row) => durationCellFromHours(row.frHoras),
   align: 'right',
 }
 
@@ -137,6 +146,7 @@ const colFrHorasUteis: ColumnDef<TicketRowDto> = {
   key: 'frHorasUteis',
   header: '1º atendimento (úteis)',
   accessor: (row) => fmtHours(row.frHorasUteis),
+  durationSeconds: (row) => durationCellFromHours(row.frHorasUteis),
   align: 'right',
 }
 
@@ -144,6 +154,7 @@ const colResHoras: ColumnDef<TicketRowDto> = {
   key: 'resHoras',
   header: 'Resolução (corridas)',
   accessor: (row) => fmtHours(row.resHoras),
+  durationSeconds: (row) => durationCellFromHours(row.resHoras),
   align: 'right',
 }
 
@@ -151,6 +162,7 @@ const colResHorasUteis: ColumnDef<TicketRowDto> = {
   key: 'resHorasUteis',
   header: 'Resolução (úteis)',
   accessor: (row) => fmtHours(row.resHorasUteis),
+  durationSeconds: (row) => durationCellFromHours(row.resHorasUteis),
   align: 'right',
 }
 

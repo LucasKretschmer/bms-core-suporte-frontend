@@ -107,26 +107,46 @@ export async function listTicketOwners(): Promise<TicketOwnerOption[]> {
  * como "sem restrição", não como mês corrente. O ramo `null` continua no TIPO de propósito:
  * ele é o que obriga qualquer call site novo a decidir, em vez de herdar um default calado.
  *
- * ⚠️ 123/FAT-1 — POR QUAL DATA o período recorta, medido no código em 04/09/2026
- * (prefixo `Suporte.Infrastructure/Repositories/`). O texto anterior deste comentário
- * afirmava que `te.InicioEm >= from && te.InicioEm < toExclusive` entrava em TODOS os
- * agregados. **Isso é falso desde a demanda 121** (commit `462d092`), e um comentário
- * errado aqui é pior que nenhum: quem o lê "conserta" o backend de volta.
+ * ⚠️ **POR QUAL DATA o período recorta.** Este comentário é documentação VIVA e já
+ * esteve errado duas vezes; um comentário errado aqui é pior que nenhum, porque quem o lê
+ * "conserta" o backend de volta. Ele é reescrito por inteiro a cada troca de predicado, e
+ * a medição é datada.
  *
- * O que `GetPlanConsumptionAsync` faz hoje, agregado por agregado:
- *  | agregado                     | parcela TICKET                | parcela PROJETO       |
- *  |------------------------------|-------------------------------|-----------------------|
- *  | `horasUsadas`                | `Ticket.FechadoEm` (`:759-763`) | `InicioEm` (`:769`)  |
- *  | `horasFaturaveis`            | `Ticket.FechadoEm` (`:775-779`) | `InicioEm` (`:786`)  |
- *  | `horasAnalise`               | `Ticket.FechadoEm` (`:793-798`) | — (ticket-only)      |
- *  | elegibilidade da linha       | `Ticket.FechadoEm` (`:686-689`) | `InicioEm` (`:690-692`) |
- *  | `horasEmAbertoNaoFaturadas`  | **nenhuma data** — estoque all-time, `FechadoEm == null` (`:816-824`) |
+ * 🔴 **Medido em 09/09/2026, depois da 132/B1+B2, em
+ * `Suporte.Infrastructure/Repositories/ReportQueryRepository.cs`
+ * (`GetPlanConsumptionAsync`).** O texto anterior dizia `Ticket.FechadoEm` em quatro das
+ * cinco linhas — **é falso desde a 132/D1**, e as âncoras numéricas dele também já não
+ * batiam. Ancorado agora pelos MARCADORES `⟪…⟫` do próprio arquivo, não por número de
+ * linha: há trabalho de backend em voo e linha envelhece entre a leitura e o merge.
+ *
+ *  | agregado                | parcela TICKET                    | parcela PROJETO        |
+ *  |-------------------------|-----------------------------------|------------------------|
+ *  | `horasUsadas`           | `te.InicioEm` ⟪131 PLANCONSUMO-HORASUSADAS⟫ | — **ticket-only** (a ausência é requisito da 131, não esquecimento) |
+ *  | `horasFaturaveis`       | `te.InicioEm` (mesmo bloco)       | `te.InicioEm`          |
+ *  | `horasAnalise`          | `te.InicioEm` (mesmo bloco)       | — (ticket-only)        |
+ *  | elegibilidade da linha  | `te.InicioEm` ⟪121/A1 PLANCONSUMO-ELEGIBILIDADE⟫ | `te.InicioEm` (mesmo bloco) |
+ *
+ * **Uma coluna de data para tudo.** A competência de faturamento de uma hora é o mês do
+ * dia local São Paulo de `TimeEntry.InicioEm`, e `Ticket.FechadoEm` **não participa de
+ * nenhuma decisão de fatura** — a regra canônica está escrita UMA vez, no XML-doc de
+ * `PlanConsumptionItemDto` (`Application/DTOs/Reports/ReportsDtos.cs`), e é de lá que
+ * este resumo deriva (`AP-ARQUITETURA-005`: segunda implementação é implementação que
+ * diverge).
  *
  * `horasRestantes` e `horasAdicionais` não têm predicado próprio: derivam de `horasUsadas`
- * e herdam o recorte dela. A troca `InicioEm → FechadoEm` é **substituição, não conjunção**
- * (`:101-113`), e é a regra do Bloco C do PRD da 123: a hora entra na fatura da competência
- * em que o CHAMADO foi concluído. Projeto não tem chamado, logo continua por `InicioEm`
- * (decisão D2 da 121).
+ * e herdam o recorte dela.
+ *
+ * 🔴 **A quinta linha desta tabela era `horasEmAbertoNaoFaturadas`** — "nenhuma data,
+ * estoque all-time, `FechadoEm == null`". O campo **saiu do wire** na 132/B1+B2 e o
+ * cartão que o exibia saiu de `ClientTicketsPanel.tsx` na 132/F2 (D7). O conceito não foi
+ * escondido, deixou de existir: com a competência vindo do apontamento, não há hora fora
+ * de fatura nenhuma esperando um chamado fechar. O que antes ficava nesse limbo aparece
+ * nos agregados acima, na competência em que foi apontado.
+ *
+ * ⚠️ `Ticket.FechadoEm` **continua sendo PROJETADO** noutras rotas (`FechadoEmChamado`,
+ * a coluna "Concluído em") — é dado operacional da linha, não a competência dela.
+ * Projeção não é predicado; restaurar um predicado sobre ele faria a hora de janeiro num
+ * chamado ainda ABERTO desaparecer do relatório (o defeito que a D1 revogou).
  */
 export type ClientKpisPeriod = {
   from: string | null

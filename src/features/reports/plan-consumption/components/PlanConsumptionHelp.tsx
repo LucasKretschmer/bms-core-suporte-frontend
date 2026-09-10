@@ -1,51 +1,47 @@
 /**
  * 127/FE-AJUDA — o `(?)` da tela de **Consumo de Planos**.
  *
- * Recolhe atrás de um botão os dois blocos que ocupavam o topo da tela e empurravam a
- * tabela para baixo (decisão do usuário em 08/09/2026, olhando a tela):
- *  1. a nota **"Como o período é contado aqui"** (`CompetenciaNota`);
- *  2. o **card de exceções de faturamento** (`BillingExceptionsCard`) — com o botão
- *     **Conferir** que ele traz.
+ * Recolhe atrás de um botão a nota **"Como o período é contado aqui"**
+ * (`CompetenciaNota`), que ocupava o topo da tela e empurrava a tabela para baixo
+ * (decisão do usuário em 08/09/2026, olhando a tela).
  *
- * ## A ressalva que este componente carrega
+ * ## 🔴 O que a 132 removeu daqui, e o que ela NÃO removeu (`FE/D-1`)
  *
- * O card era **sempre renderizado**, inclusive zerado, porque esconder no zero tornaria
- * *"não há exceções"* indistinguível de *"a requisição falhou"* (`AP-FRONTEND-021`), e
- * porque a conferência acontece **enquanto** o gestor olha os números da fatura — página
- * separada só é aberta por quem lembra que ela existe. Com tudo recolhido, essas duas
- * garantias migram para o **próprio gatilho**:
+ * Até a 132 este componente hospedava **duas** coisas: a nota de competência **e** o
+ * card de exceções de faturamento, com o botão *Conferir* e um **indicador** de quatro
+ * estados no próprio gatilho.
  *
- *  - a **distinção** vive no `aria-label` do botão, que muda nos quatro estados
- *    (`planConsumptionHelpTexts.ts`) — logo é lida por quem usa leitor de tela **sem
- *    abrir nada**, e não depende de enxergar cor nenhuma;
- *  - o **chamamento** vive no selo: glifo/número visível (`…`, `!`, `3`), com cor apenas
- *    como reforço. Cor **nunca** é o único meio (WCAG 1.4.1).
+ * A 132/D7 removeu **as exceções**. Com `TimeEntry.InicioEm` como competência (D1), a
+ * hora é faturada no mês em que foi **apontada** — chamado aberto ou fechado —, logo
+ * "chamado fora de qualquer fatura" deixou de ser um conjunto: não há o que conferir,
+ * nem o que indicar. Saíram o card, a query do resumo, o indicador, o selo e a região
+ * `role="status"` que anunciava a transição entre os estados.
  *
- * Por isso a query do resumo (`useBillingExceptionsSummary`) é feita **aqui**, e não só
- * dentro do card: o indicador precisa do número mesmo com o conteúdo fechado. Quando o
- * usuário abre, o card chama o MESMO hook com a MESMA `queryKey` — o TanStack Query serve
- * do cache e **nenhuma requisição nova** é disparada (há teste para isso).
+ * ⚠️ **A nota de competência FICOU, e isso é requisito, não sobra.** A instrução
+ * original da remoção (`R32`) apontava para as linhas que renderizam **este
+ * componente** — o hospedeiro —, não para o hóspede. Cumprida ao pé da letra, ela
+ * apagaria a explicação de como o período é contado **no mês em que essa regra
+ * mudou**, que é exatamente quando o gestor abre o `(?)`. Ver `FE/D-1` em
+ * `decisoes-ratificadas.md` §2.
  *
- * ⚠️ **Não abre sozinho quando há anomalias.** A decisão foi "os dois ficam recolhidos"; um
- * auto-abrir a contradiria e devolveria o empurrão na tabela justamente no mês com
- * problema. O que compensa o risco é o indicador — e é ele que os testes travam.
+ * Sem requisição nenhuma, o componente não tem mais estado de carga nem de falha — e
+ * portanto nada a distinguir no gatilho. O `aria-label`, que era o indicador, virou um
+ * texto fixo que **não afirma conferência** (`planConsumptionHelpTexts.ts`).
  *
  * A11y: `<button>` real (teclado de graça), `aria-expanded` + `aria-controls` apontando
  * para um elemento que **existe nos dois estados**, foco visível pelo anel global da
- * demanda 126 (nenhum `outline-none` aqui).
+ * demanda 126 (nenhum `outline-none` aqui). O conteúdo só é montado quando aberto, para
+ * que nenhum focável fique escondido no anel de Tab.
  */
 
 import { useId, useState } from 'react'
 import { clsx } from 'clsx'
 import { CompetenciaNota } from '../../shared/components/CompetenciaNota'
-import { EXCECAO_FATURA_CLASSES } from '../../shared/utils/faturamentoTheme'
-import { useBillingExceptionsSummary } from '../hooks/useBillingExceptions'
+import { TEXTO_QTDE_TICKETS_RECORTE_PROPRIO } from '../../shared/utils/competenciaTexts'
 import {
+  TEXTO_AJUDA_NOME_ACESSIVEL,
   TEXTO_AJUDA_ROTULO,
-  indicadorDeConferencia,
-  type EstadoDaConferencia,
 } from '../planConsumptionHelpTexts'
-import { BillingExceptionsCard } from './BillingExceptionsCard'
 
 type PlanConsumptionHelpProps = {
   /** Período da tela (YYYY-MM-DD) — a MESMA fonte da tabela e do export. */
@@ -54,30 +50,9 @@ type PlanConsumptionHelpProps = {
   className?: string
 }
 
-/**
- * Cor do selo **por estado**, sempre por token (nunca hex). É reforço: o que discrimina
- * é o glifo e o nome acessível.
- *
- * `zero` não tem selo — o repouso é a ausência de marca, e o texto do `aria-label` é que
- * diz "nenhum chamado exige conferência".
- */
-const CLASSES_DO_SELO: Record<EstadoDaConferencia, string> = {
-  carregando: 'border-line bg-card text-muted',
-  erro: 'border-error-fg/40 bg-error-bg text-error-fg',
-  zero: '',
-  pendente: `border-excecao-fatura-fg/40 bg-excecao-fatura-bg ${EXCECAO_FATURA_CLASSES.accent}`,
-}
-
 export function PlanConsumptionHelp({ from, to, className }: PlanConsumptionHelpProps) {
   const [isOpen, setIsOpen] = useState(false)
   const conteudoId = useId()
-
-  const query = useBillingExceptionsSummary({ from, to })
-  const indicador = indicadorDeConferencia({
-    isLoading: query.isLoading,
-    isError: query.isError,
-    anomaliasCount: query.data?.anomaliasCount,
-  })
 
   return (
     <div className={clsx('flex flex-col gap-4', className)}>
@@ -86,10 +61,9 @@ export function PlanConsumptionHelp({ from, to, className }: PlanConsumptionHelp
           type="button"
           aria-expanded={isOpen}
           aria-controls={conteudoId}
-          aria-label={indicador.nomeAcessivel}
+          aria-label={TEXTO_AJUDA_NOME_ACESSIVEL}
           onClick={() => setIsOpen((aberto) => !aberto)}
           data-testid="ajuda-gatilho"
-          data-estado={indicador.estado}
           className={clsx(
             'inline-flex items-center gap-2 rounded-control border border-line bg-card',
             'px-3 py-1.5 text-sm font-semibold text-foreground',
@@ -104,28 +78,7 @@ export function PlanConsumptionHelp({ from, to, className }: PlanConsumptionHelp
             ?
           </span>
           {TEXTO_AJUDA_ROTULO}
-          {indicador.selo !== null && (
-            <span
-              data-testid="ajuda-selo"
-              className={clsx(
-                'inline-flex min-w-5 items-center justify-center rounded-full border px-1.5 text-xs font-bold leading-5',
-                CLASSES_DO_SELO[indicador.estado],
-              )}
-            >
-              {indicador.selo}
-            </span>
-          )}
         </button>
-
-        {/*
-          O nome acessível do botão MUDA quando a requisição resolve, e mudança de
-          `aria-label` não é anunciada a quem já leu o botão. Esta região `status`
-          (polida, sr-only) carrega a mesma frase — é o que torna a transição
-          "carregando → 3 chamados exigem conferência" perceptível sem foco nenhum.
-        */}
-        <p className="sr-only" role="status" data-testid="ajuda-anuncio">
-          {indicador.nomeAcessivel}
-        </p>
       </div>
 
       {/*
@@ -140,12 +93,30 @@ export function PlanConsumptionHelp({ from, to, className }: PlanConsumptionHelp
         data-testid="ajuda-conteudo"
       >
         {isOpen && (
-          <>
-            {/* 131: nesta tela projeto NÃO consome o plano — enquadramento próprio,
-                nunca o mesmo do Relatório do Cliente. */}
-            <CompetenciaNota from={from} to={to} notaDeProjeto="fora-do-plano" comparaSaudePlanos />
-            <BillingExceptionsCard from={from} to={to} />
-          </>
+          /* 131: nesta tela projeto NÃO consome o plano — enquadramento próprio,
+             nunca o mesmo do Relatório do Cliente. */
+          <CompetenciaNota from={from} to={to} notaDeProjeto="fora-do-plano" comparaSaudePlanos />
+        )}
+
+        {/*
+          🔴 **135/G1 — o recorte PRÓPRIO da coluna "Qtde. Tickets", AO LADO da nota e
+          nunca dentro dela.** `CompetenciaNota` é compartilhada com o Relatório do
+          Cliente, que **não tem** esta coluna: um parágrafo incondicional lá afirmaria a
+          existência de uma coluna inexistente naquela tela (AP-FRONTEND-028, o 5º lugar —
+          a 132 já pagou esse defeito uma vez).
+
+          Entra **dentro** do disclosure, não acima dele: solto na tela, voltaria a empurrar
+          a tabela para baixo, que é exatamente a decisão de 127/FE-AJUDA. E o nome
+          acessível do `(?)` ("como o período é contado nesta tela") continua verdadeiro —
+          este parágrafo é sobre como o período é contado.
+        */}
+        {isOpen && (
+          <p
+            className="rounded-card border border-line bg-card shadow-card p-4 text-xs text-foreground"
+            data-testid="ajuda-qtde-tickets"
+          >
+            {TEXTO_QTDE_TICKETS_RECORTE_PROPRIO}
+          </p>
         )}
       </div>
     </div>

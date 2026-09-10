@@ -78,7 +78,7 @@ describe('useCategoryMutations', () => {
     mockCreate.mockResolvedValueOnce({ id: 1, nome: 'X', isActive: true })
     const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-    act(() => result.current.create.mutate('X'))
+    act(() => result.current.create.mutate({ nome: 'X', forcesBillableOutsidePlan: false }))
     await waitFor(() => expect(result.current.create.isSuccess).toBe(true))
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Categoria adicionada.')
@@ -123,19 +123,32 @@ describe('useCategoryMutations', () => {
       mockUpdate.mockResolvedValueOnce({ id: 7, nome: 'Consultoria N2', isActive: true })
       const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-      act(() => result.current.update.mutate({ id: 7, nome: 'Consultoria N2' }))
+      act(() =>
+        result.current.update.mutate({
+          id: 7,
+          nome: 'Consultoria N2',
+          forcesBillableOutsidePlan: true,
+        }),
+      )
       await waitFor(() => expect(result.current.update.isSuccess).toBe(true))
 
-      // Vermelho se a mutation inverter os argumentos ou mandar o objeto cru ao service.
-      expect(mockUpdate).toHaveBeenCalledWith(7, 'Consultoria N2')
-      expect(mockToastSuccess).toHaveBeenCalledWith('Categoria renomeada.')
+      // Vermelho se a mutation inverter os argumentos, mandar o objeto cru ao service, ou
+      // (133) parar de repassar a flag — o service tem 3 parâmetros posicionais e um
+      // 3º argumento perdido vira `undefined` no body, que o servidor lê como
+      // "não alterar".
+      expect(mockUpdate).toHaveBeenCalledWith(7, 'Consultoria N2', true)
+      // 133: o PUT não é mais só "renomear"; o toast não pode afirmar o que o request não
+      // faz mais sozinho (`AP-FRONTEND-022`).
+      expect(mockToastSuccess).toHaveBeenCalledWith('Categoria atualizada.')
     })
 
     it('409: toast explica o conflito e diz o que fazer', async () => {
       mockUpdate.mockRejectedValueOnce(conflito("Já existe uma categoria com o nome 'Plantão'."))
       const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-      act(() => result.current.update.mutate({ id: 7, nome: 'Plantão' }))
+      act(() =>
+        result.current.update.mutate({ id: 7, nome: 'Plantão', forcesBillableOutsidePlan: false }),
+      )
       await waitFor(() => expect(result.current.update.isError).toBe(true))
 
       // Vermelho se o onError voltar a usar o `handleApiError` cru: o mock deste arquivo o
@@ -150,7 +163,9 @@ describe('useCategoryMutations', () => {
       mockUpdate.mockRejectedValueOnce(conflito(doBe2))
       const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-      act(() => result.current.update.mutate({ id: 7, nome: 'Plantão' }))
+      act(() =>
+        result.current.update.mutate({ id: 7, nome: 'Plantão', forcesBillableOutsidePlan: false }),
+      )
       await waitFor(() => expect(result.current.update.isError).toBe(true))
 
       expect(mockToastError).toHaveBeenCalledWith(`${doBe2} Escolha um nome diferente.`)
@@ -160,10 +175,76 @@ describe('useCategoryMutations', () => {
       mockUpdate.mockRejectedValueOnce(new Error('Network Error'))
       const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-      act(() => result.current.update.mutate({ id: 7, nome: 'X' }))
+      act(() =>
+        result.current.update.mutate({ id: 7, nome: 'X', forcesBillableOutsidePlan: false }),
+      )
       await waitFor(() => expect(result.current.update.isError).toBe(true))
 
       expect(mockToastError).not.toHaveBeenCalledWith(expect.stringContaining('Escolha um nome'))
+    })
+  })
+
+  /**
+   * 133 — a flag atravessa o hook até o service, **nos dois valores**. O par
+   * `true`/`false` é o que discrimina: com só um dos casos, uma implementação que
+   * mandasse `true` fixo (ou que perdesse o argumento) passaria.
+   */
+  describe('flag de cobrança obrigatória fora do plano (133)', () => {
+    it('update repassa a flag LIGADA como 3º argumento posicional do service', async () => {
+      mockUpdate.mockResolvedValueOnce({
+        id: 7,
+        nome: 'Consultoria N2',
+        isActive: true,
+        forcesBillableOutsidePlan: true,
+      })
+      const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
+
+      act(() =>
+        result.current.update.mutate({
+          id: 7,
+          nome: 'Consultoria N2',
+          forcesBillableOutsidePlan: true,
+        }),
+      )
+      await waitFor(() => expect(result.current.update.isSuccess).toBe(true))
+
+      expect(mockUpdate).toHaveBeenCalledWith(7, 'Consultoria N2', true)
+    })
+
+    it('update repassa a flag DESLIGADA — `false` é valor, não ausência', async () => {
+      // Vermelho se o hook montar o objeto com spread condicional ou "otimizar" o `false`
+      // para fora: o service receberia `undefined` e o body sairia sem a chave.
+      mockUpdate.mockResolvedValueOnce({
+        id: 7,
+        nome: 'Consultoria',
+        isActive: true,
+        forcesBillableOutsidePlan: false,
+      })
+      const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
+
+      act(() =>
+        result.current.update.mutate({
+          id: 7,
+          nome: 'Consultoria',
+          forcesBillableOutsidePlan: false,
+        }),
+      )
+      await waitFor(() => expect(result.current.update.isSuccess).toBe(true))
+
+      expect(mockUpdate).toHaveBeenCalledWith(7, 'Consultoria', false)
+    })
+
+    it('create repassa a flag nos dois valores (2º argumento posicional)', async () => {
+      mockCreate.mockResolvedValue({ id: 1, nome: 'X', isActive: true })
+      const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
+
+      act(() =>
+        result.current.create.mutate({ nome: 'Consultoria', forcesBillableOutsidePlan: true }),
+      )
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledWith('Consultoria', true))
+
+      act(() => result.current.create.mutate({ nome: 'Suporte', forcesBillableOutsidePlan: false }))
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledWith('Suporte', false))
     })
   })
 
@@ -186,12 +267,12 @@ describe('useCategoryMutations', () => {
       {
         nome: 'create',
         prepara: () => void mockCreate.mockResolvedValueOnce({ id: 1, nome: 'X', isActive: true }),
-        dispara: (m) => m.create.mutate('X'),
+        dispara: (m) => m.create.mutate({ nome: 'X', forcesBillableOutsidePlan: false }),
       },
       {
         nome: 'update',
         prepara: () => void mockUpdate.mockResolvedValueOnce({ id: 7, nome: 'Novo', isActive: true }),
-        dispara: (m) => m.update.mutate({ id: 7, nome: 'Novo' }),
+        dispara: (m) => m.update.mutate({ id: 7, nome: 'Novo', forcesBillableOutsidePlan: false }),
       },
       {
         nome: 'toggleActive',
@@ -242,7 +323,7 @@ describe('useCategoryMutations', () => {
     mockCreate.mockRejectedValueOnce(conflito("Já existe uma categoria com o nome 'X'."))
     const { result } = renderHook(() => useCategoryMutations(), { wrapper: createWrapper() })
 
-    act(() => result.current.create.mutate('X'))
+    act(() => result.current.create.mutate({ nome: 'X', forcesBillableOutsidePlan: false }))
     await waitFor(() => expect(result.current.create.isError).toBe(true))
 
     expect(mockToastError).toHaveBeenCalledWith(
