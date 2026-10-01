@@ -367,7 +367,7 @@ export const TOOLTIP_CONCLUIDO_EM =
 // necessário porque as três colunas repartem a mesma janela em três destinos de cobrança.
 
 const SUFIXO_BALDE =
-  'Soma dos apontamentos concluídos deste chamado dentro do período filtrado, repartida por como cada hora é cobrada.'
+  'Soma dos apontamentos concluídos deste chamado dentro do período filtrado, repartida por como cada hora é cobrada. Inclui todos os atendentes, mesmo com o filtro "Atendente".'
 
 export const HEADER_BALDE_PLANO = 'Plano (chamado)'
 export const TOOLTIP_BALDE_PLANO = `Horas que consomem o plano de suporte. ${SUFIXO_BALDE}`

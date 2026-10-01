@@ -70,6 +70,8 @@ beforeEach(() => {
     isCoordenadorOuAcima: false,
     isGerentePlus: false,
     isAtendente: true,
+    isGestor: false,
+    primaryTeamId: null,
     isAuthenticated: true,
   })
 
@@ -87,6 +89,7 @@ beforeEach(() => {
       teamId: [],
       categoria: [],
       serviceCategoryId: [],
+      incluirSemApontamento: false,
       from: null,
       to: null,
     },
@@ -249,6 +252,7 @@ describe('AppointmentsPage — legenda de status (MELH-01/D5, 119)', () => {
         teamId: [],
         categoria: [],
         serviceCategoryId: [],
+        incluirSemApontamento: false,
         from: null,
         to: null,
       },
@@ -411,7 +415,9 @@ describe('AppointmentsPage — o arquivo CSV que a tela baixa (134/S3, ponta a p
     ])
 
     // Cabeçalho intacto — positiva que ancora a ordem das colunas.
-    expect(csv).toContain('"Tempo (período)","Tempo total","Apontamentos (período)"')
+    expect(csv).toContain(
+      '"Tempo (período)","Tempo total (histórico)","Apontamentos (período)","Apontamentos (histórico)"',
+    )
     // Linha inteira, literal e na ordem: 9840 → 02:44:00, 95400 → 26:30:00 (26, não 02),
     // e as contagens 3 e 7 saindo como número, não como duração.
     expect(csv).toContain(
@@ -440,7 +446,7 @@ describe('AppointmentsPage — o arquivo CSV que a tela baixa (134/S3, ponta a p
 })
 
 describe('AppointmentsPage — a TELA não muda (134/S3)', () => {
-  it('a coluna visível "Tempo total" continua exibindo "2h 44m"', () => {
+  it('a coluna visível "Tempo total (histórico)" continua exibindo "2h 44m"', () => {
     const coluna = buildAppointmentsColumns().find((c) => c.key === 'tempoTotal')
     if (!coluna) throw new Error('coluna "tempoTotal" sumiu da tabela da tela')
     expect(coluna.accessor(makeItem({ totalSecondsAllTime: 9840 }))).toBe('2h 44m')

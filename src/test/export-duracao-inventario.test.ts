@@ -14,8 +14,8 @@
  * passa quando uma chave entra e outra sai — foi exatamente o que aconteceu com o número
  * "27" da §9.4, escrito quando `plan-consumption` tinha 6 colunas de duração e hoje tem 8.
  *
- * 🔴 **Total MEDIDO em 2026-09-09 pela U12: 29 chaves em 12 superfícies.** Derivado do código
- * (não herdado da spec, que dizia 27): 8+1+2+1+4+2+4+2+1+2+1+1. O número no teste é
+ * 🔴 **Total MEDIDO: 30 chaves em 12 superfícies.** Derivado do código
+ * (não herdado da spec, que dizia 27): 8+1+2+1+5+2+4+2+1+2+1+1. O número no teste é
  * conferência redundante — quem reprova de verdade é o mapa nominal.
  *
  * **Duas camadas, e a reconciliação entre elas é parte do teste:**
@@ -93,9 +93,10 @@ const INVENTARIO: Record<string, string[]> = {
   'features/reports/appointments/index.tsx': ['tempo', 'tempoTotal'],
   // S4 · Apontamentos por Projeto — 1. `dataApontamento` é INSTANTE.
   'features/reports/project-appointments/index.tsx': ['tempo'],
-  // S5 · Painel de tickets do cliente — 4 (o tempo do período + os 3 baldes de fatura).
+  // S5 · Painel de tickets do cliente: 5 (tempo do período, tempo total e os 3 baldes de fatura).
   'features/client-tickets/components/ClientTicketsPanel.tsx': [
     'tempo',
+    'tempoTotal',
     'baldePlano',
     'baldeFaturado',
     'baldeAnalise',
@@ -128,7 +129,7 @@ const INVENTARIO: Record<string, string[]> = {
 }
 
 /** Medido pela U12 em 2026-09-09 — conferência redundante do mapa acima. */
-const TOTAL_MEDIDO_DE_CHAVES = 29
+const TOTAL_MEDIDO_DE_CHAVES = 30
 const TOTAL_MEDIDO_DE_SUPERFICIES = 12
 
 /**
@@ -247,7 +248,7 @@ describe('134/§9.4 · inventário global das colunas de duração', () => {
     }
   })
 
-  it('total MEDIDO: 29 chaves em 12 superfícies (conferência do mapa nominal)', () => {
+  it('total MEDIDO: 30 chaves em 12 superfícies (conferência do mapa nominal)', () => {
     expect(Object.values(fonte.porArquivo).flat().length).toBe(TOTAL_MEDIDO_DE_CHAVES)
     expect(Object.keys(fonte.porArquivo).length).toBe(TOTAL_MEDIDO_DE_SUPERFICIES)
   })

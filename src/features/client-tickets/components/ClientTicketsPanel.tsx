@@ -61,8 +61,9 @@ import { resolverPeriodoPadrao } from '../../reports/shared/utils/periodoPadrao'
 import { getPercentClass } from '../../reports/plan-consumption/columns'
 import { getTicketStatuses, listTeams } from '../../reports/shared/services/reportsService'
 import type { ClientTicketItemDto } from '../types/clientTickets'
-import { buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO } from '../columns'
-import { listClientTickets, listTicketOwners } from '../services/clientTicketsService'
+import { buildClientTicketsColumns, HEADER_TEMPO_NO_PERIODO, HEADER_TEMPO_TOTAL } from '../columns'
+import { buildClientTicketsParams, CLIENT_TICKETS_SCOPE } from '../clientTicketsParams'
+import { listClientTickets, listTicketApontadores } from '../services/clientTicketsService'
 import { useClientTickets } from '../hooks/useClientTickets'
 import { useClientKpis } from '../hooks/useClientKpis'
 
@@ -96,6 +97,7 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   // 121/§4.4 — antes "Tempo do plano": o rótulo afirmava algo que a coluna não mede
   // (é o tempo TOTAL no período, todos os baldes). Mesmo rótulo da tabela visível.
   { header: HEADER_TEMPO_NO_PERIODO, key: 'tempo', type: 'duration' },
+  { header: HEADER_TEMPO_TOTAL, key: 'tempoTotal', type: 'duration' },
   { header: 'Apontamentos', key: 'apontamentos' },
   { header: HEADER_CONCLUIDO_EM, key: 'concluidoEm' },
   { header: 'Na fatura', key: 'naFatura' },
@@ -133,6 +135,7 @@ function mapTicketToExportRow(item: ClientTicketItemDto): ExportRow {
     owner: item.ownerNome ?? '—',
     status: item.status ?? '—',
     tempo: durationCell(item.totalSeconds),
+    tempoTotal: durationCell(item.totalSecondsAllTime),
     apontamentos: item.apontamentosCount,
     concluidoEm: concluidoEmTexto(item.fechadoEm),
     naFatura: naFaturaTexto(item.entraNaFatura),
@@ -234,9 +237,10 @@ export function ClientTicketsPanel({
     queryFn: listTeams,
     staleTime: 5 * 60 * 1000,
   })
-  const ownersQuery = useQuery({
-    queryKey: ['ticket-owners'],
-    queryFn: listTicketOwners,
+  // Quem apontou nos chamados deste cliente, no mesmo escopo da tabela.
+  const apontadoresQuery = useQuery({
+    queryKey: ['ticket-apontadores', CLIENT_TICKETS_SCOPE, clientId],
+    queryFn: () => listTicketApontadores({ scope: CLIENT_TICKETS_SCOPE, clientId }),
     staleTime: 5 * 60 * 1000,
   })
   const statusesQuery = useQuery({
@@ -249,9 +253,9 @@ export function ClientTicketsPanel({
     () => (teamsQuery.data ?? []).map((t) => ({ value: t.id, label: t.nome })),
     [teamsQuery.data],
   )
-  const ownerOptions = useMemo<MultiSelectOption<number>[]>(
-    () => (ownersQuery.data ?? []).map((o) => ({ value: o.value, label: o.label })),
-    [ownersQuery.data],
+  const apontadorOptions = useMemo<MultiSelectOption<number>[]>(
+    () => (apontadoresQuery.data ?? []).map((o) => ({ value: o.value, label: o.label })),
+    [apontadoresQuery.data],
   )
   const statusOptions = useMemo<MultiSelectOption<string>[]>(
     () => (statusesQuery.data ?? []).map((s) => ({ value: s.value, label: s.label })),
@@ -270,25 +274,11 @@ export function ClientTicketsPanel({
   const isEmpty = !isLoading && !isError && (!data || data.items.length === 0)
 
   function fetchAllForExport(): Promise<ClientTicketItemDto[]> {
+    // Mesmo builder da tabela: a planilha sai com os mesmos filtros, período e recortes.
     return fetchAllPaginated<ClientTicketItemDto>((page, pageSize) =>
-      listClientTickets({
-        clientId,
-        search: filters.search || undefined,
-        status: filters.status.length > 0 ? filters.status : undefined,
-        teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
-        owner: filters.owner.length > 0 ? filters.owner : undefined,
-        // Mesma janela resolvida da tela (D-2): a planilha não pode sair com o range aberto
-        // enquanto a tabela mostra o mês atual.
-        from: periodo.from,
-        to: periodo.to,
-        // O export sai com o MESMO recorte da tela — senão a planilha responde a outra
-        // pergunta que a tabela de onde o usuário clicou "Exportar".
-        apenasFatura: filters.apenasFatura || undefined,
-        sortBy: sortBy ?? undefined,
-        sortDirection,
-        page,
-        pageSize,
-      }),
+      listClientTickets(
+        buildClientTicketsParams(clientId, filters, { sortBy, sortDirection }, { page, pageSize }),
+      ),
     )
   }
 
@@ -456,18 +446,18 @@ export function ClientTicketsPanel({
               className="min-w-[180px]"
             />
 
-            {/* Filtro de Atendente (multi-select com checkboxes, 070) */}
+            {/* Filtro de Atendente: quem apontou no chamado (apontadoPor), não o dono. */}
             <MultiSelectCombobox<number>
               id={`${tableId}-owners`}
               label="Atendente"
               summaryLabel="Atendente"
-              value={filters.owner}
-              options={ownerOptions}
-              onChange={(owner) => setFilters({ owner })}
+              value={filters.apontadoPor}
+              options={apontadorOptions}
+              onChange={(apontadoPor) => setFilters({ apontadoPor })}
               placeholder="Todos"
               searchable
-              isLoading={ownersQuery.isLoading}
-              error={ownersQuery.isError ? 'Falha ao carregar atendentes.' : undefined}
+              isLoading={apontadoresQuery.isLoading}
+              error={apontadoresQuery.isError ? 'Falha ao carregar atendentes.' : undefined}
               className="min-w-[200px]"
             />
 
@@ -539,7 +529,7 @@ export function ClientTicketsPanel({
           message={
             filters.apenasFatura
               ? 'Nenhum chamado deste cliente foi concluído dentro do período filtrado, então nada dele entra nesta fatura. Desligue "Só o que entra na fatura do período" para ver também os chamados em aberto.'
-              : 'Nenhum ticket encontrado para este cliente no período.'
+              : 'Nenhum ticket encontrado para este cliente com apontamento no período.'
           }
         />
       )}

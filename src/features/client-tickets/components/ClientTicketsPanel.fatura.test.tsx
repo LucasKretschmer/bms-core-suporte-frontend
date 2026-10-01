@@ -36,7 +36,7 @@ import type { ReactElement, ReactNode } from 'react'
 vi.mock('../services/clientTicketsService', () => ({
   getClientKpis: vi.fn(),
   listClientTickets: vi.fn(),
-  listTicketOwners: vi.fn().mockResolvedValue([]),
+  listTicketApontadores: vi.fn().mockResolvedValue([]),
 }))
 vi.mock('../../reports/shared/services/reportsService', () => ({
   getTicketStatuses: vi.fn().mockResolvedValue([]),

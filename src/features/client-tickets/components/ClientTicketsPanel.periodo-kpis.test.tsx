@@ -31,7 +31,7 @@ import { defaultCurrentMonthFullPeriod } from '../../reports/shared/utils/defaul
 vi.mock('../services/clientTicketsService', () => ({
   getClientKpis: vi.fn(),
   listClientTickets: vi.fn(),
-  listTicketOwners: vi.fn().mockResolvedValue([]),
+  listTicketApontadores: vi.fn().mockResolvedValue([]),
 }))
 vi.mock('../../reports/shared/services/reportsService', () => ({
   getTicketStatuses: vi.fn().mockResolvedValue([]),

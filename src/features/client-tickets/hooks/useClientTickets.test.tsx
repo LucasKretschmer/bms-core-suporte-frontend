@@ -45,22 +45,34 @@ describe('useClientTickets', () => {
     expect(result.current.sortDirection).toBe('desc')
   })
 
-  it('inicia com teamId e owner arrays vazios (070)', () => {
+  it('inicia com teamId e apontadoPor arrays vazios', () => {
     const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
     expect(result.current.filters.teamId).toEqual([])
-    expect(result.current.filters.owner).toEqual([])
+    expect(result.current.filters.apontadoPor).toEqual([])
   })
 
-  it('encaminha teamId e owner ao service quando preenchidos (070)', async () => {
+  it('combo Atendente filtra por apontadoPor (não por owner) e sempre envia somenteComApontamento', async () => {
     const { result } = renderHook(() => useClientTickets(1), { wrapper: wrapper() })
-
-    result.current.setFilters({ teamId: [1, 2], owner: [7] })
 
     await waitFor(() => {
       expect(service.listClientTickets).toHaveBeenCalledWith(
-        expect.objectContaining({ teamId: [1, 2], owner: [7] }),
+        expect.objectContaining({ scope: 'all', somenteComApontamento: true }),
       )
     })
+
+    result.current.setFilters({ teamId: [1, 2], apontadoPor: [7] })
+
+    await waitFor(() => {
+      expect(service.listClientTickets).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamId: [1, 2],
+          apontadoPor: [7],
+          somenteComApontamento: true,
+        }),
+      )
+    })
+    const calls = vi.mocked(service.listClientTickets).mock.calls
+    expect(calls[calls.length - 1][0]).not.toHaveProperty('owner')
   })
 
   /**

@@ -5,6 +5,7 @@ import { usePermissions } from '../../../../hooks/usePermissions'
 import { defaultTicketScope, type TicketScope } from '../../../../utils/reportScope'
 import { defaultCurrentMonthPeriod } from '../../shared/utils/defaultPeriod'
 import { loadReportFilters } from '../../../../utils/reportFilters'
+import { buildTicketsReportParams } from '../ticketsReportParams'
 import type { TableParams } from '../../shared/hooks/useServerTable'
 import type { TicketReportItemDto } from '../../shared/types/reports'
 
@@ -17,6 +18,8 @@ export type AppointmentsFilters = {
   categoria: string[]
   /** MELH-02 — categorias do TIMER (internas) selecionadas. Vazio = sem filtro. */
   serviceCategoryId: number[]
+  /** Toggle "Incluir chamados sem apontamento no período". false = envia somenteComApontamento=true. */
+  incluirSemApontamento: boolean
   from: string | null
   to: string | null
 }
@@ -52,7 +55,8 @@ export function defaultAppointmentsPeriod(reference: Date = new Date()): {
 /**
  * Hook de tabela server-side para U4 — Apontamentos por Ticket.
  * Gerencia paginação, ordenação e filtros para GET /api/v1/reports/tickets.
- * Inclui todos os tickets — inclusive com totalSeconds = 0.
+ * Por padrão lista só chamados com apontamento no período ou em andamento; o toggle
+ * `incluirSemApontamento` devolve os demais.
  *
  * Scope default por papel (#9): Coordenador+ → 'all'; Atendente → 'mine'.
  * UX apenas — o backend força 'mine' p/ Atendente (A01), é a fonte de verdade.
@@ -73,6 +77,7 @@ export function useAppointments() {
       teamId: [],
       categoria: [],
       serviceCategoryId: [],
+      incluirSemApontamento: false,
       from: period.from,
       to: period.to,
     }
@@ -95,6 +100,7 @@ export function useAppointments() {
       teamId: saved.teamId ?? defaults.teamId,
       categoria: saved.categoria ?? defaults.categoria,
       serviceCategoryId: saved.serviceCategoryId ?? defaults.serviceCategoryId,
+      incluirSemApontamento: saved.incluirSemApontamento ?? defaults.incluirSemApontamento,
       from: saved.from !== undefined ? saved.from : defaults.from,
       to: saved.to !== undefined ? saved.to : defaults.to,
     }
@@ -108,23 +114,7 @@ export function useAppointments() {
 
   const queryFn = useCallback(
     (params: TableParams<AppointmentsFilters>) =>
-      listTicketsReport({
-        scope: params.filters.scope,
-        search: params.filters.search || undefined,
-        status: params.filters.status.length > 0 ? params.filters.status : undefined,
-        teamId: params.filters.teamId.length > 0 ? params.filters.teamId : undefined,
-        categoria: params.filters.categoria.length > 0 ? params.filters.categoria : undefined,
-        serviceCategoryId:
-          params.filters.serviceCategoryId.length > 0
-            ? params.filters.serviceCategoryId
-            : undefined,
-        from: params.filters.from ?? undefined,
-        to: params.filters.to ?? undefined,
-        sortBy: params.sortBy ?? undefined,
-        sortDirection: params.sortDirection,
-        page: params.page,
-        pageSize: params.pageSize,
-      }),
+      listTicketsReport(buildTicketsReportParams(params.filters, params, params)),
     [],
   )
 

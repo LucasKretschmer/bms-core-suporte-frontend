@@ -39,6 +39,8 @@ function setRole(isCoordenadorOuAcima: boolean) {
     isCoordenadorOuAcima,
     isGerentePlus: false,
     isAtendente: !isCoordenadorOuAcima,
+    isGestor: isCoordenadorOuAcima,
+    primaryTeamId: null,
     isAuthenticated: true,
   })
 }
@@ -284,6 +286,50 @@ describe('useAppointments', () => {
     await waitFor(() => expect(mocked).toHaveBeenCalled())
     const firstArg = mocked.mock.calls[0][0]
     expect(firstArg.serviceCategoryId).toBeUndefined()
+  })
+})
+
+describe('useAppointments: somente chamados com apontamento', () => {
+  it('por padrão envia somenteComApontamento=true e o toggle nasce desligado', async () => {
+    const mocked = vi.mocked(listTicketsReport)
+    mocked.mockClear()
+
+    const { result } = renderHook(() => useAppointments(), { wrapper: createWrapper() })
+
+    expect(result.current.filters.incluirSemApontamento).toBe(false)
+    await waitFor(() => expect(mocked).toHaveBeenCalled())
+    expect(mocked.mock.calls[0][0].somenteComApontamento).toBe(true)
+  })
+
+  it('toggle ligado remove o param; desligado de novo, ele volta', async () => {
+    const mocked = vi.mocked(listTicketsReport)
+    mocked.mockClear()
+
+    const { result } = renderHook(() => useAppointments(), { wrapper: createWrapper() })
+    await waitFor(() => expect(mocked).toHaveBeenCalled())
+
+    act(() => result.current.setFilters({ incluirSemApontamento: true }))
+    await waitFor(() => {
+      const ultimo = mocked.mock.calls[mocked.mock.calls.length - 1][0]
+      expect(ultimo.somenteComApontamento).toBeUndefined()
+    })
+
+    act(() => result.current.setFilters({ incluirSemApontamento: false }))
+    await waitFor(() => {
+      const ultimo = mocked.mock.calls[mocked.mock.calls.length - 1][0]
+      expect(ultimo.somenteComApontamento).toBe(true)
+    })
+  })
+
+  it('restaura o toggle salvo no drill-down', () => {
+    sessionStorage.setItem(
+      'report-filters:appointments',
+      JSON.stringify({ incluirSemApontamento: true }),
+    )
+
+    const { result } = renderHook(() => useAppointments(), { wrapper: createWrapper() })
+
+    expect(result.current.filters.incluirSemApontamento).toBe(true)
   })
 })
 

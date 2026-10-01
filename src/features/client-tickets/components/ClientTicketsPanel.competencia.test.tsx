@@ -29,7 +29,7 @@ import type { ReactElement, ReactNode } from 'react'
 vi.mock('../services/clientTicketsService', () => ({
   getClientKpis: vi.fn(),
   listClientTickets: vi.fn(),
-  listTicketOwners: vi.fn().mockResolvedValue([]),
+  listTicketApontadores: vi.fn().mockResolvedValue([]),
 }))
 vi.mock('../../reports/shared/services/reportsService', () => ({
   getTicketStatuses: vi.fn().mockResolvedValue([]),
@@ -218,7 +218,7 @@ describe('toggle "Só o que entra na fatura do período"', () => {
     // Sem o toggle: mensagem antiga.
     await waitFor(() =>
       expect(
-        screen.getByText('Nenhum ticket encontrado para este cliente no período.'),
+        screen.getByText('Nenhum ticket encontrado para este cliente com apontamento no período.'),
       ).toBeInTheDocument(),
     )
 
@@ -412,6 +412,7 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
       'Atendente',
       'Status',
       'Tempo no período',
+      'Tempo total',
       'Apontamentos',
       'Concluído em',
       'Na fatura',
@@ -469,7 +470,7 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
    * que não é (`apontamentos` é CONTAGEM, `concluidoEm` é INSTANTE); e o mapper voltar a
    * pré-formatar em qualquer das 4 chaves derivadas.
    */
-  it('as 4 colunas de duração são exatamente {tempo, baldePlano, baldeFaturado, baldeAnalise}', async () => {
+  it('as 5 colunas de duração são exatamente {tempo, tempoTotal, baldePlano, baldeFaturado, baldeAnalise}', async () => {
     mockedTickets.mockResolvedValue({
       items: [
         ticket({
@@ -496,7 +497,7 @@ describe('export do detalhe — colunas novas e estado do toggle', () => {
     const linhas = mockedExportCsv.mock.calls[0][2]
 
     expect(new Set(chavesDeDuracao(colunas))).toEqual(
-      new Set(['tempo', 'baldePlano', 'baldeFaturado', 'baldeAnalise']),
+      new Set(['tempo', 'tempoTotal', 'baldePlano', 'baldeFaturado', 'baldeAnalise']),
     )
     // Negativas nomeadas: contagem e instante NÃO são duração (PRD §2.4).
     expect(chavesDeDuracao(colunas)).not.toContain('apontamentos')

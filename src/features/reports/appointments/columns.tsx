@@ -13,8 +13,8 @@
  *
  * CORR-05 (D1): as colunas "Tempo"/"Apontamentos" (do período) ganham um indicador
  * quando há apontamentos fora do período filtrado (`*AllTime` > valor do período) —
- * "dado sumindo em silêncio" era o cerne da queixa do QA. As colunas "Tempo total"/
- * "Apontamentos (total)" são aditivas e sempre visíveis, alimentadas pela regra
+ * "dado sumindo em silêncio" era o cerne da queixa do QA. As colunas "Tempo total (histórico)"/
+ * "Apontamentos (histórico)" são aditivas e sempre visíveis, alimentadas pela regra
  * canônica (DesativadoEm IS NULL + Status NOT IN (Cancelled, Discarded), sem recorte
  * de período — 120/D-1 amplia a exclusão para também não contar apontamentos
  * descartados, por paridade com o KPI do detalhe do ticket).
@@ -34,6 +34,10 @@ import type { TicketReportItemDto } from '../shared/types/reports'
 import { formatSeconds } from '../shared/utils/formatters'
 import { INVOICY_CATEGORY } from '../../ticket-detail/constants'
 import { statusTone } from './statusColors'
+
+/** Rótulos das colunas sem recorte de período, iguais na tela e na planilha. */
+export const HEADER_TEMPO_HISTORICO = 'Tempo total (histórico)'
+export const HEADER_APONTAMENTOS_HISTORICO = 'Apontamentos (histórico)'
 
 /**
  * Ícone de link externo — aria-hidden pois o texto do link já é descritivo.
@@ -229,7 +233,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       key: 'tempo',
       header: 'Tempo',
       headerInfo:
-        'Tempo apontado dentro do período selecionado. Veja "Tempo total" para o tempo sem recorte de período (exclui apontamentos cancelados e descartados).',
+        `Tempo apontado dentro do período selecionado. Veja "${HEADER_TEMPO_HISTORICO}" para o tempo sem recorte de período (exclui apontamentos cancelados e descartados).`,
       sortable: true,
       sortKey: 'tempo',
       align: 'right',
@@ -251,7 +255,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
     {
       // CORR-05/D1 — aditiva, sempre visível: regra canônica sem recorte de período.
       key: 'tempoTotal',
-      header: 'Tempo total',
+      header: HEADER_TEMPO_HISTORICO,
       headerInfo: 'Tempo total de todos os apontamentos do ticket, sem recorte de período. Exclui apontamentos cancelados e descartados.',
       sortable: false, // não está na whitelist de sortBy do backend
       align: 'right',
@@ -262,7 +266,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
       key: 'apontamentos',
       header: 'Apontamentos',
       headerInfo:
-        'Apontamentos dentro do período selecionado. Veja "Apontamentos (total)" para a contagem sem recorte de período (exclui apontamentos cancelados e descartados).',
+        `Apontamentos dentro do período selecionado. Veja "${HEADER_APONTAMENTOS_HISTORICO}" para a contagem sem recorte de período (exclui apontamentos cancelados e descartados).`,
       sortable: true,
       sortKey: 'apontamentos',
       align: 'right',
@@ -284,7 +288,7 @@ export function buildAppointmentsColumns(): ColumnDef<TicketReportItemDto>[] {
     {
       // CORR-05/D1 — aditiva, sempre visível: regra canônica sem recorte de período.
       key: 'apontamentosTotal',
-      header: 'Apontamentos (total)',
+      header: HEADER_APONTAMENTOS_HISTORICO,
       headerInfo: 'Total de apontamentos do ticket, sem recorte de período. Exclui apontamentos cancelados e descartados.',
       sortable: false, // não está na whitelist de sortBy do backend
       align: 'right',

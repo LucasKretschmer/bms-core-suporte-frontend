@@ -3,13 +3,15 @@ import { useServerTable } from '../../reports/shared/hooks/useServerTable'
 import type { TableParams } from '../../reports/shared/hooks/useServerTable'
 import { resolverPeriodoPadrao } from '../../reports/shared/utils/periodoPadrao'
 import { listClientTickets } from '../services/clientTicketsService'
+import { buildClientTicketsParams } from '../clientTicketsParams'
 import type { ClientTicketItemDto } from '../types/clientTickets'
 
 export type ClientTicketsFilters = {
   search: string
   status: string[]
   teamId: number[]
-  owner: number[]
+  /** Usuários que apontaram (combo "Atendente"); vai ao wire como apontadoPor. */
+  apontadoPor: number[]
   /**
    * Período (YYYY-MM-DD, clearable) — o que o usuário VÊ nos campos De/Até.
    *
@@ -53,7 +55,7 @@ function buildInitialFilters(initial?: ClientTicketsInitial): ClientTicketsFilte
     search: '',
     status: [],
     teamId: [],
-    owner: [],
+    apontadoPor: [],
     from: periodo.from,
     to: periodo.to,
     apenasFatura: false,
@@ -68,31 +70,11 @@ function buildInitialFilters(initial?: ClientTicketsInitial): ClientTicketsFilte
  * useServerTable só usa initialFilters na montagem — memoizar mantém a referência estável.
  */
 export function useClientTickets(clientId: number, initial?: ClientTicketsInitial) {
-  const queryFn = useCallback((params: TableParams<ClientTicketsFilters>) => {
-    const periodo = resolverPeriodoPadrao({
-      from: params.filters.from,
-      to: params.filters.to,
-    })
-    return listClientTickets({
-      clientId,
-      search: params.filters.search || undefined,
-      status: params.filters.status.length > 0 ? params.filters.status : undefined,
-      teamId: params.filters.teamId.length > 0 ? params.filters.teamId : undefined,
-      owner: params.filters.owner.length > 0 ? params.filters.owner : undefined,
-      // 123/FE-PER (D-2): a MESMA janela dos KPIs, sempre explícita no wire. Se fosse
-      // `?? undefined`, limpar o campo devolveria `/reports/tickets` ao seu default de
-      // range aberto (sem restrição) enquanto os KPIs cairiam no mês corrente do
-      // `/metrics/plan-consumption` — as duas janelas na mesma tela, que é a D-2.
-      from: periodo.from,
-      to: periodo.to,
-      // Só vai ao wire quando ligado — `false` é o default do controller.
-      apenasFatura: params.filters.apenasFatura || undefined,
-      sortBy: params.sortBy ?? undefined,
-      sortDirection: params.sortDirection,
-      page: params.page,
-      pageSize: params.pageSize,
-    })
-  }, [clientId])
+  const queryFn = useCallback(
+    (params: TableParams<ClientTicketsFilters>) =>
+      listClientTickets(buildClientTicketsParams(clientId, params.filters, params, params)),
+    [clientId],
+  )
 
   const initialFilters = useMemo(
     () => buildInitialFilters(initial),

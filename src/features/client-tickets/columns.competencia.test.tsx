@@ -76,6 +76,7 @@ describe('conjunto de colunas do detalhe do parceiro', () => {
       'owner',
       'status',
       'tempo',
+      'tempoTotal',
       'apontamentos',
       'concluidoEm',
       'naFatura',

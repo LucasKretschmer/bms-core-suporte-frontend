@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { getClientKpis, listClientTickets, listTicketOwners } from './clientTicketsService'
+import { getClientKpis, listClientTickets, listTicketApontadores } from './clientTicketsService'
 import { api } from '../../../services/api'
 
 vi.mock('../../../services/api', () => ({
@@ -53,34 +53,35 @@ describe('clientTicketsService', () => {
     expect(callParams).not.toHaveProperty('search')
   })
 
-  it('listClientTickets envia teamId e owner como arrays quando preenchidos (070)', async () => {
+  it('listClientTickets envia teamId e apontadoPor como arrays quando preenchidos', async () => {
     mockedGet.mockResolvedValueOnce(paginated([]))
     await listClientTickets({
       clientId: 1,
       status: ['Aberto', 'Em andamento'],
       teamId: [1, 2],
-      owner: [7, 9],
+      apontadoPor: [7, 9],
       page: 1,
       pageSize: 25,
     })
     const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
     expect(callParams.status).toEqual(['Aberto', 'Em andamento'])
     expect(callParams.teamId).toEqual([1, 2])
-    expect(callParams.owner).toEqual([7, 9])
+    expect(callParams.apontadoPor).toEqual([7, 9])
+    expect(callParams).not.toHaveProperty('owner')
   })
 
-  it('listClientTickets omite teamId/owner quando undefined (cleanParams)', async () => {
+  it('listClientTickets omite teamId/apontadoPor quando undefined (cleanParams)', async () => {
     mockedGet.mockResolvedValueOnce(paginated([]))
     await listClientTickets({
       clientId: 1,
       teamId: undefined,
-      owner: undefined,
+      apontadoPor: undefined,
       page: 1,
       pageSize: 25,
     })
     const callParams = mockedGet.mock.calls[0][1]?.params as Record<string, unknown>
     expect(callParams).not.toHaveProperty('teamId')
-    expect(callParams).not.toHaveProperty('owner')
+    expect(callParams).not.toHaveProperty('apontadoPor')
   })
 
   it('listClientTickets envia from/to (período) quando preenchidos (095)', async () => {
@@ -111,16 +112,32 @@ describe('clientTicketsService', () => {
     expect(callParams).not.toHaveProperty('to')
   })
 
-  it('listTicketOwners desempacota data.data do envelope ApiResponse (070)', async () => {
-    const owners = [
+  it('listTicketApontadores chama /apontadores com scope e clientId e desempacota data.data', async () => {
+    const apontadores = [
       { value: 1, label: 'Ana Silva' },
       { value: 2, label: 'Bruno Costa' },
     ]
-    mockedGet.mockResolvedValueOnce({ data: { data: owners, message: 'OK' } })
-    const result = await listTicketOwners()
-    expect(result).toEqual(owners)
-    expect(mockedGet).toHaveBeenCalledWith('/api/v1/reports/tickets/owners')
+    mockedGet.mockResolvedValueOnce({ data: { data: apontadores, message: 'OK' } })
+    const result = await listTicketApontadores({ scope: 'all', clientId: 42 })
+    expect(result).toEqual(apontadores)
+    // Sem scope o backend assume 'mine' e o combo mostraria só o usuário logado.
+    expect(mockedGet).toHaveBeenCalledWith('/api/v1/reports/tickets/apontadores', {
+      params: { scope: 'all', clientId: 42 },
+    })
   })
+
+  it('apontadoPor e somenteComApontamento saem no formato que o ASP.NET liga (serializer real)', async () => {
+    const actual = await vi.importActual<typeof import('../../../services/api')>(
+      '../../../services/api',
+    )
+    const uri = actual.api.getUri({
+      url: '/api/v1/reports/tickets',
+      params: { apontadoPor: [7, 9], somenteComApontamento: true },
+    })
+    expect(uri).toContain('apontadoPor=7&apontadoPor=9')
+    expect(uri).toContain('somenteComApontamento=true')
+    expect(uri).not.toContain('apontadoPor%5B')
+  }, 30_000)
 
   /**
    * 121/C1 — antes destes testes o contrato afirmado aqui era "getClientKpis manda só

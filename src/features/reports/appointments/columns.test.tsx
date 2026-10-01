@@ -238,10 +238,10 @@ describe('buildAppointmentsColumns — coluna Tempo/Tempo total (CORR-05/D1/119)
     expect(container.textContent).toContain('0h 21m')
   })
 
-  it('coluna "Tempo total" sempre renderiza formatSeconds(totalSecondsAllTime)', () => {
+  it('coluna "Tempo total (histórico)" sempre renderiza formatSeconds(totalSecondsAllTime)', () => {
     const cols = buildAppointmentsColumns()
     const tempoTotalCol = cols.find((c) => c.key === 'tempoTotal')!
-    expect(tempoTotalCol.header).toBe('Tempo total')
+    expect(tempoTotalCol.header).toBe('Tempo total (histórico)')
     expect(tempoTotalCol.sortable).toBe(false)
     const { container } = render(
       <>{tempoTotalCol.accessor(makeItem({ totalSecondsAllTime: 1260 }))}</>,
@@ -270,10 +270,10 @@ describe('buildAppointmentsColumns — coluna Apontamentos/Apontamentos (total) 
     expect(container.textContent).toContain('Total (sem recorte): 2')
   })
 
-  it('coluna "Apontamentos (total)" sempre renderiza apontamentosCountAllTime', () => {
+  it('coluna "Apontamentos (histórico)" sempre renderiza apontamentosCountAllTime', () => {
     const cols = buildAppointmentsColumns()
     const col = cols.find((c) => c.key === 'apontamentosTotal')!
-    expect(col.header).toBe('Apontamentos (total)')
+    expect(col.header).toBe('Apontamentos (histórico)')
     expect(col.sortable).toBe(false)
     const { container } = render(<>{col.accessor(makeItem({ apontamentosCountAllTime: 2 }))}</>)
     expect(container.textContent).toBe('2')

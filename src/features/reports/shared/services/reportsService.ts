@@ -87,7 +87,7 @@ export async function listPlanConsumption(
 
 // ── U4 — Apontamentos por Ticket ─────────────────────────────────────────────
 
-type TicketsReportParams = {
+export type TicketsReportParams = {
   scope?: 'mine' | 'team' | 'all'
   search?: string
   status?: string[]
@@ -99,6 +99,8 @@ type TicketsReportParams = {
    * NÃO confundir com `categoria` (HubSpot). AND com os demais filtros; vazio = sem filtro.
    */
   serviceCategoryId?: number[]
+  /** true = só chamados com apontamento concluído no período ou em andamento. Ausente = todos. */
+  somenteComApontamento?: boolean
   from?: string | null
   to?: string | null
   sortBy?: string | null

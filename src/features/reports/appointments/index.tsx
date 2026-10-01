@@ -1,8 +1,8 @@
 /**
  * U4 — Apontamentos por Ticket
  *
- * Lista todos os tickets com tempo agregado no período.
- * Inclui tickets com totalSeconds = 0 (sem apontamentos no período).
+ * Lista os tickets com tempo agregado no período. Por padrão só os que têm apontamento
+ * no período ou em andamento; o toggle "Incluir chamados sem apontamento" traz os demais.
  * Acessível a todos os usuários autenticados (AtendentePlus).
  *
  * Linha clicável: navega para o detalhe interno do ticket (/relatorios/tickets/$ticketId).
@@ -19,6 +19,7 @@ import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../components/ui/Pagination'
 import { Input } from '../../../components/ui/Input'
 import { Combobox } from '../../../components/ui/Combobox'
+import { Switch } from '../../../components/ui/Switch'
 import { MultiSelectCombobox } from '../../../components/ui/MultiSelectCombobox'
 import type { MultiSelectOption } from '../../../components/ui/MultiSelectCombobox'
 import { useToast } from '../../../components/ui/Toast'
@@ -37,12 +38,20 @@ import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPag
 import { usePermissions } from '../../../hooks/usePermissions'
 import { saveReportFilters } from '../../../utils/reportFilters'
 import { useAppointments } from './hooks/useAppointments'
-import { buildAppointmentsColumns } from './columns'
+import {
+  buildAppointmentsColumns,
+  HEADER_APONTAMENTOS_HISTORICO,
+  HEADER_TEMPO_HISTORICO,
+} from './columns'
+import { buildTicketsReportParams } from './ticketsReportParams'
 import { STATUS_LEGEND_ITEMS } from './statusColors'
 import type { TicketReportItemDto } from '../shared/types/reports'
 
 /** Chave de persistência de filtros desta tela (R2) */
 const FILTERS_KEY = 'appointments'
+
+const INCLUIR_SEM_APONTAMENTO_ID = 'appointments-incluir-sem-apontamento'
+const INCLUIR_SEM_APONTAMENTO_LABEL = 'Incluir chamados sem apontamento no período'
 
 // ── Opções de scope ──────────────────────────────────────────────────────────
 
@@ -56,12 +65,12 @@ const SCOPE_OPTIONS = [
 
 // Exportado para teste (107): garante que a categoria HubSpot NUNCA entra no
 // arquivo exportável desta tela (privacidade — só aparece na tela). D7 (119):
-// "Tempo total"/"Categoria do atendimento" entram (dado interno de gestão).
+// "Tempo total (histórico)"/"Categoria do atendimento" entram (dado interno de gestão).
 //
 // 134: as duas colunas de tempo são `type: 'duration'` — o mapper entrega
 // SEGUNDOS CRUS e a formatação (`[h]:mm:ss` no XLSX, `H:mm:ss` no CSV) mora no
 // núcleo (`exportTable.ts`). Nunca pré-formatar aqui. "Apontamentos (período)" e
-// "Apontamentos (total)" são CONTAGENS, não durações — seguem sem `type`.
+// "Apontamentos (histórico)" são CONTAGENS, não durações: seguem sem `type`.
 // A TELA não muda: `columns.tsx` continua exibindo "2h 44m" via `formatSeconds`.
 export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Ticket', key: 'ticket' },
@@ -72,9 +81,9 @@ export const EXPORT_COLUMNS: ExportColumn[] = [
   { header: 'Categoria do atendimento', key: 'categoriaAtendimento' },
   { header: 'Status', key: 'status' },
   { header: 'Tempo (período)', key: 'tempo', type: 'duration' },
-  { header: 'Tempo total', key: 'tempoTotal', type: 'duration' },
+  { header: HEADER_TEMPO_HISTORICO, key: 'tempoTotal', type: 'duration' },
   { header: 'Apontamentos (período)', key: 'apontamentos' },
-  { header: 'Apontamentos (total)', key: 'apontamentosTotal' },
+  { header: HEADER_APONTAMENTOS_HISTORICO, key: 'apontamentosTotal' },
 ]
 
 export function mapToExportRow(item: TicketReportItemDto): ExportRow {
@@ -229,21 +238,9 @@ export default function AppointmentsPage() {
 
   function fetchAllForExport(): Promise<TicketReportItemDto[]> {
     return fetchAllPaginated<TicketReportItemDto>((page, pageSize) =>
-      listTicketsReport({
-        scope: filters.scope,
-        search: filters.search || undefined,
-        status: filters.status.length > 0 ? filters.status : undefined,
-        teamId: filters.teamId.length > 0 ? filters.teamId : undefined,
-        categoria: filters.categoria.length > 0 ? filters.categoria : undefined,
-        serviceCategoryId:
-          filters.serviceCategoryId.length > 0 ? filters.serviceCategoryId : undefined,
-        from: filters.from ?? undefined,
-        to: filters.to ?? undefined,
-        sortBy: sortBy ?? undefined,
-        sortDirection,
-        page,
-        pageSize,
-      }),
+      listTicketsReport(
+        buildTicketsReportParams(filters, { sortBy, sortDirection }, { page, pageSize }),
+      ),
     )
   }
 
@@ -380,6 +377,22 @@ export default function AppointmentsPage() {
         to={filters.to}
         onChange={(from, to) => setFilters({ from, to })}
       />
+
+      <div className="flex items-center gap-2 pb-2">
+        <Switch
+          id={INCLUIR_SEM_APONTAMENTO_ID}
+          checked={filters.incluirSemApontamento}
+          onChange={(incluirSemApontamento) => setFilters({ incluirSemApontamento })}
+          label={INCLUIR_SEM_APONTAMENTO_LABEL}
+          hideLabel={false}
+        />
+        <label
+          htmlFor={INCLUIR_SEM_APONTAMENTO_ID}
+          className="text-xs text-foreground cursor-pointer"
+        >
+          {INCLUIR_SEM_APONTAMENTO_LABEL}
+        </label>
+      </div>
     </div>
   )
 

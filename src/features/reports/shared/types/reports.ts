@@ -302,6 +302,12 @@ export type TicketReportItemDto = {
   faturaPlanoSegundos?: number | null
   faturaFaturadoSegundos?: number | null
   faturaAnaliseSegundos?: number | null
+
+  /**
+   * true = o chamado tem apontamento Running ou Paused agora. O backend atual sempre
+   * manda a chave; backend anterior não manda, e ausente vale false: testar com `=== true`.
+   */
+  temApontamentoEmAndamento?: boolean
 }
 
 /** MELH-02 — opção do filtro "Categoria do atendimento" (categoria do TIMER, interna). */

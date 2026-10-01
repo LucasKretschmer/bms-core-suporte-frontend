@@ -50,6 +50,15 @@ import {
 /** Rótulo da coluna de tempo — ver o comentário do cabeçalho (121/§4.4). */
 export const HEADER_TEMPO_NO_PERIODO = 'Tempo no período'
 
+/** Tempo do chamado sem recorte de período (`totalSecondsAllTime`). */
+export const HEADER_TEMPO_TOTAL = 'Tempo total'
+
+/** Texto do indicador de apontamento Running/Paused na linha. */
+const TEXTO_EM_ANDAMENTO = 'Em andamento'
+
+const TOOLTIP_EM_ANDAMENTO =
+  'Há um apontamento iniciado ou pausado neste chamado. O tempo dele entra nos totais quando for concluído.'
+
 /**
  * 123/FAT-1 — formatação dos 3 baldes de fatura do chamado.
  *
@@ -144,16 +153,39 @@ export function buildClientTicketsColumns(): ColumnDef<ClientTicketItemDto>[] {
       key: 'tempo',
       header: HEADER_TEMPO_NO_PERIODO,
       headerInfo:
-        'Tempo total dos apontamentos com início no período filtrado — todos os tipos de faturamento, não apenas o plano. Esta NÃO é a data que decide a fatura: para isso veja "Concluído em".',
+        'Tempo total dos apontamentos com início no período filtrado: todos os tipos de faturamento, não apenas o plano. Com o filtro "Atendente", soma só os atendentes selecionados. Esta NÃO é a data que decide a fatura: para isso veja "Concluído em".',
       sortable: true,
       sortKey: 'tempo',
       align: 'right',
-      width: '130px',
-      accessor: (row) => formatSeconds(row.totalSeconds),
+      width: '170px',
+      accessor: (row) => {
+        // Chave ausente (backend anterior) vale false: só `true` acende o indicador.
+        if (row.temApontamentoEmAndamento !== true) return formatSeconds(row.totalSeconds)
+        return (
+          <span className="inline-flex items-center justify-end gap-2">
+            {formatSeconds(row.totalSeconds)}
+            <span title={TOOLTIP_EM_ANDAMENTO}>
+              <Badge value={TEXTO_EM_ANDAMENTO} />
+            </span>
+          </span>
+        )
+      },
+    },
+    {
+      key: 'tempoTotal',
+      header: HEADER_TEMPO_TOTAL,
+      headerInfo:
+        'Tempo de todos os apontamentos do chamado, sem recorte de período e de todos os atendentes, mesmo com o filtro "Atendente". Exclui apontamentos cancelados e descartados.',
+      // Não está na whitelist de sortBy de /reports/tickets.
+      align: 'right',
+      width: '120px',
+      accessor: (row) => formatSeconds(row.totalSecondsAllTime),
     },
     {
       key: 'apontamentos',
       header: 'Apontamentos',
+      headerInfo:
+        'Apontamentos com início no período filtrado. Com o filtro "Atendente", conta só os dos atendentes selecionados.',
       sortable: true,
       sortKey: 'apontamentos',
       align: 'right',

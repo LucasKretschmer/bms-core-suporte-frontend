@@ -14,7 +14,7 @@ import type {
  * - getClientKpis     → GET /api/v1/metrics/plan-consumption (PaginatedResponse cru),
  *                       localizando a linha do cliente pelo clientId, **no período
  *                       informado** (from/to — 121/C1).
- * - listTicketOwners  → GET /api/v1/reports/tickets/owners (opções do filtro de atendente, 070)
+ * - listTicketApontadores → GET /api/v1/reports/tickets/apontadores (opções do filtro de atendente)
  */
 
 export type ListClientTicketsParams = {
@@ -25,8 +25,10 @@ export type ListClientTicketsParams = {
   status?: string[]
   /** Filtro multi-equipe (array de IDs de equipe). */
   teamId?: number[]
-  /** Filtro multi-atendente (array de IDs de usuário/owner interno) — 070. */
-  owner?: number[]
+  /** Filtro por quem apontou (IDs de usuário); restringe também o tempo do período a eles. */
+  apontadoPor?: number[]
+  /** true = só chamados com apontamento concluído no período ou em andamento. */
+  somenteComApontamento?: boolean
   /**
    * Início do período (YYYY-MM-DD) — mesmo formato de listPlanConsumption/reportsService.
    * O backend (GET /api/v1/reports/tickets) já aceita from/to (DateTime?); afeta
@@ -72,21 +74,30 @@ export async function listClientTickets(
 }
 
 /**
- * Opção legível de atendente (owner) para o filtro multi-select (070).
- * value = id interno do usuário (enviado em owner[]); label = nome de exibição.
+ * Opção de atendente que apontou em chamados: value = id interno do usuário (enviado em
+ * apontadoPor), label = nome de exibição.
  */
-export type TicketOwnerOption = {
+export type TicketApontadorOption = {
   value: number
   label: string
 }
 
+export type ListTicketApontadoresParams = {
+  /** Sem scope o backend assume 'mine' e a lista teria só o usuário logado. */
+  scope: TicketScope
+  clientId?: number
+}
+
 /**
- * Opções de atendente (owner) do filtro de chamados do cliente (070).
- * Envelope ApiResponse<{ value; label }[]> (mesmo padrão de /reports/tickets/statuses).
+ * Quem apontou em chamados, no escopo informado e, opcionalmente, de um cliente.
+ * Envelope ApiResponse<{ value; label }[]> (mesmo padrão de /reports/tickets/owners).
  */
-export async function listTicketOwners(): Promise<TicketOwnerOption[]> {
-  const { data } = await api.get<ApiResponse<TicketOwnerOption[]>>(
-    '/api/v1/reports/tickets/owners',
+export async function listTicketApontadores(
+  params: ListTicketApontadoresParams,
+): Promise<TicketApontadorOption[]> {
+  const { data } = await api.get<ApiResponse<TicketApontadorOption[]>>(
+    '/api/v1/reports/tickets/apontadores',
+    { params: cleanParams(params) },
   )
   return data.data
 }
