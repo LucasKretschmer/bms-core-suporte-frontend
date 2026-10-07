@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # deploy.sh — Deploy do bms-core-suporte-frontend no Cloud Run.
-#   Serve a SPA (Vite) e faz PROXY de /api → backend interno no GKE (ILB),
-#   alcançado por Direct VPC egress. Assim frontend, API e cookie de refresh
+#   Serve a SPA (Vite) e faz PROXY de /api -> backend no Cloud Run (ingress interno),
+#   alcançado por Direct VPC egress all-traffic. Assim frontend, API e cookie de refresh
 #   compartilham a MESMA origem https://...run.app (sem CORS no navegador).
 #
 # Subcomandos:
@@ -12,8 +12,8 @@
 #   ./deploy.sh redeploy   -> RECOMPILA e atualiza SÓ a imagem (mantém config)
 #
 # Sem secrets: o frontend não tem valor sensível (VITE_* é público por definição).
-# Ordem: deploy o BACKEND primeiro — este script descobre o IP do ILB via kubectl
-# (ou receba BACKEND_HOST=<ip> por env).
+# Ordem: deploy o BACKEND primeiro - este script descobre o host dele no Cloud Run
+# (ou receba BACKEND_HOST=<host> por env). IMAGE_REF=<imagem> pula o build no deploy.
 # =============================================================================
 set -euo pipefail
 
@@ -24,15 +24,14 @@ PROJECT_ID="${PROJECT_ID:-invoicy-ped}"
 REGION="${REGION:-southamerica-east1}"
 SERVICE="${SERVICE:-bms-core-suporte-frontend}"
 
-# Rede para o Direct VPC egress (mesma VPC/subnet do cluster GKE)
+# Rede para o Direct VPC egress. all-traffic é obrigatório: o backend tem ingress
+# interno e só aceita chamada que chega pela VPC (a subnet tem Private Google Access).
 VPC_NETWORK="${VPC_NETWORK:-default}"
 VPC_SUBNET="${VPC_SUBNET:-ad-subnet}"
 
-# Backend interno (ILB do GKE). Vazio = descobrir via kubectl.
+# Host do backend no Cloud Run (sem https://). Vazio = descobrir pelo serviço.
 BACKEND_HOST="${BACKEND_HOST:-}"
-GKE_CLUSTER="${GKE_CLUSTER:-autopilot-cluster-ped}"
-GKE_NAMESPACE="${GKE_NAMESPACE:-suporte}"
-GKE_BACKEND_SVC="${GKE_BACKEND_SVC:-bms-core-suporte-backend}"
+BACKEND_SERVICE="${BACKEND_SERVICE:-bms-core-suporte-backend}"
 
 IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${SERVICE}"
 
@@ -63,15 +62,12 @@ build_imagem() { # $1=IMAGE_REF
 
 descobrir_backend_host() {
   [ -n "$BACKEND_HOST" ] && return
-  command -v kubectl >/dev/null 2>&1 \
-    || { c_err "kubectl não encontrado e BACKEND_HOST não informado. Passe BACKEND_HOST=<ip-do-ilb>."; exit 1; }
-  c_info "Descobrindo IP do ILB do backend no GKE..."
-  gcloud container clusters get-credentials "$GKE_CLUSTER" --region="$REGION" --project="$PROJECT_ID" >/dev/null
-  BACKEND_HOST="$(kubectl -n "$GKE_NAMESPACE" get svc "$GKE_BACKEND_SVC" \
-    -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+  c_info "Descobrindo o host do backend no Cloud Run..."
+  BACKEND_HOST="$(gcloud run services describe "$BACKEND_SERVICE" --project="$PROJECT_ID" --region="$REGION" \
+    --format='value(status.url)' 2>/dev/null | tr -d '\r' | sed 's#^https://##')"
   [ -n "$BACKEND_HOST" ] \
-    || { c_err "ILB do backend sem IP — faça o deploy do backend primeiro (repo bms-core-suporte-backend)."; exit 1; }
-  c_ok "Backend interno: http://${BACKEND_HOST}"
+    || { c_err "Backend '${BACKEND_SERVICE}' não encontrado - faça o deploy do backend primeiro (repo bms-core-suporte-backend)."; exit 1; }
+  c_ok "Backend interno: https://${BACKEND_HOST}"
 }
 
 # =============================================================================
@@ -92,9 +88,9 @@ gcloud config set project ${PROJECT_ID}
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \\
   --member="user:SEU_EMAIL" --role="roles/run.admin"
 
-# 2) Direct VPC egress usa a subnet '${VPC_SUBNET}' da VPC '${VPC_NETWORK}'
-#    (mesma rede do cluster GKE) — nada a criar, só conferir que existe:
-gcloud compute networks subnets describe ${VPC_SUBNET} --region=${REGION}
+# 2) Direct VPC egress usa a subnet '${VPC_SUBNET}' da VPC '${VPC_NETWORK}', que precisa
+#    de Private Google Access (privateIpGoogleAccess: True) para chegar no backend interno:
+gcloud compute networks subnets describe ${VPC_SUBNET} --region=${REGION} --format='value(privateIpGoogleAccess)'
 
 # 3) Ordem de deploy: PRIMEIRO o backend (bms-core-suporte-backend), depois:
 #    ./deploy.sh all
@@ -109,8 +105,8 @@ cmd_deploy() {
   exigir_gcloud
   descobrir_backend_host
 
-  local IMAGE_REF; IMAGE_REF="$(imagem_ref)"
-  build_imagem "$IMAGE_REF"
+  local IMAGE_REF="${IMAGE_REF:-}"
+  if [ -z "$IMAGE_REF" ]; then IMAGE_REF="$(imagem_ref)"; build_imagem "$IMAGE_REF"; fi
 
   c_info "Deploy '${SERVICE}' em ${REGION} (projeto ${PROJECT_ID})..."
   gcloud run deploy "$SERVICE" \
@@ -119,7 +115,7 @@ cmd_deploy() {
     --image="$IMAGE_REF" \
     --platform=managed \
     --allow-unauthenticated \
-    --network="$VPC_NETWORK" --subnet="$VPC_SUBNET" --vpc-egress=private-ranges-only \
+    --network="$VPC_NETWORK" --subnet="$VPC_SUBNET" --vpc-egress=all-traffic \
     --set-env-vars="BACKEND_HOST=${BACKEND_HOST}" \
     --memory="$MEMORY" --cpu="$CPU" --timeout="$TIMEOUT" \
     --min-instances="$MIN_INSTANCES" --max-instances="$MAX_INSTANCES"
@@ -129,7 +125,7 @@ cmd_deploy() {
   c_ok "Frontend no ar: $URL"
   c_info "Pós-deploy:"
   c_info "  1. Confirme que o backend tem Cors__AllowedOrigins__0=${URL} (deploy.sh do backend, FRONTEND_URL)."
-  c_info "  2. Extensão Chrome: VITE_API_BASE_URL=${URL}/api/v1 e VITE_API_HOST=${URL} + npm run build."
+  c_info "  2. Extensão Chrome usa VITE_API_BASE_URL=${URL}/api/v1 (só muda se a URL do frontend mudar)."
 }
 
 # =============================================================================

@@ -1,7 +1,7 @@
 # =============================================================================
 # Dockerfile — bms-core-suporte-frontend (Cloud Run).
-# Stage 1: build Vite. Stage 2: nginx servindo a SPA + proxy /api → backend
-# interno no GKE (ILB), via Direct VPC egress do Cloud Run.
+# Stage 1: build Vite. Stage 2: nginx servindo a SPA + proxy /api -> backend
+# no Cloud Run (ingress interno), via Direct VPC egress do Cloud Run.
 # VITE_API_URL vazio = requisições relativas à MESMA origem (proxy /api) —
 # é o que torna o cookie httpOnly de refresh same-origin (SameSite=Lax).
 # =============================================================================
@@ -27,7 +27,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Template processado pelo entrypoint oficial do nginx (envsubst em ${PORT}/${BACKEND_HOST})
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
-# Cloud Run injeta PORT (8080); BACKEND_HOST é definido no deploy (IP do ILB)
+# Cloud Run injeta PORT (8080); BACKEND_HOST é definido no deploy (host do backend no Cloud Run)
 ENV PORT=8080 \
     BACKEND_HOST=127.0.0.1
 
