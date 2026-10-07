@@ -494,3 +494,48 @@ export type AgentMetricDto = {
   ahtSegundos?: number | null
   mediaPausas?: number | null
 }
+
+/**
+ * Item de GET /reports/productivity. Campos opcionais chegam nulos ou sem a chave
+ * quando o período não é completo ou não há dias úteis.
+ */
+export type ProductivityReportItemDto = AgentMetricDto & {
+  ticketsAtendidos: number
+  mediaTicketsUltimos3Meses: number
+  mediaResolvidosPorDia?: number | null
+  mediaSegundosPorTicket?: number | null
+  diasUteis?: number | null
+  horasUteisSegundos?: number | null
+  mediaOciosoSegundosPorDia?: number | null
+  extrapolouJornada: boolean
+}
+
+/** Resumo de GET /reports/productivity/summary (envelope `ApiResponse`). */
+export type ProductivitySummaryDto = {
+  totalSegundos: number
+  totalAtendentes: number
+  totalAtendimentos: number
+  mediaAtendimentosPorAtendente: number
+  medianaAtendimentosPorAtendente: number
+  totalTickets: number
+  mediaSegundosPorTicket?: number | null
+  medianaSegundosPorTicket?: number | null
+}
+
+// ── Apontamentos (GET /reports/appointments) ────────────────────────────────
+
+export type AppointmentReportItemDto = {
+  timeEntryId: number
+  ticketId: number
+  hubspotTicketId: string
+  assunto?: string | null
+  clienteNome?: string | null
+  equipeAtribuida?: string | null
+  solicitante?: { nome?: string | null; email?: string | null } | null
+  atendente: string
+  categorizacaoAtendimento?: string | null
+  faturamento: string
+  dataApontamento: string
+  totalSegundos: number
+  acimaDoLimite: boolean
+}

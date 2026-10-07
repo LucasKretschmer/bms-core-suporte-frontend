@@ -3,7 +3,7 @@
  *
  * Prova de detecção de cada asserção (o que faz ficar vermelho):
  * - "não salva com canEdit=false": remover o `if (!canEdit) return` de `commit()` →
- *   `onSaveIdle` volta a ser chamado e o teste cai. `readOnly` sozinho NÃO segura este
+ *   `onSaveRule` volta a ser chamado e o teste cai. `readOnly` sozinho NÃO segura este
  *   caso: no jsdom `fireEvent.change` escreve no input mesmo com `readOnly`, então o
  *   teste exercita a guarda de verdade, não o atributo.
  * - "salva com canEdit=true" (companheira POSITIVA): sem ela, o assert negativo acima
@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GlobalRulesCard } from './GlobalRulesCard'
 import { GLOBAL_IDLE_KEY, type BusinessRuleDto } from '../types/businessRule'
 
-const onSaveIdle = vi.fn()
+const onSaveRule = vi.fn()
 
 function makeIdleRule(minutes: number): BusinessRuleDto {
   return {
@@ -36,17 +36,14 @@ function renderCard(canEdit: boolean, isSaving = false) {
       rules={[makeIdleRule(5)]}
       isSaving={isSaving}
       canEdit={canEdit}
-      onSaveIdle={onSaveIdle}
+      onSaveRule={onSaveRule}
     />,
   )
 }
 
-/**
- * O `<label>` do campo envolve também o botão do `InfoIcon`, então `getByLabelText`
- * casa dois elementos. `role="spinbutton"` é o input `type="number"` — único na tela.
- */
-function getInput(): HTMLInputElement {
-  return screen.getByRole('spinbutton') as HTMLInputElement
+/** Campo pelo id: são vários `spinbutton` no card. */
+function getInput(chave: string = GLOBAL_IDLE_KEY): HTMLInputElement {
+  return document.getElementById(`global-rule-${chave}`) as HTMLInputElement
 }
 
 describe('GlobalRulesCard — escrita restrita a GerentePlus (122/D16)', () => {
@@ -61,8 +58,8 @@ describe('GlobalRulesCard — escrita restrita a GerentePlus (122/D16)', () => {
     fireEvent.change(input, { target: { value: '30' } })
     fireEvent.blur(input)
 
-    expect(onSaveIdle).toHaveBeenCalledTimes(1)
-    expect(onSaveIdle).toHaveBeenCalledWith({ ruleId: 42, minutes: 30 })
+    expect(onSaveRule).toHaveBeenCalledTimes(1)
+    expect(onSaveRule).toHaveBeenCalledWith({ ruleId: 42, chave: GLOBAL_IDLE_KEY, valor: 30 })
   })
 
   it('canEdit=false: o valor continua VISÍVEL (o card não é escondido)', () => {
@@ -80,7 +77,7 @@ describe('GlobalRulesCard — escrita restrita a GerentePlus (122/D16)', () => {
     fireEvent.change(input, { target: { value: '30' } })
     fireEvent.blur(input)
 
-    expect(onSaveIdle).not.toHaveBeenCalled()
+    expect(onSaveRule).not.toHaveBeenCalled()
     expect(input).toHaveValue(5)
   })
 
@@ -127,7 +124,55 @@ describe('GlobalRulesCard — escrita restrita a GerentePlus (122/D16)', () => {
     fireEvent.change(input, { target: { value: '99' } })
     fireEvent.blur(input)
 
-    expect(onSaveIdle).not.toHaveBeenCalled()
+    expect(onSaveRule).not.toHaveBeenCalled()
     expect(input).toHaveValue(5)
+  })
+})
+
+describe('GlobalRulesCard - regras de jornada e limite', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('mostra as 3 regras novas com o padrão quando não há registro', () => {
+    renderCard(true)
+
+    expect(screen.getByText('Jornada diária (h)')).toBeInTheDocument()
+    expect(screen.getByText('Tolerância da jornada (%)')).toBeInTheDocument()
+    expect(screen.getByText('Limite por apontamento (h)')).toBeInTheDocument()
+    expect(getInput('jornadaHorasDia')).toHaveValue(8)
+    expect(getInput('toleranciaJornadaPercentual')).toHaveValue(20)
+    expect(getInput('limiteApontamentoHoras')).toHaveValue(4)
+  })
+
+  it('valor na faixa grava com a chave da regra (inclui o 0 da tolerância)', () => {
+    renderCard(true)
+
+    fireEvent.change(getInput('jornadaHorasDia'), { target: { value: '6' } })
+    fireEvent.blur(getInput('jornadaHorasDia'))
+    fireEvent.change(getInput('toleranciaJornadaPercentual'), { target: { value: '0' } })
+    fireEvent.blur(getInput('toleranciaJornadaPercentual'))
+
+    expect(onSaveRule).toHaveBeenCalledWith({ ruleId: null, chave: 'jornadaHorasDia', valor: 6 })
+    expect(onSaveRule).toHaveBeenCalledWith({
+      ruleId: null,
+      chave: 'toleranciaJornadaPercentual',
+      valor: 0,
+    })
+  })
+
+  it('fora da faixa não grava e reverte', () => {
+    renderCard(true)
+
+    const casos: [string, string, number][] = [
+      ['jornadaHorasDia', '25', 8],
+      ['toleranciaJornadaPercentual', '201', 20],
+      ['limiteApontamentoHoras', '0', 4],
+      ['limiteApontamentoHoras', '', 4],
+    ]
+    for (const [chave, digitado, atual] of casos) {
+      fireEvent.change(getInput(chave), { target: { value: digitado } })
+      fireEvent.blur(getInput(chave))
+      expect(getInput(chave)).toHaveValue(atual)
+    }
+    expect(onSaveRule).not.toHaveBeenCalled()
   })
 })

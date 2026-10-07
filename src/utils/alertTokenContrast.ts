@@ -402,6 +402,20 @@ export const CALL_SITES_DE_ERRO: CallSiteDeErro[] = [
     porque: 'coluna de consumo em faixa crítica (>= 95%) do relatório Consumo de Planos.',
   },
   {
+    arquivo: 'src/features/reports/productivity/components/AlertaDeLimite.tsx',
+    classes: ['bg-error-bg', 'text-error-fg'],
+    porque:
+      'selo "Acima da jornada" / "Acima do limite" da Produtividade por Analista: texto de ' +
+      'erro sobre o fundo de erro, mesmo par do badge "Cancelado".',
+  },
+  {
+    arquivo: 'src/features/reports/productivity/productivityFormat.ts',
+    classes: ['bg-error-bg'],
+    porque:
+      'fundo da linha acima da jornada (grade) ou do limite (drill). O texto da linha segue ' +
+      '`text-foreground` sobre o fundo de erro; o estado também é dito pelo selo de texto.',
+  },
+  {
     arquivo: 'src/features/reports/shared/components/PeriodFilter.tsx',
     classes: ['text-error-fg'],
     porque: 'mensagem de erro do filtro de período.',

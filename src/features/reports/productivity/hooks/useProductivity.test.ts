@@ -4,10 +4,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useProductivity } from './useProductivity'
 import * as reportsService from '../../shared/services/reportsService'
 import type { PaginatedResponse } from '../../../../types/api'
-import type { AgentMetricDto } from '../../shared/types/reports'
+import type { ProductivityReportItemDto } from '../../shared/types/reports'
 import React from 'react'
 
-const emptyResponse: PaginatedResponse<AgentMetricDto> = {
+const emptyResponse: PaginatedResponse<ProductivityReportItemDto> = {
   items: [],
   totalCount: 0,
   page: 1,
@@ -48,7 +48,7 @@ describe('useProductivity', () => {
     vi.useRealTimers()
   })
 
-  it('usa o fuso local (format), não UTC — sem off-by-one na virada de mês', () => {
+  it('usa o fuso local (format), não UTC: sem off-by-one na virada de mês', () => {
     vi.useFakeTimers()
     // 1º dia do mês à meia-noite local: toISOString daria o dia anterior em fusos negativos.
     vi.setSystemTime(new Date(2024, 2, 1, 0, 0, 0)) // 2024-03-01 00:00 local
@@ -167,37 +167,5 @@ describe('useProductivity', () => {
 
     act(() => result.current.setSort('nome'))
     expect(result.current.page).toBe(1)
-  })
-})
-
-import { productivityColumns } from '../columns'
-
-describe('useProductivity — AHT null exibe "—"', () => {
-  it('coluna AHT exibe "—" quando ahtSegundos é null', () => {
-    const ahtCol = productivityColumns.find((c) => c.key === 'ahtSegundos')
-    const rowWithNull: AgentMetricDto = {
-      userId: 1,
-      nome: 'Analista',
-      equipe: null,
-      nAtendimentos: 10,
-      totalSegundos: 3600,
-      ahtSegundos: null,
-      mediaPausas: null,
-    }
-    expect(ahtCol?.accessor(rowWithNull)).toBe('—')
-  })
-
-  it('coluna AHT formata segundos quando ahtSegundos não é null', () => {
-    const ahtCol = productivityColumns.find((c) => c.key === 'ahtSegundos')
-    const rowWithValue: AgentMetricDto = {
-      userId: 2,
-      nome: 'Analista',
-      equipe: 'Equipe A',
-      nAtendimentos: 5,
-      totalSegundos: 7200,
-      ahtSegundos: 1440,
-      mediaPausas: 2.5,
-    }
-    expect(ahtCol?.accessor(rowWithValue)).toBe('0h 24m')
   })
 })

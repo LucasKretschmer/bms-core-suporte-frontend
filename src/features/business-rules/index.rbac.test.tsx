@@ -67,12 +67,9 @@ function comPapel(papel: Papel) {
   })
 }
 
-/**
- * O `<label>` do campo envolve também o botão do `InfoIcon`, então `getByLabelText`
- * casa dois elementos. `role="spinbutton"` é o input `type="number"` — único na tela.
- */
+/** Campo do alerta de inatividade pelo id: o card tem vários `spinbutton`. */
 function getIdleInput(): HTMLInputElement {
-  return screen.getByRole('spinbutton') as HTMLInputElement
+  return document.getElementById(`global-rule-${GLOBAL_IDLE_KEY}`) as HTMLInputElement
 }
 
 /**

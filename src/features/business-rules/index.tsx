@@ -8,11 +8,10 @@ import { GlobalRulesCard } from './components/GlobalRulesCard'
 import { TeamRulesCard } from './components/TeamRulesCard'
 import { useGlobalRules, useTeamRules, useTeamsList } from './hooks/useBusinessRules'
 import { useRuleMutations } from './hooks/useRuleMutations'
-import { GLOBAL_IDLE_KEY } from './types/businessRule'
 
 /**
  * F8 — Configurações / Regras de negócio.
- * Regra global (alerta de inatividade) + 1 card por equipe com toggles.
+ * Regras globais (inatividade, jornada e limites) + 1 card por equipe com toggles.
  * Visível para CoordenadorPlus (UX); backend é a fonte de verdade.
  *
  * 122/REG-1-FE (decisão D16): a ESCRITA da regra global (`teamId: null`) passou a exigir
@@ -72,13 +71,8 @@ export default function BusinessRulesPage() {
               rules={globalQuery.data ?? []}
               isSaving={saveMutation.isPending}
               canEdit={isGerentePlus}
-              onSaveIdle={({ ruleId, minutes }) =>
-                saveMutation.mutate({
-                  ruleId,
-                  teamId: null,
-                  chave: GLOBAL_IDLE_KEY,
-                  valor: minutes,
-                })
+              onSaveRule={({ ruleId, chave, valor }) =>
+                saveMutation.mutate({ ruleId, teamId: null, chave, valor })
               }
             />
 

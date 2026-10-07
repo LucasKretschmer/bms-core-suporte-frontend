@@ -40,15 +40,18 @@ describe('resolveRule', () => {
  * 2026-08-04 (121/D11) e não pode voltar por acidente.
  */
 describe('conjunto de chaves editáveis pelo painel', () => {
-  it('RULE_DEFAULTS tem exatamente as 7 chaves vivas', () => {
+  it('RULE_DEFAULTS tem exatamente as 10 chaves vivas', () => {
     expect(Object.keys(RULE_DEFAULTS).sort()).toEqual([
       'allowCrossTeam',
       'allowEditTimes',
       'idleAlertMinutes',
+      'jornadaHorasDia',
+      'limiteApontamentoHoras',
       'notifyNewInQueue',
       'notifyStatusChange',
       'showProjectActivities',
       'singleActiveTimer',
+      'toleranciaJornadaPercentual',
     ])
   })
 

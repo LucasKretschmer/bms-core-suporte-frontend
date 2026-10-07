@@ -18,6 +18,8 @@ import {
   listServiceCategoryOptions,
   listTicketsReport,
   listProductivity,
+  getProductivitySummary,
+  listAppointmentsReport,
 } from './reportsService'
 import type { PaginatedResponse } from '../../../../types/api'
 import type {
@@ -667,6 +669,65 @@ describe('reportsService', () => {
         .params
       expect(params.sortBy).toBe('totalsegundos')
       expect(params.sortDirection).toBe('desc')
+    })
+  })
+
+  describe('getProductivitySummary', () => {
+    const resumo = { totalSegundos: 60, totalAtendentes: 1, totalAtendimentos: 1 }
+
+    it('sem userId: envia o recorte da tela e desempacota data.data', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: resumo } })
+
+      const result = await getProductivitySummary({
+        from: '2026-10-01',
+        to: '2026-10-07',
+        teamId: '3',
+      })
+
+      expect(result).toEqual(resumo)
+      expect(api.get).toHaveBeenCalledWith('/api/v1/reports/productivity/summary', {
+        params: { from: '2026-10-01', to: '2026-10-07', teamId: '3' },
+      })
+    })
+
+    it('com userId: o parâmetro sai na query; teamId nulo não sai', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { data: resumo } })
+
+      await getProductivitySummary({ from: '2026-10-01', to: '2026-10-07', teamId: null, userId: 42 })
+
+      expect(api.get).toHaveBeenCalledWith('/api/v1/reports/productivity/summary', {
+        params: { from: '2026-10-01', to: '2026-10-07', userId: 42 },
+      })
+    })
+  })
+
+  describe('listAppointmentsReport', () => {
+    it('chama /reports/appointments com userId, período e ordenação', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 },
+      })
+
+      await listAppointmentsReport({
+        userId: 42,
+        from: '2026-10-01',
+        to: '2026-10-07',
+        sortBy: 'totalsegundos',
+        sortDirection: 'desc',
+        page: 1,
+        pageSize: 25,
+      })
+
+      expect(api.get).toHaveBeenCalledWith('/api/v1/reports/appointments', {
+        params: {
+          userId: 42,
+          from: '2026-10-01',
+          to: '2026-10-07',
+          sortBy: 'totalsegundos',
+          sortDirection: 'desc',
+          page: 1,
+          pageSize: 25,
+        },
+      })
     })
   })
 })

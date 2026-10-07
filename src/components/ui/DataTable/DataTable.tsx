@@ -11,6 +11,8 @@ type DataTableProps<TRow> = {
   onSort?: (sortKey: string) => void
   onRowClick?: (row: TRow) => void
   isClickable?: boolean
+  /** Classe extra por linha, para destaque condicional. */
+  rowClassName?: (row: TRow) => string | undefined
   className?: string
 }
 
@@ -44,6 +46,7 @@ export function DataTable<TRow>({
   onSort,
   onRowClick,
   isClickable,
+  rowClassName,
   className,
 }: DataTableProps<TRow>) {
   return (
@@ -113,6 +116,7 @@ export function DataTable<TRow>({
                 'border border-line border-t-0',
                 (isClickable || onRowClick) &&
                   'cursor-pointer hover:shadow-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset transition-shadow duration-150',
+                rowClassName?.(row),
               )}
             >
               {columns.map((col) => (

@@ -1,26 +1,26 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { DataTable } from '../../../components/ui/DataTable/DataTable'
 import { Pagination } from '../../../components/ui/Pagination'
 import { ReportPageLayout } from '../../../components/layout/ReportPageLayout'
+import { useToast } from '../../../components/ui/Toast'
 import { ExportButtons } from '../shared/components/ExportButtons'
 import { PeriodFilter } from '../shared/components/PeriodFilter'
 import { TeamCombobox } from '../shared/components/TeamCombobox'
 import { exportToCsv, exportToXlsx } from '../shared/utils/exportTable'
-import { fetchAllPaginated, ExportLimitError } from '../shared/utils/fetchAllPaginated'
-import { listProductivity } from '../shared/services/reportsService'
-import { useToast } from '../../../components/ui/Toast'
-import type { AgentMetricDto } from '../shared/types/reports'
+import { ExportLimitError } from '../shared/utils/fetchAllPaginated'
+import type { ProductivityReportItemDto } from '../shared/types/reports'
 import { productivityColumns } from './columns'
+import { ProductivityAppointmentsModal } from './components/ProductivityAppointmentsModal'
+import { ProductivitySummaryCards } from './components/ProductivitySummaryCards'
 import { PRODUCTIVITY_EXPORT_COLUMNS, mapToExportRow } from './exportRow'
+import { fetchProductivityForExport } from './fetchProductivityForExport'
 import { useProductivity } from './hooks/useProductivity'
+import { CLASSE_LINHA_ACIMA_DO_LIMITE } from './productivityFormat'
 
-/** Chave única para persistência da ordem das colunas */
 const TABLE_ID = 'productivity'
+const EXPORT_FILENAME = 'produtividade-analistas'
 
-/**
- * Página U6 — Produtividade por Analista.
- * Restrita a CoordenadorPlus (guarda de rota configurada em routes/_auth/relatorios/produtividade.tsx).
- */
+/** Produtividade por Analista. Rota restrita a CoordenadorPlus. */
 export default function ProductivityPage() {
   const {
     data,
@@ -39,48 +39,37 @@ export default function ProductivityPage() {
   const [isExporting, setIsExporting] = useState(false)
   const toast = useToast()
 
-  const exportColumns = PRODUCTIVITY_EXPORT_COLUMNS
+  const [analistaAberto, setAnalistaAberto] = useState<ProductivityReportItemDto | null>(null)
+  const lastTriggerRef = useRef<HTMLElement | null>(null)
 
-  /** Busca todas as páginas do conjunto filtrado para export completo */
-  const fetchAllForExport = useCallback(
-    () =>
-      fetchAllPaginated<AgentMetricDto>((page, pageSize) =>
-        listProductivity({
-          from: filters.from,
-          to: filters.to,
-          teamId: filters.teamId,
-          page,
-          pageSize,
-        }),
-      ),
-    [filters],
-  )
+  const handleRowClick = useCallback((row: ProductivityReportItemDto) => {
+    lastTriggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setAnalistaAberto(row)
+  }, [])
 
-  async function handleExportCsv() {
-    if (isExporting) return
-    setIsExporting(true)
-    toast.info('Carregando dados para exportar…')
-    try {
-      const items = await fetchAllForExport()
-      exportToCsv('produtividade-analistas', exportColumns, items.map(mapToExportRow))
-      toast.success('Exportação CSV concluída.')
-    } catch (err) {
-      toast.error(
-        err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
-      )
-    } finally {
-      setIsExporting(false)
+  const handleCloseDrill = useCallback(() => {
+    setAnalistaAberto(null)
+    const trigger = lastTriggerRef.current
+    if (trigger && document.contains(trigger)) {
+      window.setTimeout(() => trigger.focus(), 0)
     }
-  }
+  }, [])
 
-  async function handleExportXlsx() {
+  async function handleExport(formato: 'csv' | 'xlsx') {
     if (isExporting) return
     setIsExporting(true)
     toast.info('Carregando dados para exportar…')
     try {
-      const items = await fetchAllForExport()
-      await exportToXlsx('produtividade-analistas', exportColumns, items.map(mapToExportRow))
-      toast.success('Exportação Excel concluída.')
+      const items = await fetchProductivityForExport(filters, { sortBy, sortDirection })
+      const rows = items.map(mapToExportRow)
+      if (formato === 'csv') {
+        exportToCsv(EXPORT_FILENAME, PRODUCTIVITY_EXPORT_COLUMNS, rows)
+        toast.success('Exportação CSV concluída.')
+      } else {
+        await exportToXlsx(EXPORT_FILENAME, PRODUCTIVITY_EXPORT_COLUMNS, rows)
+        toast.success('Exportação Excel concluída.')
+      }
     } catch (err) {
       toast.error(
         err instanceof ExportLimitError ? err.message : 'Erro ao exportar. Tente novamente.',
@@ -95,10 +84,14 @@ export default function ProductivityPage() {
   return (
     <ReportPageLayout
       title="Produtividade por Analista"
-      breadcrumbItems={[
-        { label: 'Relatórios' },
-        { label: 'Produtividade por Analista' },
-      ]}
+      breadcrumbItems={[{ label: 'Relatórios' }, { label: 'Produtividade por Analista' }]}
+      summary={
+        <ProductivitySummaryCards
+          params={{ from: filters.from, to: filters.to, teamId: filters.teamId }}
+          variant="global"
+          ariaLabel="Resumo de produtividade do período"
+        />
+      }
       filters={
         <div className="flex flex-wrap items-end gap-3">
           <PeriodFilter
@@ -106,16 +99,13 @@ export default function ProductivityPage() {
             to={filters.to}
             onChange={(from, to) => setFilters({ from, to })}
           />
-          <TeamCombobox
-            value={filters.teamId}
-            onChange={(teamId) => setFilters({ teamId })}
-          />
+          <TeamCombobox value={filters.teamId} onChange={(teamId) => setFilters({ teamId })} />
         </div>
       }
       exportActions={
         <ExportButtons
-          onExportCsv={() => void handleExportCsv()}
-          onExportXlsx={() => void handleExportXlsx()}
+          onExportCsv={() => void handleExport('csv')}
+          onExportXlsx={() => void handleExport('xlsx')}
           isExporting={isExporting}
         />
       }
@@ -131,6 +121,10 @@ export default function ProductivityPage() {
         data={data?.items ?? []}
         sortState={{ sortBy, sortDirection }}
         onSort={setSort}
+        onRowClick={handleRowClick}
+        rowClassName={(row) =>
+          row.extrapolouJornada === true ? CLASSE_LINHA_ACIMA_DO_LIMITE : undefined
+        }
       />
       {data && data.totalPages > 0 && (
         <div className="px-5 border-t border-border">
@@ -144,6 +138,17 @@ export default function ProductivityPage() {
             onPageSizeChange={setPageSize}
           />
         </div>
+      )}
+
+      {analistaAberto && (
+        <ProductivityAppointmentsModal
+          key={analistaAberto.userId}
+          userId={analistaAberto.userId}
+          analistaNome={analistaAberto.nome}
+          from={filters.from}
+          to={filters.to}
+          onClose={handleCloseDrill}
+        />
       )}
     </ReportPageLayout>
   )

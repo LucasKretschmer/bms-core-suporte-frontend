@@ -118,7 +118,7 @@ describe('ReportPageLayout — consumidores (121/F6)', () => {
   })
 
   /**
-   * ⚠️ TRAVA DE LACUNA CONHECIDA, não requisito. Estas 4 telas não têm teste de página:
+   * ⚠️ TRAVA DE LACUNA CONHECIDA, não requisito. Estas 3 telas não têm teste de página:
    * para elas a identidade visual pós-`banner` está provada apenas ESTRUTURALMENTE
    * (`git diff` sem linhas removidas + guard falsy), e o QA registrou isso.
    *
@@ -127,14 +127,13 @@ describe('ReportPageLayout — consumidores (121/F6)', () => {
    * trava ausência temporária nomeia a condição que o remove"). A lista nunca cresce:
    * tela nova nasce com teste de página.
    */
-  it('as 4 telas SEM teste de página são nominalmente estas (lacuna registrada, não coberta)', () => {
+  it('as 3 telas SEM teste de página são nominalmente estas (lacuna registrada, não coberta)', () => {
     expect(
       new Set(CONSUMIDORES.filter((c) => !c.temTesteDePagina).map((c) => c.arquivo)),
     ).toEqual(
       new Set([
         'src/features/movimentacao-diaria/index.tsx',
         'src/features/reports/client-report/index.tsx',
-        'src/features/reports/productivity/index.tsx',
         'src/features/reports/project-appointments/index.tsx',
       ]),
     )

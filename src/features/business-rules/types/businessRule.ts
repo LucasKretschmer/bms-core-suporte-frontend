@@ -6,7 +6,8 @@
  * Chaves e domínios confirmados no backend (BusinessRuleKeys):
  * - bool:   singleActiveTimer, allowEditTimes, allowCrossTeam,
  *           notifyStatusChange, notifyNewInQueue, showProjectActivities
- * - int:    idleAlertMinutes (1..60)
+ * - int:    idleAlertMinutes (1..60), jornadaHorasDia (1..24),
+ *           toleranciaJornadaPercentual (0..200), limiteApontamentoHoras (1..24)
  *
  * `autoStopOnReply` (era string ∈ { 'prompt' | 'auto' | 'off' }) foi REVOGADA em
  * 2026-08-04 (demanda 121, decisão D11) e saiu daqui junto com o combo
@@ -60,7 +61,56 @@ export const RULE_DEFAULTS: Record<string, RuleValue> = {
   notifyNewInQueue: true,
   showProjectActivities: false,
   idleAlertMinutes: 5,
+  jornadaHorasDia: 8,
+  toleranciaJornadaPercentual: 20,
+  limiteApontamentoHoras: 4,
 }
+
+/** Regra global numérica editável no card de regras globais. */
+export type GlobalIntRuleMeta = {
+  chave: string
+  label: string
+  tooltip: string
+  hint: string
+  min: number
+  max: number
+}
+
+/** Regras globais inteiras, na ordem de exibição. Faixas espelham o backend. */
+export const GLOBAL_INT_RULES: GlobalIntRuleMeta[] = [
+  {
+    chave: GLOBAL_IDLE_KEY,
+    label: 'Alerta de inatividade (min)',
+    tooltip: 'Minutos sem atividade antes de alertar o atendente sobre o timer ocioso.',
+    hint: 'Entre 1 e 60 minutos.',
+    min: 1,
+    max: 60,
+  },
+  {
+    chave: 'jornadaHorasDia',
+    label: 'Jornada diária (h)',
+    tooltip: 'Horas esperadas por dia útil. Base das horas úteis da Produtividade por Analista.',
+    hint: 'Entre 1 e 24 horas.',
+    min: 1,
+    max: 24,
+  },
+  {
+    chave: 'toleranciaJornadaPercentual',
+    label: 'Tolerância da jornada (%)',
+    tooltip: 'Margem sobre as horas úteis antes de destacar o analista como acima da jornada.',
+    hint: 'Entre 0 e 200%.',
+    min: 0,
+    max: 200,
+  },
+  {
+    chave: 'limiteApontamentoHoras',
+    label: 'Limite por apontamento (h)',
+    tooltip: 'Apontamentos acima deste total são destacados no detalhe do analista.',
+    hint: 'Entre 1 e 24 horas.',
+    min: 1,
+    max: 24,
+  },
+]
 
 /** Metadados de exibição dos toggles por equipe (rótulo + descrição). */
 export const TEAM_RULE_META: Record<TeamRuleKey, { label: string; description: string }> = {
@@ -114,5 +164,12 @@ export function asBool(value: RuleValue): boolean {
 }
 
 export function asMinutes(value: RuleValue): number {
-  return typeof value === 'number' ? value : RULE_DEFAULTS.idleAlertMinutes as number
+  return asIntRule(value, GLOBAL_IDLE_KEY)
+}
+
+/** Valor numérico da regra; fora disso, o default da chave. */
+export function asIntRule(value: RuleValue, chave: string): number {
+  if (typeof value === 'number') return value
+  const fallback = RULE_DEFAULTS[chave]
+  return typeof fallback === 'number' ? fallback : 0
 }

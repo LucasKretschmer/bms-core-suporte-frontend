@@ -1,11 +1,13 @@
 import { api } from '../../../../services/api'
 import type { ApiResponse, PaginatedResponse } from '../../../../types/api'
 import type {
-  AgentMetricDto,
+  AppointmentReportItemDto,
   ClientListItemDto,
   ClientReportDto,
   OrigemFiltro,
   PlanConsumptionResponseDto,
+  ProductivityReportItemDto,
+  ProductivitySummaryDto,
   ProjectAppointmentReportItemDto,
   ServiceCategoryOptionDto,
   SupportPlanDto,
@@ -240,9 +242,49 @@ type ProductivityParams = {
 
 export async function listProductivity(
   params: ProductivityParams,
-): Promise<PaginatedResponse<AgentMetricDto>> {
-  const { data } = await api.get<PaginatedResponse<AgentMetricDto>>(
+): Promise<PaginatedResponse<ProductivityReportItemDto>> {
+  const { data } = await api.get<PaginatedResponse<ProductivityReportItemDto>>(
     '/api/v1/reports/productivity',
+    { params: cleanParams(params) },
+  )
+  return data
+}
+
+export type ProductivitySummaryParams = {
+  from?: string | null
+  to?: string | null
+  teamId?: string | null
+  /** Presente: o resumo vale só para este atendente. */
+  userId?: number | null
+}
+
+export async function getProductivitySummary(
+  params: ProductivitySummaryParams,
+): Promise<ProductivitySummaryDto> {
+  const { data } = await api.get<ApiResponse<ProductivitySummaryDto>>(
+    '/api/v1/reports/productivity/summary',
+    { params: cleanParams(params) },
+  )
+  return data.data
+}
+
+// Apontamentos (usado pelo drill da Produtividade)
+
+export type AppointmentsReportParams = {
+  userId?: number | null
+  from?: string | null
+  to?: string | null
+  sortBy?: string | null
+  sortDirection?: 'asc' | 'desc'
+  page: number
+  pageSize: number
+}
+
+export async function listAppointmentsReport(
+  params: AppointmentsReportParams,
+): Promise<PaginatedResponse<AppointmentReportItemDto>> {
+  const { data } = await api.get<PaginatedResponse<AppointmentReportItemDto>>(
+    '/api/v1/reports/appointments',
     { params: cleanParams(params) },
   )
   return data

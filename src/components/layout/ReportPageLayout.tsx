@@ -7,6 +7,8 @@ import { Skeleton } from '../ui/Skeleton'
 type ReportPageLayoutProps = {
   title: string
   breadcrumbItems: BreadcrumbItem[]
+  /** Slot acima dos filtros (cards de resumo), sempre visível. */
+  summary?: React.ReactNode
   /** Slot de filtros acima da tabela */
   filters?: React.ReactNode
   /** Slot de botões de export */
@@ -39,6 +41,7 @@ type ReportPageLayoutProps = {
 export function ReportPageLayout({
   title,
   breadcrumbItems,
+  summary,
   filters,
   exportActions,
   banner,
@@ -55,6 +58,8 @@ export function ReportPageLayout({
       breadcrumbItems={breadcrumbItems}
       actions={exportActions}
     >
+      {summary && <div className="mb-4">{summary}</div>}
+
       {/* Barra de filtros */}
       {filters && (
         <div className="mb-4 p-4 bg-card rounded-card border border-line shadow-card">

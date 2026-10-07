@@ -253,6 +253,7 @@ const NAO_RESOLVIDAS_ACEITAS: readonly string[] = [
   "src/features/reports/client-report/hooks/useClientReport.ts | 'client-report'",
   "src/features/reports/plan-consumption/hooks/usePlanConsumption.ts | 'plan-consumption'",
   "src/features/reports/productivity/hooks/useProductivity.ts | 'productivity'",
+  "src/features/reports/productivity/hooks/useProductivityAppointments.ts | 'productivity-appointments'",
   "src/features/reports/project-appointments/hooks/useProjectAppointments.ts | 'project-appointments-report'",
   "src/features/reports/shared/hooks/useServerTable.test.tsx | 'test'",
 ]
